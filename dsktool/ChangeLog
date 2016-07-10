@@ -1,0 +1,37 @@
+2016-01-03 John Elliott
+
+	* dsktool-1.0.5 released.
+
+	* Compilation fixes from Zoltán Böszörményi
+
+2015-04-20 John Elliott
+
+	* dsktool-1.0.4 released.
+
+2015-04-16 Stuart Brady
+
+	* Patch to compile dsktool against more recent wxWidgets versions.
+
+2010-12-14 John Elliott
+
+	* dsktool-1.0.3 released.
+
+	* Minor updates to compile with wxWidgets 2.8.10
+
+2007-04-23 John Elliott
+
+	* dsktool-1.0.2 released.
+
+	* Updated to use wxT() macros on all text.
+
+2005-07-01 John Elliott
+
+	* dsktool-1.0.1 released.
+
+	* Support added for connecting to a remote computer over a serial 
+	 link.
+
+2005-04-20 John Elliott
+
+	* dsktool-1.0.0 released.
+	

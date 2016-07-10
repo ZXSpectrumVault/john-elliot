@@ -1,0 +1,831 @@
+.TH UNQUILL 1 "16th October 2015"
+
+.SH NAME
+
+unquill \- Disassemble, play, and convert games written with Quill.
+
+.SH SYNOPSIS
+
+.B unquill
+{
+.B -option
+{
+.B -option
+\ ... }} inputfile
+
+.SH DESCRIPTION
+.LP
+.I UnQuill
+takes snapshot files of Spectrum, CPC and Commodore 64 games written
+with Quill, and produces textual listings of the data tables which control
+them. From this it is possible to determine how to solve the game (ie cheat :-))
+or how to reconstruct it on another gamewriting system. It can also run the
+games or convert them to the Infocom Z-Code format.
+.LP
+Supported snapshot formats are Spectrum .SNA (used by JPP),
+CPC .SNA (used by CPCEMU) and Commodore .VSF (used by VICE).
+.I spconv
+(1) can be used to convert many Spectrum snapshot formats to .SNA; I'm not
+aware of equivalent CPC or C64 tools. Note that spconv v1.08 or later
+is needed to convert the most recent format of .Z80 snapshots.
+.LP
+The supplied .EXE file runs under DOS.
+
+.SH COPYING
+.LP
+.I UnQuill
+is copyright 1996-2002, 2011, 2012, 2015 by John Elliott.
+.LP
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+.LP
+This program is distributed in the hope that it will be useful,
+but
+.B WITHOUT ANY WARRANTY;
+without even the implied warranty of
+.B MERCHANTABILITY
+or
+.B FITNESS FOR A PARTICULAR PURPOSE.
+See the GNU General Public License for more details.
+.LP
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+
+
+.SH OPTIONS
+
+.TP
+.B -O
+Redirect output to a file rather than stdout. 
+.TP
+.B -C
+.I UnQuill
+normally refuses to write a Z5 file to standard output. You can
+force it to using the -C option.
+.TP
+.B -Dx
+Display options when the -TR option is used under DOS to run the game.
+.I x
+can be:
+.RS
+.IP 4
+CGA 4-colour graphics mode (default if CGA video hardware detected)
+.IP C
+CGA / EGA / VGA 16-colour text mode.
+.IP E
+EGA 16-colour graphics mode (default if EGA video hardware detected)
+.IP M 
+MDA monochrome text mode (default if MDA video hardware detected)
+.IP T
+Plain text output (matching the behaviour of UnQuill on other platforms) -- 
+no graphics or colours.
+.IP V
+VGA  / MCGA 256-colour graphics mode (default if VGA video hardware detected)
+
+.LP
+Note that if a game does not define a custom typeface, UnQuill will try to 
+load the Spectrum font from a Spectrum ROM image. This should be called 
+.B spectrum.rom
+and be located in the current directory. If 
+.B spectrum.rom
+is not present, a built-in open-source font will be used instead.
+.RE
+.TP
+.B -G
+Enables experimental graphics character support when outputting to a Z5
+file.
+.TP
+.B -M
+Disable text colours when outputting to a Z5 file.
+.TP
+.B -L
+There are two types of Quilled games - "early" (usually text-only) and
+"late" (usually with graphics).
+.B -L
+selects the "late" type; use this if
+.I UnQuill
+gives nonensical output or address errors without the
+.B -L
+option. Games produced with PAW (Professional Adventure Writer) will probably
+cause address errors whether the -L option is present or not.
+.TP
+.B -TX
+Output a representation of the game in XML.
+.B -TZ
+Normally, game text is displayed in 32-column lines and colour codes are
+omitted. -TZ switches to HTML-like output ("ZXML") where colour codes are
+represented as
+.I <CODE>
+and the text is not formatted. The
+.I <,>
+is the PRINT comma (16-column tab).
+.TP
+.B -TZB
+As ZXML, but
+.I <BR>
+(line break) tags are inserted where the lines of output would break while
+being printed.
+.TP
+.B -TI
+Produce a source file suitable for the
+.I Inform
+(1) adventure game compiler. Note that the resulting source will not
+compile into a working game; it is intended to be used for further rewriting.
+.TP
+.B -T5
+Produce a Z5 module suitable for Infocom/Inform interpreters such as
+.I frotz 
+(1). For this to work, the file iqrun.z5 must be in the current directory
+(or, in the Unix version, in the library directory specified in the Makefile).
+.TP
+.B -TR
+Emulate the Quill runtime system and play the game. Notes on the emulation
+are scattered through the detailed information below.
+.TP
+.B -Q
+Quiet. No beeping (applies to -TR and -T5). This is for use with games like
+SubSunk wherein the beeper is used to play tunes.
+.TP
+.B -V
+Verbose. Condition and connection table entries referring to a particular
+room, object or message are annotated with the text of the respective
+room, object or message.
+.TP
+.B -Sx
+Do not output a section of text.
+.I x
+can be:
+.RS
+.IP C
+Condition tables (Response and Process).
+.IP F
+User-defined font(s) (if present).
+.IP G
+Location graphics.
+.IP L
+Location descriptions.
+.IP M
+Messages.
+.IP N
+Connections.
+.IP O
+Object descriptions and initial locations.
+.IP S
+System messages.
+.IP U
+User-defined graphics.
+.IP V
+Vocabulary.
+
+.SH OUTPUT FORMAT (Normal mode)
+
+Output will be in the form of several tables:
+
+.SS Response (Events) table
+.LP
+Each entry is of the form:
+.RS 16
+VERB  NOUN  Conditions:
+.RE
+.RS 31
+condition1
+.br
+condition2
+.br
+condition3...
+.RE
+.RS 16
+            Actions:
+.RE
+.RS 31
+action1
+.br
+action2
+.br
+action3...
+.RE
+
+.LP
+This table is scanned immediately after player input. The two words at the
+beginning are compared with the player's command, and if there is a match
+the conditions will be tested. Assuming the conditions hold, the actions
+are then performed. Scanning of the table then continues at the next entry.
+If all entries have been scanned, an attempt is made to parse the command as
+a "movement" command; if that fails, the message "I can't do that" is printed.
+.LP
+The word "_" is a wildcard and matches any word typed. The table is sorted by
+word number; since "_" is word 255, it comes last.
+.LP
+
+.SS Process (Status) table
+.LP
+As Response, but the two words at the beginning of the entry are used only for
+sorting and as aides memoires for the programmer. All entries are checked;
+this table is scanned immediately before player input.
+
+.SS Conditions are:
+
+.IP "AT      x"
+True if player in room
+.I x
+.IP "NOTAT   x"
+True if player not in room
+.I x
+.IP "ATGT    x"
+True if player in room >
+.I x
+.IP "ATLT    x"
+True if player in room <
+.I x
+.IP "PRESENT x"
+True if object
+.I x
+is worn, carried or at the same location as the player.
+.IP "ABSENT  x"
+True if object
+.I x
+is not worn, carried or at the same location as the player.
+.IP "WORN    x"
+True if object
+.I x
+is worn.
+.IP "NOTWORN x"
+True if object
+.I x
+is not worn.
+.IP "CARRIED x"
+True if object
+.I x
+is carried.
+.IP "NOTCARR x"
+True if object
+.I x
+is not carried.
+.IP "CHANCE  x"
+True if a random number between 0 and 100 is less than
+.I x
+.IP "ZERO    x"
+True if flag
+.I x
+is zero.
+.IP "NOTZERO x"
+True if flag
+.I x
+is nonzero.
+.IP "EQ x y"
+True if the value of flag
+.I x
+is
+.I y
+.IP "GT x y"
+True if the value of flag
+.I x
+>
+.I y
+.IP "LT x y"
+True if the value of flag
+.I x
+<
+.I y
+
+.SS Actions are:
+.LP
+(actions marked * are only available in later games)
+.IP INVEN
+Display player's inventory
+.IP DESC
+Describe current room, stop scanning table.
+.IP QUIT
+Print "Are you sure?". If player types Y, continue; else behave as
+.B DONE
+.IP END
+Print "End of game - play again?". If player types Y, restart the game.
+Otherwise, print "Have a nice day" and reset the Spectrum.
+.IP DONE
+Command successful. Stop scanning the table.
+.IP OK
+Print "OK." and behave as
+.B DONE
+.IP ANYKEY
+Print "Press any key to continue" and wait for a keypress. Note: On systems
+other than DOS, you should press RETURN, because the input works
+in cooked mode.
+.IP SAVE
+Save the current position.
+.IP LOAD
+Load the current position.
+.IP TURNS
+Print "You have taken
+.I n
+turns" where
+.I n
+is the number of inputs made.
+.IP SCORE
+Print "You have scored
+.I x
+" where
+.I x
+is the contents of flag 30.
+.IP *CLS
+Clear the screen.
+.IP *DROPALL
+"Drop" all objects.
+.IP *AUTOG
+"Get" the currently referenced object.
+.IP *AUTOD
+"Drop" the currently referenced object.
+.IP *AUTOW
+"Wear" the currently referenced object.
+.IP *AUTOR
+"Remove" (ie unwear) the current object.
+.IP "PAUSE   x"
+Pause
+.I x
+/50 seconds. PAUSE is also used in "late" games to control functions such as
+RAMsaving and graphics; if flag 28 holds a value from 1-23, a subfunction will
+be called and then flag 28 will be reset to zero. The subfunctions are listed
+later.
+.IP "*PAPER   x"
+Set background colour to
+.I x
+(0 is black, 1 is blue, 2 is red, 3 is magenta, 4 is green, 5 is cyan, 6 is
+yellow and 7 is white).
+.IP "*INK     x"
+Set foreground colour to
+.I x
+(0-7).
+.IP "*INK     x  y"
+On the CPC6128, this is used to change the palette used:
+.I x
+is the pen number, 0-3, and
+.I y
+is the colour to use for that pen.
+
+.IP "*BORDER  x"
+Set border colour to
+.I x
+(0-7).
+.IP "GOTO    x"
+Move player to room
+.I x
+.IP "MESSAGE x"
+Display message
+.I x
+.IP "REMOVE  x"
+"Remove" (unwear) object
+.I x
+; checks that the player is wearing it and would be able to carry it.
+.IP "GET     x"
+"Get" object
+.I x
+; includes checks for the object's presence etc.
+.IP "DROP    x"
+"Drop" object
+.I x
+; checks that the player is carrying it etc.
+.IP "WEAR    x"
+"Drop" object
+.I x
+; checks that the player is carrying it etc.
+.IP "DESTROY x"
+Move object
+.I x
+to room 252 (destroyed objects).
+.IP "CREATE  x"
+Move object
+.I x
+to the same room as the player.
+.IP "SWAP    x y"
+Exchange object
+.I x
+and object
+.I y
+(eg "a lamp" and "a lit lamp").
+.IP "*PLACE   x y"
+Move object
+.I x
+to room
+.I y
+.IP "SET     x"
+Let flag
+.I x
+= 255.
+.IP "CLEAR   x"
+Let flag
+.I x
+= 0.
+.IP "PLUS    x y"
+Add
+.I y
+to flag
+.I x
+\. If the total would exceed 255, the flag is set to 255.
+.IP "MINUS   x y"
+Subtract
+.I y
+from flag
+.I x
+\. If the total would go below zero, the flag is set to 0.
+.IP "LET     x y"
+Let flag
+.I x
+=
+.I y
+.IP "BEEP    x y"
+Sound beeper;
+.I x
+= duration (centiseconds),
+.I y
+= pitch (60+(tones above middle C)). When the game is emulated, this is done
+by writing a BEL to stdout, and pausing for a second. On a game which makes
+frequent use of this command (such as Subsunk), this can get annoying, so the
+-Q option silences the beeps.
+.LP
+"Patch" allows users to add new machine-code drivers for these commands. For
+example, in the Very Big Cave Adventure, INK has been rewritten to flash the
+screen.
+.SS PAUSE subfunctions
+.LP
+The subfunctions in this list are numbers to store in flag 28. Some also use
+the parameter
+.I x
+passed to PAUSE. They may vary slightly from game to game. Not many of these
+are emulated because they rely heavily on Spectrum hardware.
+
+.IP "1,2,3,5,6"
+Sound effects; duration may be passed as the parameter to the PAUSE.
+.IP "4"
+Flash the screen and the border.
+.IP "7"
+Switch to the default font.
+.IP "8"
+Switch to the alternative font.
+.IP "9"
+A series of coloured boxes expands out of the centre of the screen at speed.
+.IP "10"
+Change the "You can also see" message to
+.I x
+.IP "11"
+Set the maximum number of objects carried at once to
+.I x
+.IP "12"
+Restart the game without warning.
+.IP "13"
+Reboot the Spectrum without warning. Emulated by leaving UnQuill.
+.IP "14"
+Increase number of objects that can be carried at once by
+.I x
+.IP "15"
+Decrease number of objects that can be carried at once by
+.I x
+.IP "16,17,18"
+Change the keyboard click to one of three alternatives.
+.IP "19"
+If graphics extension loaded, switch graphics on or off (off if
+.I x
+is 255).
+.IP "20"
+Has no effect.
+.IP "21"
+RAMsave or RAMload. If
+.I x
+is 50, the game state will be loaded from RAM; otherwise it will be saved.
+.IP "22"
+Save files contain an identity byte which is checked when loading or saving
+positions (normally 255). This subfunction sets the byte to
+.I x
+
+.SS Object texts
+.LP
+Object 0 is a source of light. If flag 0 is nonzero, then it is "dark" and the
+location description will only appear if object 0 is present; otherwise the
+message "Everything is dark. I can't see" appears.
+.LP
+Objects are sometimes used to change the location descriptions of rooms; for
+example, the Very Big Cave Adventure has an object "The hairy figure has been
+blown to kingdom come. Unfortunately, so has the bridge". When this object is
+created, the location description contains this text just after a message of
+the "You can also see:" type. Such objects do not have words associated with
+them.
+
+.SS Location texts
+.LP
+The player starts in Room 0. The following extra locations may be seen in the
+condition tables:
+.IP 252
+Repository of non-created objects
+.IP 253
+Worn
+.IP 254
+Carried
+.IP 255
+The player's current location
+
+.SS Message texts
+.LP
+At the end of a message, all colours are reset to the standard colours.
+
+.SS System messages
+.LP
+Messages such as "I can't do that".  In "early" games, these messages
+are in the runtime module rather than the database proper.
+
+.SS Connections
+.LP
+For each location, a list of verbs which can be typed and the result of typing
+them. These are scanned after the Response table.
+
+.SS Vocabulary
+.LP
+A list of words. Two or more words can have the same number; this makes them
+synonymous. Words with numbers <14 are "directions"; if an action involving
+such a word fails, "I can't go that way" is printed instead of "I can't do
+that."
+
+.SS User-Defined Graphics
+.LP
+Output as an X-Window bitmap. The UDGs are 21 8x8 characters, which have ASCII
+values 144-164. Some games (for example, Subsunk) use the UDGs to create
+location "graphics".
+.SS User-Defined Font
+.LP
+Output as an X-Window bitmap, containing 96 8x8 characters (ASCII 32 to 127).
+.LP
+.I UnQuill
+displays UDGs in the game text as ? marks, or as "%xx" in ZXML, where xx is
+the hexadecimal version of their ASCII number (90-a4).
+
+.SS Location graphics
+.LP
+Location graphics are output as a series of drawing instructions.
+
+.IP "AMOVE x y"
+Move the drawing position to the absolute coordinates (x,y).
+.IP "PLOT flags x y"
+As AMOVE, but plots a point at the coordinates as well.
+The flags (i and o) are for Inverse and Over respectively.
+.IP "MOVE x y"
+Move by a number of pixels relative to the current drawing position.
+.IP "LINE flags x y"
+As MOVE, but draws a line. The flags (i and o) are for Inverse and Over.
+.IP "BLOCK h w x y"
+Move to point (x*8, y*8) and set screen attributes in a block (w*8, h*8) in
+size.
+.IP "SHADE x y f "
+As MOVE, but then does a shaded flood fill in a texture given by "f". "f" is
+treated as two nibbles; each gives an index into a patterns table. The two
+resulting patterns are ORed together, and that pattern is used for the fill.
+.IP "BSHADE x y f "
+As SHADE, but overwrites the borders of the shaded area.
+.IP "FILL x y"
+As SHADE, but does a solid fill rather than shaded.
+
+.IP "GOSUB sc=n room"
+Draw the graphic for another room at the current coordinates, with scale "sc".
+Scale 0 is full-size; Scale 1 is 1/8, Scale 2 is 2/8, ...
+
+.IP "RPLOT flags dx dy"
+Move by one pixel and plot a point.
+
+.IP "INK i"
+Set ink colour for drawing.
+.IP "PAPER p"
+Set paper colour for drawing.
+.IP "BRIGHT x"
+Set bright attribute for drawing.
+.IP "FLASH f"
+Set flash attribute for drawing.
+.IP "END"
+End of drawing opcodes.
+
+.SS The flags
+.LP
+The flags are 36 variables which can hold values from 0-255. They are not
+displayed by UNQUILL since their initial values are always 0.
+
+.IP "Flag  0"
+is nonzero => it is dark. Player cannot see without object 0.
+.IP "Flag  1"
+= number of objects carried.
+.IP "Flag  2"
+if nonzero is decremented each time a location is described.
+.IP "Flag  3"
+if nonzero is decremented each time a location is described and it is dark.
+.IP "Flag  4"
+if nonzero is decremented each time a location is described, it is dark, and
+object 0 is absent.
+.IP "Flags 5-8"
+if nonzero are decremented at each player input.
+.IP "Flag  9"
+if nonzero is decremented at each player input when it is dark.
+.IP "Flag 10"
+if nonzero is decremented at each player input when it is dark and object 0 is
+absent.
+.IP "Flags 11-27"
+are free for use by games.
+.IP "Flag 28"
+is passed as a parameter to the PAUSE command in "late" games. If it is
+nonzero, PAUSE has extra functionality.
+.IP "Flag 29"
+is used in "late" games to control display of graphics.
+.RS
+Bit 5 is set for graphics never to be drawn.
+.br
+Bit 6 is set for graphics to be drawn every time a location is described. If
+Bits 5 and 6 are zero, the graphics are only drawn the first time a location
+is described.
+.br
+Bit 7 is set to force the graphics to be drawn at the next location
+description, at which point it is automatically cleared. Thus a typical
+instance would be:
+.RE
+.RS 16
+LOOK  _     Conditions:
+.RE
+.RS 16
+            Actions:
+.RE
+.RS 31
+PLUS    129 128
+.br
+DESC
+.RE
+.IP "Flag 30"
+holds the player's score.
+.IP "Flags 31-32"
+hold the number of turns. This is a little-endian word.
+.IP "Flag 33"
+holds the vocabulary number of the first word found in the command line.
+.IP "Flag 34"
+holds the vocabulary number of the second word found in the command line.
+.IP "Flag 35"
+holds the current location.
+
+.SH OUTPUT FORMAT (Inform mode)
+
+The Inform output mode performs a simplistic translation to an Inform source
+file. The rooms and objects will be converted to Inform rooms and objects,
+while the logic tables will be converted to two long subroutines. Note that
+these subroutines (called QuillProcess and GamePreRoutine) are syntactically
+correct Inform, but will not work correctly; QuillProcess is called
+every game turn rather than every player input, while the code to detect
+nouns in GamePreRoutine doesn't work because the correct objects aren't in
+scope.
+.LP
+The code may also generate verb actions with the same names as those in
+the Inform verb library (verblibm.h). If this is the case, the Inform
+compiler will emit error messages relating to verblibm.h; the first one of
+these shows the verb that caused the trouble, and the copy in the generated
+source file can be removed.
+.LP
+The automated translation of directions is not perfect; for example,
+the translation of The Secret Of St. Brides translates "up" directions as
+.I UPST_to
+rather than
+.I u_to.
+
+.SH OUTPUT FORMAT (Z5 mode)
+.LP
+UnQuill merges the .SNA file with iqrun.z5, which must be present. The
+resulting Z-code file should run in any good Z-code interpreter (support for
+timed events is preferable).
+.LP
+iqrun.z5 is actually a Quill interpreter written in Z-code; so the
+Quilled game will be running under double emulation. This makes the game
+run at something like a third of the speed of a native Inform game; this
+only becomes apparent if you're using an 8-bit computer with CPU speed in
+the single figures.
+
+.SH EXAMPLES
+
+.B "A>unquill subsunk.sna -Osubsunk.txt"
+.LP
+Send the contents of Subsunk to a text file.
+
+.B "D:/GAMES/SPECTRUM>unquill vbca1.sna -L -SC -SO -SL -SM -SS -SN -SU -SF -SG"
+.LP
+Display the vocabulary of the Very Big Cave Adventure, Part 1.
+
+.B "% unquill -L -V -SL -SM retarded.sna | more "
+.LP
+List the workings of Retarded Creatures & Caverns; omit the locations and the
+messages because they will appear as annotations.
+
+.B "A>unquill hampstd.sna -SC -SO -SL -SS -SC -SU -SV -TZ"
+.LP
+Display the messages of Hampstead, in ZXML.
+
+.B "% unquill subsunk.sna -ti -osubsunk.inf"
+.LP
+Create an Inform file containing a simplistic conversion of Subsunk.
+
+.B "$ unquill -l -t5 -otcom1.z5 tcom1.sna"
+.LP
+Create a Z5 file containing The Colour Of Magic. This file can then be
+used like any other .z5 file.
+
+.SH BUGS
+
+.LP
+Z5 output does not set the file checksum of the resulting Z5 game. So a
+"Verify" command (were there one) would say the file was damaged.
+.LP
+The SAVE command in Z5 games saves the state of the Z-machine, not the state
+of the Quilled game. This means, firstly, that saved games are much bigger
+than they need to be; and secondly, that savefiles are not interchangeable
+between games.
+
+.LP
+The automatic Inform translation is rather primitive.
+.LP
+Report any bugs to John Elliott (jce@seasip.demon.co.uk). If
+a particular .sna file caused problems, include a copy of it.
+
+.SH FILES
+.br
+.B /usr/lib/games/zcode/iqrun.z5
+.br
+- The Z-code module for the -T5 option.
+
+.SH VERSION HISTORY
+
+.IP "v0.1"
+Could not display compressed files or UDGs. A bug sometimes occurred in listing
+more than 128 objects, locations or messages.
+
+.IP "v0.2"
+Ability to list compressed objects and UDGs added. Listing bug fixed.
+
+.IP "v0.3"
+Verbose mode added. System messages in "early" games now listed.
+
+.IP "v0.4"
+Lists word-object mappings in "late" games. Can run gamefiles.
+
+.IP "v0.5"
+Some bugs in the "run" code fixed - in particular, The Secret Of St Brides
+will now run correctly. Initial support for output in the Inform format.
+
+.IP "v0.6"
+Run-time accuracy improved. Output in Z5 format added.
+
+.IP "v0.7"
+Support added for the Commodore 64 and CPC Quill runtimes. Further bugs fixed
+in the "run" code.
+
+.IP "v0.8"
+Support added for Spectrum graphics. More runtime bugs fixed.
+
+.IP "v0.8.1"
+Some debugging text removed from the .Z5 template game.
+
+.IP "v0.8.2"
+Added font output. UDGs are now output correctly (not mirror-image).
+UnQuill version number is printed at the start of the output.
+
+.IP "v0.8.5"
+Added -TZB option for "ZXML with linebreaks". If a game has multiple fonts,
+all of them will be extracted rather than just the currently selected one.
+
+.IP "v0.8.6"
+Fixed a bug that caused premature exit when dumping
+.I Merlock the Mede
+in verbose mode.
+
+.IP "v0.8.7"
+Improved the C64 snapshot parser to search for a C64MEM block rather than
+assume it to be at a fixed offset.
+
+.IP "v0.9.0"
+Corrected the behaviour of PLUS and MINUS opcodes (clamping at 255 and 0 
+respectively). Corrected the handling of colour output in the Z-code version.
+Added -TX XML output. 
+
+.IP "v0.10.0"
+Added support for direct screen access in DOS, allowing display of coloured
+text and user-defined graphics. Dropped CP/M support, as the source is now
+too complex for the Hi-Tech C compiler to compile correctly.
+
+.IP "v0.10.1"
+Corrected various parts of the XML output that generated ill-formed XML 
+documents.
+
+.SH TO DO
+
+.LP
+Output location graphics for CPC6128 and C64 versions.
+.LP
+Support beeper sound in the DOS version.
+.LP
+Support location graphics in the DOS version.
+.LP
+Create SDL and Curses output handlers allowing the UNIX version to display
+colour, accurate graphics etc.
+
+.SH SEE ALSO
+spconv(1), inform(1)
+

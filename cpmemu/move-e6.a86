@@ -1,0 +1,64 @@
+;Author:  John Elliott, 14 October 1997
+;Version: 1.00
+;
+;MOVE-E6 - Move the CP/M-86 INT E6 call to INT E7.
+;
+;NOTA BENE: This will break any additional disc drivers which may be loaded.
+;
+;To cross-assemble from DOS:
+;
+;RASM86 MOVE-E6
+;LINKCMD MOVE-E6
+;
+	push	es
+	push	ds
+	xor	ax,ax
+	mov	ds,ax
+	mov	es,ax
+	mov	si,0398h		;INT E6
+	mov	di,039Ch		;INT E7
+	lodsw
+	mov	bx,ax			;BX = INT E6 low
+	stosw
+	lodsw				;AX = INT E6 high
+	stosw
+	mov	si,bx	
+	mov	ds,ax		;DS:SI -> INT E6 handler.
+	mov	es,ax
+;
+;The memory layout we seek is:
+;
+;DS:SI-5 CD E6	INT	0E6h
+;DS:SI-3 8B D8	MOV	BX,AX
+;DS:SI-1 C3	RET	
+;DS:SI   2B C0  SUB 	AX,AX
+;DS:SI+2 CF     IRET
+;
+	mov	ax,-5
+	add	si,ax		;DS:SI -> INT E6 instruction
+	lodsb
+	cmp	al,0CDh		;INT
+	jnz	Fail
+	mov	di,si		;This is the byte to change
+	lodsb
+	cmp	al,0E6h		;INT E6?
+	jnz	Fail
+	inc	al		;AL = 0E7h
+	stosb
+	mov	dx,offset DidIt
+Exit:	mov	cl,9		;Report success
+	pop	ds
+	pop	es
+	int	0E0h
+	mov	cl,0
+	mov	dl,0
+	int	0E0h
+
+Fail:	mov	dx,offset Failstr
+	jmp	Exit
+
+	dseg
+DidIt	db	'INT E6 call moved to INT E7',13,10,'$'
+Failstr	db	'Failed to patch INT E6 call - has it been done already?',13,10,'$'
+
+	end

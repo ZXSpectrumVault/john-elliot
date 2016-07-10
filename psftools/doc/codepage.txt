@@ -1,0 +1,99 @@
+Code pages supported by psftools
+================================
+
+The following codepages are supported by this version of psftools:
+
+ISO codepages
+=============
+
+8859-1	} The ISO-8859 codepages. Most of them map the Codepage 437 characters
+8859-2	} (smiley face, card suits etc.) into the control code area from
+8859-3	} characters 00h to 1Fh. The exceptions are -13, -14 and -16, which
+8859-4	} leave this area blank.
+8859-5	}
+8859-6	}
+8859-7	}
+8859-8	}
+8859-9	}
+8859-10	}
+8859-13	}
+8859-14	}
+8859-15	}
+8859-16	}
+
+ISO codepages: Aliases
+======================
+
+  The following numeric aliases also refer to the ISO codepages, allowing 
+them to be incorporated in CPI files:
+
+8859-1: 	CP819	CP28591
+8859-2: 	CP912	CP28592
+8859-3: 	CP913	CP28593
+8859-4: 	CP914	CP28594
+8859-5: 	CP915	CP28595
+8859-6: 	[*]	CP28596
+8859-7: 	CP813	CP28597
+8859-8: 	CP916	CP28598
+8859-9: 	CP920	CP28599
+8859-10:	CP919
+
+[*] Various sources also suggest that either CP189 or CP1089 would be an 
+alias for 8859-6; but without more evidence I can't be sure which.
+
+OEM codepages
+=============
+
+CP367	US-ASCII: Only characters 32-126 are mapped. So (for example) 
+        psfxform --codepage=367 will extract only ASCII characters.
+
+CP437	The infamous IBM PC hardware codepage. 
+
+CP737	Greek			} All of these have the same symbols as 
+CP775	Baltic Rim		} Codepage 437 in positions 0x00-0x1F and 
+CP850	International		} position 0x7F.
+CP852	Eastern Europe		}
+CP855	Cyrillic		}
+CP857	Turkish			}
+CP858	CP850 with Euro sign	}
+CP860	Portugese		}
+CP861	Icelandic		}
+CP862	Hebrew			}
+CP863	French Canadian		}
+CP864	Arabic			}
+CP865	Nordic			}
+CP866	Russian			}
+CP869	Greek			}
+CP874	Thailand		}
+
+Windows codepages
+=================
+
+CP1250	Windows Latin-2		} These all leave positions 0x00-0x1F and 0x7f
+CP1251	Windows Cyrillic	} blank.
+CP1252	Windows Latin-1
+CP1253	Windows Greek
+CP1254	Windows Turkish
+CP1255	Windows Hebrew
+CP1256	Windows Arabic
+CP1257	Windows Baltic
+CP1258	Windows Vietnamese
+
+Custom codepages
+================
+
+AMSTRAD	  Amstrad PCW. The PCW character 7Fh (zero without a slash) is mapped
+          to U+FF10 (full-width zero) for want of anything better.
+
+BBCMICRO  BBC Micro: Only characters 32-127 are mapped, since that is all
+	  the BBC Micro ROM defines.
+
+PCGEM	  The character mapping used by the video drivers in Intel GEM. 
+	  Character 0x0A (picture of a bell) has been mapped to U+237E 
+          (symbol for a bell) -- not ideal.
+
+PPC437    The codepages used by the character ROM on Amstrad PPC laptops and 
+PPC860    their desktop counterpart, the Sinclair PC200. These differ slightly
+PPC865    from the standard codepages 437, 860 and 865 to avoid confusion 
+PPCGREEK  between the 'epsilon' and 'element-of' characters.
+

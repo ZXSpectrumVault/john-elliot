@@ -1,0 +1,80 @@
+.TH LAR 1 "11 January 2003"
+.SH NAME
+lar \- library archiver
+.SH SYNOPSIS
+
+.B lar
+.I function library
+.RB [files] ...
+
+.SH DESCRIPTION
+
+.I lar
+is a Unix program to manipulate CP/M
+.I LU
+format libraries. The original CP/M library program
+.I LU
+is the product of Gary P. Novosielski. The primary use of
+.I lar
+is to combine several files together for upload/download to a personal computer.
+
+.SH FUNCTION LETTERS
+
+One of the following letters must be used:
+
+.TP
+.B u
+\- Update, add files to library
+.TP
+.B t
+\- Table of contents
+.TP
+.B e
+\- Extract files from library
+.TP
+.B p
+\- Print files in library to stdout
+.TP
+.B d
+\- Delete files in library
+.TP
+.B r
+\- Reorganise library (remove gaps caused by file deletion)
+
+.LP
+Other keys:
+.TP
+.B v
+\- Verbose
+.TP
+.B l
+\- Directory listing will be in the format used by
+.BR mc(1)
+for extended filesystems.
+
+.SH LEGAL
+This program is public domain software, no warranty intended or
+implied.
+
+.SH HISTORY
+
+
+
+This version of
+.I lar
+has been rewritten to match version 5 of the LBR format definition, and
+supports date stamps, CRCs and exact file sizes.
+
+.SH BUGS/MISFEATURES
+The biggest problem is text files, the programs tries to detect
+text files vs. binaries by checking for non-Ascii (8th bit set) chars.
+If the file is text then it will throw away Control-Z chars which
+CP/M puts on the end.  All files in library are padded with Control-Z
+at the end to the CP/M sector size if necessary.
+.LP 
+No effort is made to handle the difference between CP/M and Unix
+end of line chars.  CP/M uses Cr/Lf and Unix just uses Lf.
+The solution is just to use the Unix command sed when necessary.
+.sp 3
+ * Unix is a trademark of Bell Labs.
+ ** CP/M is a trademark of Digital Research.

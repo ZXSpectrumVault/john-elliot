@@ -1,0 +1,384 @@
+;
+; Snapshot loader for the Spectrum +3
+; Copyright 2005 John Elliott <jce@seasip.demon.co.uk>
+;
+;   This software is provided 'as-is', without any express or implied
+;  warranty.  In no event will the authors be held liable for any damages
+;  arising from the use of this software.
+;
+;  Permission is granted to anyone to use this software for any purpose,
+;  including commercial applications, and to alter it and redistribute it
+;  freely, subject to the following restrictions:
+;
+;  1. The origin of this software must not be misrepresented; you must not
+;     claim that you wrote the original software. If you use this software
+;     in a product, an acknowledgment in the product documentation would be
+;     appreciated but is not required.
+;  2. Altered source versions must be plainly marked as such, and must not be
+;     misrepresented as being the original software.
+;  3. This notice may not be removed or altered from any source distribution.
+;
+CR	equ	0Dh
+LF	equ	0Ah
+BANKM	equ	5B5Ch	;+3 system variable holding memory banking state
+PORTM	equ	7FFDh	;+3 port controlling memory banking
+DOS_INIT equ	0100h	;Reset everything
+DOS_OPEN equ	0106h	;Open file
+DOS_CLOSE equ	0109h	;Close file
+DOS_READ  equ	0112h	;Read file
+DOS_WRITE equ	0115h	;Write to file
+DOS_FSEEK equ	0136h	;Set file pointer
+DOS_XREF  equ	0151h	;Find XDPB
+DD_S_RETR equ	0160h	;Set retry
+DD_LOGIN  equ	0175h	;Detect format
+DD_SEL_F  equ	0178h	;Force format
+
+DD_L_SEEK equ	018Dh	;Seek to track
+DD_L_READ equ	0190h	;uPD765a read command
+DD_L_WRIT equ	0193h	;uPD765a write command
+DD_L_ON	  equ	0196h	;Turn drive motor on
+DD_L_TOFF equ	0199h	;Start drive motor off timer
+DD_L_OFF  equ	019Ch	;Turn drive motor off
+
+RAMBASE	  equ	6300h	;Original load address of this program
+;
+; Overview:
+; This loader loads at 6300h; the BASIC program calling it must have done a
+; CLEAR 25344 so that all of BASIC is below this address. The first thing 
+; it does is copy itself to 4000h.
+; It then loads the .SNA file as follows:
+; * First 27 bytes of the SNA to within the loader.
+; * Next 1B00h bytes to C000h in bank 7 (the shadow screen). This is then 
+;  selected as the main display.
+; * Next 800h bytes to 5000h
+; * Remaining 9D00h bytes to 6300h (the correct place to load them).
+;
+; At this point, 4000h-62FFh still contain this loader and the calling BASIC 
+; program, so if there's an error we can abort back to BASIC.
+;
+; Once all of the SNA is successfully loaded, the disc motor is turned off.
+; Interrupts are disabled.
+; The 800h bytes from 5:5000 are copied to 5B00h where they belong. 
+; A second stage loader is copied to DB00h (still in bank 7) and control
+; is transferred to it. 
+; The second-stage loader copies the SNA screen from C000h to 4000h, 
+; overwriting this loader. It also initialises all registers except
+; AF, BC, SP and the EI/DI status. 
+; Since the second stage is in banked memory, a final stage has to be 
+; placed in non-banked memory to set up AF, BC, SP and EI/DI, and to pass
+; control to the program. This 12-byte launcher is (by default) created 
+; on the SNA file's stack, but can be placed anywhere in memory.
+;
+	org	04000h
+base:
+	jr	main
+;
+; These variables are all at fixed offsets from the start, so the BASIC 
+; loader can set them. They are:
+;
+ram0:	defb	0		;Value to write to port 7FFDh to switch the
+				;snapshot in. Normally 10h (USR0 mode) or
+				;30h (48 BASIC mode).
+
+ldradd:	defw	0		;Address to use for the 12-byte final loader.
+				;0 means "use SNA stack".
+
+filename:
+	defb	'00A:FILENAME.SNA'	;SNA file to load, 0FFh-terminated.
+	defb	0FFh
+;
+main:	push	bc	
+;
+; We're about to be copied into the top 3rd of the screen. Blank the attributes
+; so nothing is visible.
+;
+	ld	hl,5800h	;Attribute file
+	ld	a,(hl)
+	and	38h		;Paper colour
+	rrca	
+	rrca	
+	rrca			;Converted to ink colour
+	ld	e,a		;E = new ink
+	ld	a,(hl)
+	and	0F8h
+	or	e
+	ld	(hl),a
+	ld	de,5801h
+	ld	bc,639		;= 20 * 32 - 1
+	ldir
+
+	pop	hl		;HL = our load address
+	ld	de,4000h	;Where we should be
+	ld	bc,seconde-base	;Size of this program
+	ldir
+	jp	main2		;Pass control to the copy of this code
+				;in the screen.
+main2:	ld	(oldsp),sp	;Save caller stack, so we can return in 
+				;the event of error
+	call	bank7		;Switch in +3DOS
+;
+; Open the snapshot file
+;
+	ld	bc,5	;File 0, shared-read mode		
+	ld	de,0002h ;Open file, fail if not there
+	ld	hl,filename
+	call	DOS_OPEN
+	jp	nc,dos_err
+;
+; Load the registers
+;
+	ld	bc,0		;File 0, bank 0
+	ld	de,27		;Length
+	ld	hl,regs		;Address
+	call	DOS_READ
+	jp	nc,dos_err
+;
+; Load the screen
+;
+	ld	bc,7		;Load screen into bank 7
+	ld	de,1B00h	;Count to read
+	ld	hl,0C000h
+	call	DOS_READ
+	jp	nc,dos_err
+;
+; Now we have the correct screen, display it (with matching border)
+;
+	ld	bc,PORTM
+	di
+	ld	a,(BANKM)	
+	or	8		;Select shadow screen
+	ld	(BANKM),a
+	out	(c),a
+	ei
+	ld	a,(regs+26)
+	out	(254),a		;Select the appropriate border colour
+;
+; Load the 2k which, at the moment, BASIC and +3DOS are using.
+;
+	ld	bc,0
+	ld	de,800h
+	ld	hl,5000h
+	call	DOS_READ
+	jp	nc,dos_err
+;
+; Load the rest of the SNA.
+;
+	ld	bc,0
+	ld	de,9D00h
+	ld	hl,6300h
+	call	DOS_READ
+	jp	nc,dos_err
+;
+; Close the file.
+;
+	ld	b,0
+	call	DOS_CLOSE
+;
+; OK. Snapshot loaded. Shut down the drive motor.
+;
+	call	DD_L_OFF
+;
+; We're now committed to executing the snap. Firstly copy the chunk from 5000h
+; to its rightful place; once this has been done, we can't use the stack, so
+; disable interrupts.
+;
+	di
+	ld	hl,5000h
+	ld	de,5B00h
+	ld	bc,800h
+	ldir
+;
+; Memory is now correct from 5B00h up. Move our second-stage loader to DB00h
+; (remember, bank 7 is still paged in) and execute it.
+;
+	ld	hl,regs
+	ld	de,0DB00h
+	ld	bc,seconde - regs
+	ldir
+	jp	0DB00h + second - regs
+;
+; Handle a +3DOS error.
+;
+dos_err:
+	push	af		;<< 1.01 Switch back to 48 BASIC
+	call	bank0
+	pop	af		;>> 1.01
+	cp	20		;Map the +3DOS error
+	jr	nc,doser1
+	add	a,37		;to a +3BASIC error
+doser1:	add	a,24	
+	ld	(error),a
+	ld	sp,(oldsp)	;Restore SP
+	rst	8		;and return to BASIC
+error:	defb	0
+;
+; Memory paging subroutines
+;
+bank7:	ld	bc, PORTM
+	di	
+	ld	a,(BANKM)
+	res	4,a		;ROM 2
+	or	7		;RAM 7
+	ld	(BANKM),a
+	out	(c),a
+	ei
+	ret
+;
+bank0:	ld	bc, PORTM
+	di	
+	ld	a,(BANKM)
+	set	4,a		;ROM 3
+	and	0F8h		;RAM 0
+	ld	(BANKM),a
+	out	(c),a
+	ei
+	ret
+;
+; Caller stack pointer
+;
+oldsp:	defw	0
+;
+; Second-stage loader
+; Code below here will be executed at 0DB00h
+;
+; DB00: Snapshot header. See the EQUates for the meanings of the individual
+;      bytes.
+;
+regs:	defs	27	
+REG_I	equ	0DB00h
+REG_HL1	equ	0DB01h
+REG_DE1	equ	0DB03h
+REG_BC1	equ	0DB05h
+REG_AF1	equ	0DB07h
+REG_HL	equ	0DB09h
+REG_DE	equ	0DB0Bh
+REG_BC	equ	0DB0Dh
+REG_IY	equ	0DB0Fh
+REG_IX	equ	0DB11h
+REG_IFF equ	0DB13h
+REG_R	equ	0DB14h
+REG_AF	equ	0DB15h
+REG_SP	equ	0DB17h
+REG_IM	equ	0DB19h
+REG_BDR	equ	0DB1Ah
+;
+; DB1B: Final-stage loader
+; Enter with:
+; * BC = 7FFDh
+; * A  = 10h or 30h
+; * SP->value to give to AF.
+; * Interrupts disabled.
+; All other registers with their values from the SNA header.
+;
+final:	defw	0		;DB1B Is set to AF value by stage 2 loader.
+				;Entry point is here:
+	out	(c),a		;DB1D Select required memory config.
+	ld	bc,0		;DB1F Is set to BC value by stage 2 loader.
+	pop	af		;DB22 Load AF as specified.
+	ld	sp,0		;DB23 Is set to SP value by stage 2 loader.
+	nop			;DB26 Is set to EI or DI by stage 2 loader.
+	retn			;DB27 Retrieves snapshot PC.
+;
+; This is the second-stage loader. At this point the SNA has been 
+; loaded; the screen is at C000h in the current bank and the +3DOS ROM is
+; paged in.
+;
+second:	ld	hl,(ldradd)	;Address of the very last loader
+	ld	a,h		;If it's 0, then that means 'use snapshot
+	or	l		;stack'.
+	jr	nz,sec1
+				;(v1.02) <<
+	ld	hl,4000h	;If snapshot stack is above 0C000h
+	ld	a,(REG_SP + 1)	;we can't use it; use the screen instead.
+	cp	0C0h
+	jr	nc,sec1
+				;(v1.02) >>
+	ld	hl,(REG_SP)
+	ld	de,-16		;Allow 16 bytes below current SP.
+	add	hl,de
+;
+; HL -> final stage loader. Set pointers to it in this stage.
+;
+sec1:	ld	(0DB00h + sfinal+1 - regs),hl	;Setting SP
+	ld	(0DB00h + dfinal+1 - regs),hl	;Setting DE
+	inc	hl				;Entry point is 2 bytes 
+	inc	hl				;after base
+	ld	(0DB00h + jfinal+1 - regs),hl	;Jumping to it
+	ld	a,(ram0)			;Memory bank to use
+	ld	(0DB00h + rfinal+1 - regs),a	
+;
+; At this point we have retrieved all settings from the first stage 
+; at 4000h and no longer need it. 
+;
+; Populate the final stage loader with the correct values for AF, BC, SP
+; and DI/EI.
+;
+	ld	a,(REG_IFF)	;Interrupts on?
+	and	4
+	ld	a,0F3h		;DI
+	jr	z,sec2
+	ld	a,0FBh		;EI
+sec2:	ld	(0DB26h),a	;Stored interrupt state
+	ld	hl,(REG_BC)
+	ld	(0DB20h),hl	;Stored BC
+	ld	hl,(REG_SP)
+	ld	(0DB24h),hl	;Stored SP
+	ld	hl,(REG_AF)
+	ld	(0DB1Bh),hl	;Stored AF
+;
+; Copy the snapshot video RAM over the first stage loader.
+;
+	ld	hl,0C000h
+	ld	de,4000h
+	ld	bc,1B00h
+	ldir
+;
+; Spectrum memory is now completely populated. Install the final stage loader.
+;
+	ld	hl,0DB1Bh
+dfinal:	ld	de,0
+	ld	bc,second - final
+	ldir
+;
+; Load the registers from the SNA header. Do this by pointing SP at HL' and
+; popping them off.
+;
+	ld	sp,REG_HL1
+	pop	hl
+	pop	de
+	pop	bc
+	pop	af
+	ex	af,af'
+	exx			;Alternates done
+	pop	hl
+	pop	de
+	pop	bc		;BC will be done later, so it's spare right now.
+	pop	iy
+	pop	ix
+	pop	bc		;I and R; ignore.
+sfinal:	ld	sp,0		;Point SP at our saved AF
+	ld	a,(REG_IM)	;Retrieve interrupt mode.
+	or	a
+	jr	nz,notim0
+	im	0
+	jr	gotim
+notim0:	dec	a
+	jr	nz,notim1
+	im	1
+	jr	gotim
+notim1:	im	2
+gotim:	ld	a,(REG_I)	;Retrieve I and R
+	ld	i,a
+	ld	a,(REG_R)
+	ld	r,a
+;
+; OK. By now all registers are ready except BC, AF and SP; they will be
+; handled by the final-stage loader.
+;
+	ld	bc,PORTM
+rfinal:	ld	a,0		;Set to correct memory bank.
+jfinal:	jp	0		;Jump to final stage.
+
+seconde:
+
+	end

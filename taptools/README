@@ -1,0 +1,421 @@
+TAP utilities 1.1.0 (John Elliott, 23 August 2014)
+==================================================
+
+What's new
+~~~~~~~~~~
+
+* Since taptools 1.0.x, these utilities have been thoroughly rewritten, 
+some from scratch. Some option names have changed, with the old syntax no
+longer applying.
+
+* As well as Spectrum files, the utilities now support the cassette format 
+used by ROM BASIC on the IBM 5150 (the original PC).
+
+* New utilities: mkmgtfs and mkibmtap.
+
+About the utilities
+~~~~~~~~~~~~~~~~~~~
+
+  General note: Most of these programs operate on files in the .TAP format. 
+Those that do also support the following other formats:
+
+* .ZXT, which is a .TAP file with a +3DOS header, used by TAPROM on the +3.
+* Conventional blocks in a .TZX file
+* Conventional blocks in a .PZX file
+
+  When compiling this software, it helps to have LibDsk 
+<http://www.seasip.demon.co.uk/Unix/LibDsk/> installed. Otherwise those
+programs which output disk images (tap2dsk, sna2dsk and mkp3fs) will be 
+severely restricted in their output capabilities, and dsk2tap won't work at 
+all.
+
+  Programs in this archive are:
+
+specform
+--------
+  specform adds a +3DOS header to one or more files, or corrects the checksum 
+in an existing +3DOS header.
+
+  Syntax is: specform { -F } { -a addr } <file> <file> ...
+
+  If the -F option is not present, a +3DOS header will be added to each file
+(even those that have one already) and the result saved as a file with the 
+same name, but ending in .zxb.
+  If the -a option is present, the load address specified will be used in
+the +3DOS header added to each file. Otherwise, a load address of 0 will be
+used.
+  If the -F option is present, each file must be a +3DOS file. The header
+checksum will be recalculated and saved back to the same file.
+
+unspecform   (unspecfm in DOS)
+----------
+
+  unspecform removes the +3DOS header from a single file. It also removes 
+any bytes beyond the end of the file (usually caused by the process of copying
++3DOS files from CP/M media).
+
+  Syntax is: unspecform { input { output }}
+
+  If the input and output filenames aren't specified, standard input and 
+output are used. 
+
+
+bin2bas
+-------
+
+  bin2bas converts wraps a binary file (with or without a +3DOS header) in
+a BASIC program consisting of two lines. The first line is a REM statement
+containing the binary file, and the second is a BASIC USR command to execute
+the code in the REM:
+
+	LET x = USR(5 + PEEK 23635 + 256 * PEEK 23636)
+
+  Your binary file should therefore begin with Z80 code. This should be 
+position-independent, and follow the usual Spectrum BASIC calling conventions:
+
+* At entry, BC holds the load address.
+* If it returns, x will contain the value in BC.
+* If you want ROM code to run, observe normal precautions with IY and HL'.
+  
+Syntax is: bin2bas { -options } input { output }
+
+  If no output filename is present, stdout will be used. The options are:
+
+   -ftap=filename: Output the BASIC as a .TAP file containing the named program.
+   -fzxt=filename: Output the BASIC as a .ZXT file containing the named program.
+   -ftzx=filename: Output the BASIC as a .TZX file containing the named program.
+   -fpzx=filename: Output the BASIC as a .PZX file containing the named program.
+   -p3:            Output the BASIC as a +3DOS file (default)
+
+tapcat
+------
+
+  tapcat creates a .TAP file from one or more files (either +3DOS or raw). 
+         It can also append to an existing .TAP file.
+
+  Syntax is: tapcat {options} <tapfile> {options} <file> {{options} <file>...}
+
+  The first set of options control the output file format:
+
+   -N:    If a file exists, overwrite it rather than appending to it.
+   -ftap: If a new file is to be created, use the .TAP format (default)
+   -fpzx: If a new file is to be created, use the .PZX format
+   -ftzx: If a new file is to be created, use the .TZX format
+   -fzxt: If a new file is to be created, use the .ZXT format
+
+  Options before a filename give the type of that file. They are only used
+if the file does not have a +3DOS header; if it does, the file type and load
+address will be determined from the header.
+
+   -b      File is BASIC
+   -bLLLL  File is BASIC with autostart line LLLL
+   -c      File is character array
+   -cC     File is character array C$()
+   -d      File is headerless block
+   -m      File is memory block                          (default)
+   -mAAAA  File is memory block with load address AAAA
+   -u      File is number array
+   -uC     File is number array C()
+    
+
+mkibmtap
+--------
+
+  mkibmtap does the same thing as tapcat, for a tape in IBM 5150 format.
+
+  Syntax is: mkibmtap {options} <tapfile> {options} <file> {{options} <file>...}
+
+  The first set of options control the output file format:
+
+   -N:     If a file exists, overwrite it rather than appending to it.
+   -ftzxi: If a new file is to be created, use the .TZX format (default)
+   -fpzxi: If a new file is to be created, use the .PZX format
+   -ftzx:  Use the .TZX format with Spectrum timings rather than IBM
+   -fpzx:  Use the .PZX format with Spectrum timings rather than IBM
+   -ftap:  Use the .TAP format (Spectrum timings assumed)
+   -fzxt:  Use the .ZXT format (Spectrum timings assumed)
+
+  The IBM 5150 cassette routine is forgiving enough that it seems to have
+no difficulty reading files written with Spectrum timings rather than its own.
+
+  Options before a filename give the type of that file. They are only used
+if the file does not have a +3DOS header; if it does, the file type and load
+address will be determined from the header.
+
+   -a          File is a BASIC program in ASCII
+   -b          File is tokenised BASIC
+   -d          File is an ASCII data file (to be opened with OPEN "I")
+   -m          File is a memory block (to be loaded with BLOAD)
+   -mSSSS:OOOO File is a memory block, load address is SSSS:OOOO
+   -p          File is protected tokenised BASIC
+
+tapget
+------
+
+   tapget extracts one or more files from a .TAP file. 
+
+Syntax is: tapget <tapfile> <file> <file> ...
+
+   The filenames passed can include '*' and '?' as wildcards. Each specified
+file will be saved in +3DOS format (if a Spectrum file) or as raw data (if an
+IBM 5150 file). Note that tapget can't extract headerless blocks.
+
+tapls
+-----
+
+  tapls lists the contents of one or more .TAP files.
+
+Syntax is: tapls { options } <tapfile> <tapfile> ...
+
+  The options control how the output is formatted: 
+
+   -3   List in +3DOS CAT "T:" style
+   -l   List in UNIX ls -l style
+   -v   Show TZX / PZX control blocks.
+
+  If no options are present, a simple list of names is displayed:
+
+astroclone
+loader    
+pic       
+[Headerless]
+
+  -3 produces a listing similar to the +3DOS 'CAT "T:"' command:
+
+Program: astroclone LINE 0 
+Bytes: loader     CODE 24500,100
+Bytes: pic        CODE 50000,7000
+Headerless block: Type=255 length=40536
+
+  -l produces a listing similar to the UNIX 'ls -l' command:
+
+-r--r--r-- BASIC     190 astroclone
+-r--r--r-- Bytes     100 loader    
+-r--r--r-- Bytes    7000 pic       
+-r--r--r-- [0xff]  40536 (Headerless block)
+
+tapsplit
+--------
+ 
+  tapsplit explodes an entire .TAP file into its component parts, including
+any headerless blocks. 
+
+Syntax is: tapsplit <tapfile> { <output-dir> }
+
+  If no output directory is supplied, the current directory will be used.
+
+  Each file in the .TAP will be written to the chosen output directory. If its 
+name collides with an existing file, ".1" will be appended and the process 
+repeated.
+
+sna2tap
+-------
+
+  sna2tap converts a Spectrum snapshot in the .SNA format to a .TAP file that
+can be loaded on a 48k Spectrum.
+
+Syntax is: sna2tap {options} { input-file { output-file } }
+
+  Options are:
+
+--base=addr: sna2tap overwrites 62-65 bytes of the snapshot with its 
+            final-stage loader code. By default this is placed just below the
+            bottom of the Z80 stack. Some games, particularly those which 
+            use the stack for copying memory to and fro, may be corrupted by
+            this; if so, you need to find somewhere else to put this code. In
+            some cases the video RAM may be suitable; in others, you would 
+            have to find a free space in the snapshot, perhaps using a hex 
+            editor.
+             The address can be specified in decimal or (if preceded by "0x") 
+            hex. So --base=16384 or --base=0x4000 are equivalent.
+
+--name=name: The name to give the BASIC loader (by default, "SNAPSHOT")
+--ftap:      Output in .TAP format (default)
+--ftzx:      Output in .TZX format
+--fpzx:      Output in .PZX format
+--fzxt:      Output in .ZXT format
+
+  If the input and output filenames aren't specified, standard input and 
+output are used. 
+
+  To reverse the process, run tapsplit on the generated .TAP file. It will 
+save the snapshot as "Block1.sna".
+
+  (Technical note: tapls, tapsplit and tap2dsk assume that any block of type 
+  0x53 ('S') and length 49179 bytes is a .SNA-format snapshot, and display it 
+  accordingly.)
+
+tap2dsk / mkp3fs
+----------------
+
+  tap2dsk and mkp3fs are both programs that generate a new +3DOS-format disc
+image. mkp3fs creates a disc image and injects one or more files into it, 
+while tap2dsk transfers the contents of a .TAP file into the new disc image.
+
+  Don't pass the name of an existing disc image to either program, unless 
+you want it overwritten without warning.
+
+Syntax is: 
+	mkp3fs  { options } dskfile filename filename ...
+	tap2dsk { options } tapfile dskfile
+
+  Both programs take the same options:
+
+-180:               Generate a 180k disc image.
+-720:               Generate a 720k disc image.
+-cpmonly:	    Omit the FAT12 directory, FAT and boot sector (see below)
+-dosonly:           Make the disc fully FAT12 (see below)
+-nostamps:          Do not include file time stamps. You may want to use this
+                    if you are writing headerless files to a 720k disc image,
+                    because +3DOS appears to have difficulty reading 
+		    headerless files in this situation.
+-label <labelname>: The CP/M disc label. If none is specified, tap2dsk will 
+		    use the name of the TAP file and mkp3fs won't create a 
+		    label. If -nostamps is present, the label will not be 
+                    written either.
+-type <type>        The LibDsk type of the file to write (eg, dsk/edsk for a 
+                    disc image, floppy for a real drive). If LibDsk wasn't
+                    present at compile time, this option is ignored.
+-compress <type>    The LibDsk compression method with which the new file 
+                    should be compresssed. Again, if LibDsk wasn't around this
+		    option is ignored.
+
+Disc compatibility
+~~~~~~~~~~~~~~~~~~
+  By default, the disc images written by tap2dsk are readable not only as
+CP/M discs under +3DOS, but also as FAT12 discs under Windows 9x, Linux and 
+DOS. They are not, however, readable on Windows NT/2000/XP/Vista. Even under
+those systems that can read them, there are a couple of caveats:
+
+* If you've got Windows 95/98/ME, run the included DUALDOS.REG registry script
+ to stop Windows' volume tracker scribbling on the boot sector.
+
+* Changes made to the +3DOS directory won't update the PCDOS directory or 
+ vice versa, so don't rely on this feature after writing to the disc.
+
+Two options are supplied to control this feature:
+
+-cpmonly  leaves out the DOS directory, FAT and boot sector. The disc will 
+          still work as a CP/M disc under +3DOS, but not as a FAT12 disc under
+          anything else.
+
+-dosonly  writes a fully DOS-compatible boot sector. The disc will work 
+          fine as a FAT12 disc under Windows NT/2000/XP/Vista, and won't 
+          require the registry script to be run under Windows 95/98/ME, but
+          it won't be usable on the +3.
+
+  If both options are supplied, -cpmonly takes priority.
+
+
+mkmgtfs
+-------
+
+  mkmgtfs is an analogue of mkp3fs, for MGT-format discs (Disciple / +D).
+
+  As with mkp3fs, don't pass the name of an existing disc image to mkmgtfs
+unless you want it overwritten without warning.
+
+Syntax is: 
+	mkmgtfs  { options } dskfile filename filename ...
+
+  Options are:
+
+-label <labelname>: The disc label. 
+-type <type>        The LibDsk type of the file to write (eg, dsk/edsk for a 
+                    disc image, floppy for a real drive). If LibDsk wasn't
+                    present at compile time, this option is ignored.
+-compress <type>    The LibDsk compression method with which the new file 
+                    should be compresssed. Again, if LibDsk wasn't around this
+		    option is ignored.
+
+
+sna2dsk
+-------
+
+  sna2dsk takes a 48k .SNA-format snapshot and generates a +3DOS-format disc 
+image that, run on a real Spectrum +3, ought to load that snapshot. Don't 
+pass the name of an existing disc image to the program, unless you want it 
+overwritten without warning.
+
+Syntax is: 
+	sna2dsk { options } snafile dskfile {custom-rom-file}
+
+  If a custom ROM file is specified, the snapshot will be run in the 4-5-6-3
+memory environment, with the specified ROM file in the bottom 16k.
+
+-base addr:  sna2dsk overwrites 14 bytes of the snapshot with its
+            final-stage loader code. By default this is placed just below the
+            bottom of the Z80 stack. Some games, particularly those which 
+            use the stack for copying memory to and fro, may be corrupted by
+            this; if so, you need to find somewhere else to put this code. In
+            some cases the video RAM may be suitable; in others, you would 
+            have to find a free space in the snapshot, perhaps using a hex 
+            editor.
+             The address can be specified in decimal or (if preceded by "0x") 
+            hex. So --base=16384 or --base=0x4000 are equivalent.
+
+The following options only apply if a custom ROM file is _not_ in use:
+
+-usr0:		    The resulting disc image will run the snapshot in USR0 
+                    mode, with memory paging hardware enabled. This is the 
+                    default. 
+
+-48basic:	    The resulting disc image will run the snapshot in 48 BASIC
+                    mode, with memory paging hardware disabled. 
+
+The following options only apply if a custom ROM file _is_ in use:
+
+-pause:             After loading all data but before launching the game, 
+                    pause briefly. This was intended for Multiface 3 users,
+                    so they could activate the Multiface before the Spectrum
+                    switched to all-RAM mode, in which the Multiface can't
+                    be used.
+
+-noscreen:	    Leave the screen untouched when loading. This is intended
+		    for users who want to edit the BASIC loader to add a
+                    custom loading screen.
+
+  The options from mkp3fs / tap2dsk are also supported:
+
+-180:               Generate a 180k disc image.
+-720:               Generate a 720k disc image.
+-cpmonly:	    Omit the FAT12 directory, FAT and boot sector (see below)
+-dosonly:           Make the disc fully FAT12 (see below)
+-nostamps:          Do not include file time stamps. You will want to use this
+                    if you are writing to a 720k disc image, because +3DOS 
+                    appears to have difficulty reading headerless files (such
+                    as .SNA snapshots) in this situation.
+-label <labelname>: The CP/M disc label. 
+-type <type>        The LibDsk type of the file to write (eg, dsk/edsk for a 
+                    disc image, floppy for a real drive). If LibDsk wasn't
+                    present at compile time, this option is ignored.
+-compress <type>    The LibDsk compression method with which the new file 
+                    should be compresssed. Again, if LibDsk wasn't around this
+		    option is ignored.
+
+dsk2tap
+-------
+
+  dsk2tap takes a .DSK image, and creates a .TAP file which, when run on a 
+Spectrum +3, writes the contents of that image out to disc. It depends 
+heavily on LibDsk and will not work without it.
+
+Syntax is: 
+      ./dsk2tap {options} dskfile tapfile
+
+Options are:
+-type <type>    The LibDsk type of the input disc image (default is to 
+                autodetect).
+-side <side>    Force side 0 or side 1 of input
+-retry <count>  Set number of retries on error
+-dstep          Double-step when reading
+-stubborn       Ignore any read errors
+-ftap           Output in .TAP format
+-fpzx           Output in .PZX format
+-ftzx           Output in .TZX format
+-fzxt           Output in .ZXT format
+-format         Force a specified LibDsk disc format (default is to 
+                autodetect).
+
+  The copy is simplistic; it only works on unprotected discs, and makes no 
+attempt to replicate the original sector order.

@@ -1,0 +1,71 @@
+ROMSNA v2.00                                        John Elliott, 10 June 2005
+==============================================================================
+
+  ROMSNA is a Spectrum +3-only program which loads a 64k environment from a
+snapshot (.SNA) file and a ROM image file. In other words, it loads a .SNA with
+a custom ROM file instead of the standard ROM.
+
+  Some applications are:
+- To load games such as Bombjack or Knight-Tyme 48k which aren't compatible
+ with Amstrad's standard 48k BASIC ROM;
+- To use programs with an altered ROM (eg a different font, or one with all
+ the bugs fixed);
+- To use programs with a POKEable ROM;
+- To play games originally distributed on ROM cartridge; in this case, a blank
+ .SNA consisting of 49179 zero bytes would be used.
+- To play "Shadow of the Unicorn" or similar games which included a ROM
+ cartridge.
+
+  As supplied, ROMSNA is interactive; you input the name of the SNA file to 
+load and a couple of other parameters, and it loads and runs it. If you want 
+to change it to load a given snapshot file, then edit the BASIC loader (DISK) 
+and replace the INPUT statements with LET statements.
+
+  The four questions you are asked are:
+
+* SNA file to load> 
+
+   - This one is fairly straightforward.
+
+* ROM file to load> 
+
+   - A 16k ROM image; it can have a +3DOS header, or not, as you please.
+
+* Loader address>
+
+   - ROMSNA needs to overwrite 14 bytes of the SNA file between 16384 and
+    32767 for its final stage loader. If you just press ENTER at this prompt, 
+    ROMSNA will use the bytes just before the stack pointer of the SNA file
+    (if they're in the right range) or the first 14 bytes of screen memory.
+    If this causes your SNA file to crash, or you know that there's free 
+    space elsewhere in the file, you can enter a different number here.
+
+* Pause after load (y/N)>
+
+    It is not possible to save snapshots with a Multiface 3 while the memory is
+  set to all RAM. If "Pause after load" is selected, the program will pause for
+  a few seconds after loading the data and before starting the snapshot. During
+  the pause, the border will show multicoloured stripes; the Multiface will be
+  able to save a snapshot at this point. If you want to have a loading screen
+  which will be saved with the snapshot, insert the command to load it just
+  before the USR line:
+
+    235 LOAD "screen" SCREEN$
+
+    Note that the value poked into 32806 (lines 220, 230) can be:
+
+    0: Display the SNA screen as a loading screen; don't pause
+    1: Display the SNA screen as a loading screen; do pause
+    2: Leave whatever was on screen already as a loading screen; don't pause
+    3: Leave whatever was on screen already as a loading screen; do pause
+
+                                 - * -
+
+  ROMSNA loads the ROM image and the snapshot into the 4-5-6-3 memory
+layout. This means:
+
+1. The tape routines in a standard ROM image will not work;
+2. Sound routines which use ROM code or which are loaded between 32768 and
+  49151 will be slowed down.
+3. The Multiface will not respond to button-pressing.
+

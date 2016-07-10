@@ -1,0 +1,114 @@
+.\" -*- nroff -*-
+.\"
+.\" psfs2cpi.1: psfs2cpi man page
+.\" Copyright (c) 2005, 2007 John Elliott
+.\"
+.\"
+.\"
+.\" psftools: Manipulate console fonts in the .PSF format
+.\" Copyright (C) 2005, 2007  John Elliott
+.\"
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2 of the License, or
+.\" (at your option) any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program; if not, write to the Free Software
+.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+.\"
+.TH psfs2cpi 1 "11 April, 2008" "Version 1.0.7" "PSF Tools"
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH NAME
+psfs2cpi - Construct a .CPI codepage from one or more PSF files
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH SYNOPSIS
+.PD 0
+.B psfs2cpi
+.RI [ "--device=DEV" ]
+.RI [ "--comment=TEXT" ]
+.RI [ "--drfont" ]
+.RI [ "--nt" ]
+[ +CODEPAGE | +CODEPAGE=CPNAME ]
+INPUTFILE
+.RI [ "INPUTFILE ..." ]
+.RI [ "+CODEPAGE INPUTFILE"
+.RI [ "INPUTFILE ..." ]]
+OUTPUTFILE
+.P
+.PD 1
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH DESCRIPTION
+.LP
+psfs2cpi combines one or more PSF files into a CPI file. 
+.LP
+When run, it takes a list of codepage numbers. Each number should then be
+followed by the names of one or more PSF files, from which the character
+shapes should be obtained. For example, the command:
+.LP
+psfs2cpi +437 eg8.psf eg16.psf +850 eg8.psf eg16.psf +860 eg8.psf eg16.psf 
++863 eh8.psf eh16.psf eg.cpi
+.LP
+will generate a CPI file called eg.cpi, containing codepages 
+437, 850, 860 and 863 in two sizes. The first three codepages will have
+been based on eg8.psf and eg16.psf; the last on eh8.psf and eh16.psf.
+.LP 
+A codepage number can be followed by a directive saying which mapping table will
+actually be used. For example, if the start of the above command had read:
+.LP
+psfs2cpi +437=PPC437 ...
+.LP
+then codepage 437 would have been generated using the slightly different PPC437
+mapping.
+.LP
+If the PSF files in question have Unicode directories, and the codepage
+is one of the ones known to psfs2cpi, then the appropriate glyphs will be
+extracted from the file; this is how three code pages can be based on a
+single PSF file. If the codepage number is not known, or the PSF file has
+no Unicode directory, then the first 256 characters of the PSF file
+will be used.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH OPTIONS
+.TP
+.B --device=devname
+Sets the device name to store in the codepage file. This defaults to "EGA";
+if you are generating a codepage file for the IBM Convertible, it should be
+set to "LCD".
+.TP
+.B --comment=comment
+Sets a comment which will be added to the end of the CPI file, such as a 
+copyright message.
+.TP
+.B --drfont
+Outputs in the compressed format used by DRDOS.
+.TP
+.B --nt
+Outputs in the FONT.NT format used by Windows NT.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.\".SH BUGS
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH SEE ALSO
+cpi2psf(1), cpicomp(1), cpidcomp(1)
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH AUTHOR
+John Elliott <jce@seasip.demon.co.uk>.
+.PP

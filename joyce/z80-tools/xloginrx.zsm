@@ -1,0 +1,283 @@
+;
+;   XLOGIN: Allow automatic login of extra disc formats under PCW CP/M [RSX version]
+;   Copyright (C) 1998, John Elliott <jce@seasip.demon.co.uk>
+;
+;    This program is free software; you can redistribute it and/or modify 
+;    it under the terms of the GNU General Public License as published by
+;    the Free Software Foundation; either version 2 of the License, or
+;    (at your option) any later version.
+;
+;    This program is distributed in the hope that it will be useful,
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;    GNU General Public License for more details.
+;
+;    You should have received a copy of the GNU General Public License
+;    along with this program; if not, write to the Free Software
+;    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+	include	org.inc
+
+RSXTOP:	DEFS	6
+ICEPT:	JP	RSXEMS
+FDOS:	JP	0006H
+	DEFW	7
+DELFLG:	DEFB	0,0
+RNAME:	DEFB	'XLOGIN  '
+	DEFB	0,0,0
+;
+;Addresses in the Amstrad XBIOS jumpblock
+;
+DDRDSEC	EQU	0086h	;Read a sector
+DDLOGIN	EQU	0092h	;Log in a disc
+DDSELFM	EQU	0095h	;Select standard format
+DDXDPB	EQU	00A1h	;Generate XDPB from disc spec
+;
+;Philosophy: Capture a call to DD_LOGIN, and if it fails, attach our own processing.
+;           This works on the assumption that normal discs are going to be read more
+;           frequently than the PCW16 extended format that XLOGIN detects. 
+;            If the reverse is true, just swap the "OLOGIN" and "NLOGIN" references
+;           in the lines marked [*] below.
+;
+;           DD_LOGIN takes C and IX as parameters, returns values in AF, and can corrupt
+;                    BC,DE,HL. 
+;           All the other DD_ calls here preserve IX, so we only have to bother with
+;                    preserving C.                    
+;
+DFLAG:	DEFB	0
+
+OLOGIN:	JP	0
+
+XLOGIN:	CALL	OLOGIN		;[*] Swap these lines to give our code priority over
+	CALL	NC,NLOGIN	;[*] the native login code.
+	RET
+;
+DLOGIN:	CALL	OLOGIN		; Double-track login code: Force discs to double-track.
+	JR	C,DLOGOK	; This improves support for 180k type formats
+	CALL	NLOGIN		; in 3.5" drives (including JOYCE's emulations thereof).
+	RET	NC
+DLOGOK:	SET	7,(IX+17)
+	SCF
+	RET
+;
+NLOGIN:	XOR	A
+	CALL	DDSELFM	;Attempt to select format 0. Does not affect C.
+	RET	NC
+	PUSH	BC
+	LD	DE,0		;Track 0 sector 0
+	LD	B,D		;Bank 0
+	LD	HL,RSXEMS	;Buffer address in bank 0.
+	CALL	DDRDSEC		;Read sector. Can corrupt C, hence the POP below
+	POP	BC
+	RET	NC
+;
+;Is the sector one of them there extended PCW16 ones?
+;
+	LD	A,(RSXEMS)
+	CP	0EBh		;DOS format, must start EB ...  or E9 ...
+	JR	Z,MAYBE
+	CP	0E9h
+	JR	Z,MAYBE
+BADFMT:	XOR	A		;Return a "bad format" error
+	LD	A,6
+	RET
+;
+MAYBE:	LD	HL,RSXEMS+2Bh	;"Label" must read CP/M????DSK
+	LD	DE,TESTID
+	LD	B,11
+	CALL	CP$
+	JR	NZ,BADFMT
+	LD	HL,RSXEMS+7Ch	;Disc spec must read "CP/M<spec>"
+	LD	DE,TESTID
+	LD	B,4
+	CALL	CP$
+	JR	NZ,BADFMT
+	LD	HL,RSXEMS+80h	;Got a disc spec. Hand off to DD_XDPB to find out 
+				;if it's suitable.
+	JP	DDXDPB		;Construct the XDPB from it. 
+;
+;Compare two strings of bytes. The one at DE can have ? marks in it.
+;
+CP$:	LD	A,(DE)
+	CP	'?'
+	JR	Z,CPS1	;'?' matches everything
+	CP	(HL)
+	RET	NZ
+CPS1:	INC	HL
+	INC	DE
+	DJNZ	CP$
+	XOR	A
+	RET
+;
+;Template for a valid disc label
+;
+TESTID:	DEFB	'CP/M????DSK'
+;
+;Termination code
+;
+;Check for BDOS function 3C/7E, 3C/7F and 3C/76.
+;
+;Note: the subfunction numbers are pretty arbitrary; I have used the same 
+;     subfunction numbers for similar purposes in other RSX-type programs.
+;
+NICEPT:	LD	A,C
+	CP	3CH
+	JP	NZ,FDOS
+	LD	A,(DE)
+	CP	76h		;76h: Installation check
+NOPME:	JR	Z,HANDLE	;     If the RSX disables itself, the JR instruction
+				;     will be NOPped out.
+	CP	7Fh		;7Fh: Terminate all XLOGIN RSXs
+	JR	Z,HANDLE
+	CP	7Eh		;7Eh: Terminate only this XLOGIN RSX
+	JP	NZ,FDOS
+HANDLE:	PUSH	DE
+	INC	DE
+	LD	A,(DE)		;Must have 1 parameter
+	DEC	A
+	JR	NZ,DFDOS
+	INC	DE
+	EX	DE,HL		;Parameter must be the RSX name
+	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)
+	LD	HL,RNAME	;Does the RSX name match
+	EX	DE,HL		;Swap, just in case the caller put wildcards in
+	LD	B,8		;the RSX name parameter
+	CALL	CP$
+	JR	NZ,DFDOS
+;
+; "Delete RSX" call received.
+;
+	POP	DE
+	LD	A,(DE)
+	CP	76h		;76h: Installation check. Return zero.
+	JR	Z,RETZERO
+	LD	HL,0		;Disable the check for 76h.
+	LD	(NOPME),HL
+	LD	A,0FFh		;Mark this RSX down for deletion.
+	LD	(DELFLG),A
+	CALL	UICODE		;Disable this RSX.
+	LD	A,(DE)
+	CP	7Fh
+	JP	Z,FDOS		;7Fh: Pass "delete" call on to higher RSXs, if any
+RETZERO:
+	LD	HL,0
+	LD	B,H
+	LD	A,L		;7Eh: Do not pass "delete" call on to higher RSXs.
+	RET
+;
+DFDOS:	POP	DE
+	JP	FDOS
+;
+;
+UICODE:	PUSH	BC			;Code to uninstall this RSX
+	PUSH	DE
+	LD	HL,(OLOGIN+1)
+	LD	A,H
+	OR	L
+	JR	Z,NOTINS		;Patch was never installed
+	CALL	USERF
+	DEFW	UPATCH			;Remove the patch
+	LD	HL,0
+NOTINS:	LD	A,L			;Return BA=HL=0
+	LD	B,H
+	POP	DE
+	POP	HL
+	RET
+;
+UPATCH:	LD	HL,OLOGIN		;Restore the original DD_LOGIN code.
+	LD	DE,DDLOGIN		;(this code is executed in bank 0)
+	LD	BC,3
+	LDIR
+	RET
+;
+USERF:	LD	HL,(1)
+	LD	DE,57h
+	ADD	HL,DE
+	JP	(HL)
+;
+;Everything after this point gets used for the sector buffer once RSXEMS finishes.
+;
+RSXEMS:	PUSH	DE
+	PUSH	BC
+;
+;0. See if XLOGIN is already loaded higher up the chain.
+;
+	LD	C,3Ch
+	LD	DE,RSXPB
+	CALL	FDOS		;Installation check.
+	LD	A,H
+	OR	L
+	JR	NZ,ONLYRSX
+	LD	A,0FFh		;Mark this RSX down for deletion.
+	LD	(DELFLG),A
+	LD	HL,0		;Stop the RSX responding to the installation check.
+	LD	(NOPME),HL
+	JP	RSILENT
+
+ONLYRSX:
+;
+;1. See if we are in common memory.
+;
+	LD	DE,SCBPB
+	LD	C,31H
+	CALL	FDOS		;Returns HL=common base.
+	LD	DE,RSXTOP
+	SBC	HL,DE		;Carry set if OK.
+	JR	C,RSXEMS2
+	LD	DE,ERR$
+	XOR	A
+	DEC	A
+	LD	(DELFLG),A
+RPRINT:	LD	C,9
+	CALL	FDOS
+RSILENT:
+	LD	HL,NICEPT
+	LD	(ICEPT+1),HL
+	POP	BC
+	POP	DE
+	JP	NICEPT
+;
+RSXEMS2:
+	CALL	USERF		;Apply the patch
+	DEFW	PATCHME
+	JR	RSILENT
+;
+PATCHME:
+	LD	HL,DDLOGIN	;Save jump to previous DD_LOGIN. At least, it had
+	LD	DE,OLOGIN	;just better be a jump and not a JR!
+	LD	BC,3
+	LDIR
+	LD	A,0C3h		;Insert a jump to us in DD_LOGIN.
+	LD	(DDLOGIN),A
+	LD	HL,XLOGIN
+	LD	(DDLOGIN+1),HL
+
+	LD	A,(DFLAG)
+	OR	A
+	RET	Z
+	LD	HL,DLOGIN
+	LD	(DDLOGIN+1),HL	;3.5" special login code
+	RET
+;
+ERR$:	DEFB	'XLOGIN.RSX v'
+	include	version.inc
+	DEFB	' error: Out of memory.',13,10,'$'
+;
+SCBPB:	DEFW	005Dh		;Base of common memory
+RSXPB:	DEFB	76h,1		;Installation check
+	DEFW	RNAME
+
+	DEFB	'XLOGIN v'
+	include	version.inc
+	DEFB	' RSX',13,10
+	DEFB	'Copyright 2000, John Elliott',13,10
+	DEFB	'Copying policy: GNU GPL v2 or later',13,10
+	DEFB	'$'
+
+	DEFS	RSXEMS+512-$
+EPRG:
+
+	END
+

@@ -1,0 +1,23 @@
+/* XPM */
+static char * list_xpm[] = {
+"16 16 4 1",
+" 	c none",
+".	c #000000000000",
+"X	c #00000000FFFF",
+"o	c #FFFFFFFFFFFF",
+"                ",
+" .............. ",
+" .XXXXXXXXXXXX. ",
+" .oooooooooooo. ",
+" .o...oooooooo. ",
+" .o.o..ooooooo. ",
+" .o.oo.o.....o. ",
+" .o....ooooooo. ",
+" .oooooooooooo. ",
+" .o...oooooooo. ",
+" .o.oo.ooooooo. ",
+" .o.oo.o.....o. ",
+" .o....ooooooo. ",
+" .oooooooooooo. ",
+" .............. ",
+"                "};

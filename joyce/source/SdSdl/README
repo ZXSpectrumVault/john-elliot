@@ -1,0 +1,15 @@
+SDSDL
+=====
+  	 Copyright 2005, John Elliott
+         Copyright 1999, Caldera Thin Clients, Inc.
+         This software is licenced under the GNU Public License.
+         Please see LICENSE.TXT for further information.
+
+  SDSDL is a graphics output library written in C++, based on the GPLed 
+video driver source code of Digital Research's GEM. It uses SDL 
+<http://www.libsdl.org/> as a backend; the assembly language portions have
+been rewritten in C++.
+
+  The current incarnation of SDSDL is incomplete. The only implemented 
+functions are those necessary to support those functions present in GSX.
+

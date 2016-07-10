@@ -1,0 +1,72 @@
+.\" -*- nroff -*-
+.\"
+.\" cpicomp.1: cpicomp man page
+.\" Copyright (c) 2005, 2007 John Elliott
+.\"
+.\"
+.\"
+.\" psftools: Manipulate console fonts in the .PSF format
+.\" Copyright (C) 2005, 2007  John Elliott
+.\"
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2 of the License, or
+.\" (at your option) any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program; if not, write to the Free Software
+.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+.\"
+.TH cpicomp 1 "11 April, 2008" "Version 1.0.7" "PSF Tools"
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH NAME
+cpicomp - compress a CPI codepage by converting it to DRFONT format
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH SYNOPSIS
+.PD 0
+.B cpicomp
+.RI [ --nointer ]
+.RI [ INPUTFILE 
+.RI [ OUTPUTFILE ]]
+.P
+.PD 1
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH DESCRIPTION
+cpicomp converts codepage from the wasteful FONT or FONT.NT format
+to the more efficient DRFONT format.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH OPTIONS
+.B --nointer
+Normally CPI files are saved interleaved, with the data for each 
+codepage following immediately after the header. With this option,
+all the headers are saved followed by all the data. It is particularly
+inadvisable to use this option on a DRFONT file, because the resulting 
+font will not be handled correctly by the DRDOS MODE command.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.\".SH BUGS
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH SEE ALSO
+cpidcomp(1)
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH AUTHOR
+John Elliott <jce@seasip.demon.co.uk>.
+.PP

@@ -1,0 +1,22 @@
+This directory gives examples of how a font held in a set of 'master' PSF files
+can be used to generate character sets for a variety of different systems. The
+"mkfonts" script currently generates the following file types:
+
+* The "master" PSF files, from TXT files.
+* DOS codepage (CPI) files. In fact it builds codepages in three formats -
+ normal, DRDOS, and Windows NT.
+* PSF1 files for use as PC-GEM system fonts. PSF1 is used since the font editor
+ I wrote for PC-GEM uses this file format.
+* ROM dumps for Amstrad PC1512 and PPC512 computers.
+* Raw binary font for CP/M on an Amstrad PCW.
+* .TAP for Spectrums.
+
+  More could doubtless be added, such as X11 and Windows.
+
+  The sample PSF files are based on the fonts in the GPLed release of GEM;
+so for jurisdictions where bitmap fonts can be copyrighted, these fonts 
+are released under the terms of the GPL.
+
+  To run mkfonts, pass the base name(s) of the font(s) to build - eg, 
+
+./mkfonts gsans tsans

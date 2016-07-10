@@ -1,0 +1,138 @@
+.\" -*- nroff -*-
+.\"
+.\" psf2fnt.1: psf2fnt man page
+.\" Copyright (c) 2005, 2007 John Elliott
+.\"
+.\"
+.\"
+.\" psftools: Manipulate console fonts in the .PSF format
+.\" Copyright (C) 2005, 2007  John Elliott
+.\"
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2 of the License, or
+.\" (at your option) any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program; if not, write to the Free Software
+.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+.\"
+.TH psf2fnt 1 "11 April, 2008" "Version 1.0.7" "PSF Tools"
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH NAME
+psf2fnt - Convert a PC Screen Font file to a Windows font-resource file
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH SYNOPSIS
+.PD 0
+.B psf2fnt
+.RI [ "--ascent=ASC" ]
+.RI [ "--bold" ]
+.RI [ "--brkchar=CHAR" ]
+.RI [ "--copy=COPYRIGHT" ]
+.RI [ "--codepage=CODEPAGE" ]
+.RI [ "--charset=CHARSET" ]
+.RI [ "--defchar=DEFAULT" ]
+.RI [ "--firstchar=FIRST" ]
+.RI [ "--fontname=NAME" ]
+.RI [ "--horzres=DPI" ]
+.RI [ "--italic" ]
+.RI [ "--lastchar=CHAR" ]
+.RI [ "--pointsize=SIZE" ]
+.RI [ "--version=FORMAT" ]
+.RI [ "--vertres=DPI" ]
+.RI [ INPUTFILE 
+.RI [ OUTPUTFILE ]]
+.P
+.PD 1
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH DESCRIPTION
+psf2fnt saves some or all characters from a .PSF font as a Windows 
+font-resource file, as used by the Windows SDK tool FONTEDIT. The 
+resulting file can then be processed with fnts2fon(1) to create an
+installable font.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH OPTIONS
+.TP
+.B --ascent
+Sets the distance from the baseline to the top of the character. This defaults
+to the height of the font, minus 1.
+.TP
+.B --bold
+Marks the resulting font as bold.
+.TP
+.B --brkchar=nnn
+Sets the index of the character used to print word breaks. Defaults to 32
+(space).
+.TP
+.B --charset=charset
+Sets the character set of the resulting font. This can be one of the words 
+ANSI, OEM or SYMBOL; or a numeric value.
+.TP
+.B --codepage=x
+Extracts only the characters in the given codepage (requires the source
+PSF file to have a Unicode directory). Any characters in the codepage not
+present in the source font are replaced by blanks. The codepage can be
+specified by number or name; see psfpages(1) for a list of acceptable 
+codepage names.
+.TP
+.B --copy=string
+Sets the copyright string in the resulting font. Note that spaces will have
+to be escaped to hide them from the shell.
+.TP
+.B --defchar=nnn
+Sets the index of the character used to display out-of-range characters. 
+Defaults to 46 (full stop).
+.TP
+.B --first=n
+Extracts characters starting at the specified character.
+.TP
+.B --fontname=name
+Sets the name of the output font.
+.TP
+.B --horzres=nnn
+Sets the horizontal resolution of the font in DPI. Defaults to 48.
+.TP
+.B --italic
+Marks the font as italic.
+.TP
+.B --last=n
+Extracts characters up to and including the specified character. 
+.TP
+.B --pointsize=n
+Sets the font point size. This defaults to the font height in pixels.
+.TP
+.B --version=n
+Sets the file format version. This can be 1, 2 or 3. Version 1.0.7uld only be 
+used if you are creating a font for Windows 1.0. Version 1.0.7uld be used if 
+the font is less than 64k in size; otherwise, use Version 3.
+.LP
+If a codepage and a range of characters are both specified, the range
+is applied to the subset of characters extracted by the codepage.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.\".SH BUGS
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH SEE ALSO
+fnt2psf(1), psfpages(1)
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH AUTHOR
+John Elliott <jce@seasip.demon.co.uk>.
+.PP

@@ -1,0 +1,299 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;   JOYCE/ANNE v2.1.0: PCW emulator                                           ;
+;                                                                             ;
+;   Copyright (C) 1998-1999, John Elliott <jce@seasip.demon.co.uk>            ;
+;                                                                             ;
+;    This program is free software; you can redistribute it and/or modify     ;
+;    it under the terms of the GNU Library General Public License as          ;
+;    published by the Free Software Foundation; either version 2 of the       ;
+;    License, or(at your option) any later version.                           ;
+;                                                                             ;
+;    This program is distributed in the hope that it will be useful,          ;
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of           ;
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            ;
+;    GNU Library General Public License for more details.                     ;
+;                                                                             ;
+;    You should have received a copy of the GNU Library General Public        ;
+;    License along with this program; if not, write to the Free Software      ;
+;    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.                ;
+;                                                                             ;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+UWILDEX:
+;
+;Wildcard expansion of UFCB filenames.
+;
+;Entered with: HL->command line, in 0080h format. Must have 80h bytes free.
+;	       BC->prompt (if command line ends with a \ and 
+;                                                 extended processing is on)
+;              DE->subroutine to call on each FCB found.
+;		A = extended processing flags:
+;
+;              Bit 0 set if line can end with a \
+;;             Bit 1 set if line can contain "@file".
+;	       Bit 2 set if error messages are to be sent to stderr.
+;	       Bit 3 set if error messages are to be sent to the console.
+;
+;Returns HL = no. of files processed, BC=no. filenames passed to the command.
+;
+;Subroutine will be called with DE->temporary UFCB. It should return Carry
+;set to continue, Carry clear to stop; A=1 if file processed successfully
+;or A=0 if not.
+;
+;Phrases in the command line surrounded by []s will be skipped.
+;
+	LD	(WSP),SP
+	LD	(OBUF),HL
+	LD	(UPRMPT),BC
+	EX	DE,HL
+	LD	(EPF),A
+	LD	(DOIT1+1),HL
+	LD	HL,0
+	LD	(COUNT),HL
+	LD	(NCOUNT),HL
+RPARSE:	LD	A,(DE)
+	LD	L,A	;HL=length of command
+	INC	DE
+	ADD	HL,DE
+	LD	(HL),0	;Mark end of command
+	EX	DE,HL	;HL->command
+
+PCMD:	LD	A,(HL)
+	OR	A
+	JP	Z,ENDIT
+	CP	'['
+	JP	Z,SKIPOPT
+;;	CP	'@'
+;;	JR	Z,PROCAT
+	CP	'\'
+	JR	Z,PROCBKS
+	CALL	IFVALID
+	JP	NZ,PARSFN
+	INC	HL
+	JR	PCMD
+;
+PROCBKS:
+	LD	A,(EPF)
+	BIT	0,A
+	INC	HL
+	JR	Z,PCMD	;No special meaning for '\'
+	LD	DE,(UPRMPT)
+	LD	C,9
+	CALL	5	;Print the prompt.
+	LD	DE,XINP
+	LD	C,0Ah
+	CALL	5
+	LD	DE,(OBUF)
+	LD	HL,XINP+1
+	LD	BC,128
+	LDIR
+	LD	DE,CRLF
+	LD	C,9
+	CALL	5
+	LD	DE,(OBUF)
+	LD	H,0
+	JP	RPARSE
+;
+PARSFN:	LD	(UPFCB),HL
+	LD	(LNAME),HL
+	PUSH	BC
+	LD	DE,UPFCB
+	CALL	UDPARSE
+	POP	BC
+	LD	A,H
+	AND	L
+	INC	A
+	JP	Z,INVFN
+	LD	(UPFCB),HL
+	LD	HL,(NCOUNT)
+	INC	HL
+	LD	(NCOUNT),HL	;No. filenames successfully parsed.
+;
+;QFCB now holds a valid UFCB.
+;
+	LD	A,(QFCB+37)
+	CP	20h		;
+	JR	C,WILDEX1	;Not a DEV:
+	LD	HL,QFCB
+	LD	DE,TFCB
+	LD	BC,38
+	PUSH	DE
+	LDIR
+	POP	DE
+	CALL	DOIT		;Apply to DEV:
+NXTFN:	LD	HL,(UPFCB)
+	LD	A,H
+	OR	L
+	JP	Z,ENDIT
+	JP	PCMD
+;
+WILDEX1:
+	LD	HL,0
+WILDEX2:
+	PUSH	HL
+	CALL	SEEKHL
+	JR	NC,ENDW1	;Wildcard pattern exhausted.
+	LD	A,C
+	RRCA
+	RRCA
+	RRCA
+	LD	L,A
+	LD	H,0
+	LD	BC,BUF128+1
+	ADD	HL,BC
+	LD	DE,TFCB+1
+	LD	BC,11
+	LDIR			;Copy filename to TFCB
+	LD	A,(QFCB)
+	LD	(TFCB),A
+	LD	A,(QFCB+37)
+	LD	(TFCB+37),A
+	LD	DE,TFCB
+	CALL	ZFCB
+	CALL	DOIT
+	POP	HL
+	INC	HL
+	JR	WILDEX2
+
+ENDW1:	POP	HL
+	LD	A,H
+	OR	L
+	JR	NZ,NXTFN
+	LD	HL,NMATCH$
+	CALL	PRIHL
+	LD	HL,(LNAME)
+	CALL	PUTNAM
+	JR	NXTFN
+;
+SEEKHL:	PUSH	HL
+	LD	DE,BUF128
+	CALL	SETDMA
+	LD	C,11h
+SEEKH1:	LD	DE,QFCB
+	CALL	UDFDOS
+	POP	HL
+	LD	C,A
+	INC	A
+	AND	A	;Reset carry
+	RET	Z
+	LD	A,H
+	OR	L
+	SCF
+	RET	Z
+	DEC	HL
+	PUSH	HL
+	LD	C,12h
+	JR	SEEKH1
+;
+
+
+INVFN:
+;
+;Filename is invalid.
+;
+	LD	A,(EPF)
+	LD	HL,INVF$
+	CALL	PRIHL
+	LD	HL,(UPFCB)
+	CALL	PUTNAM
+	LD	HL,(UPFCB)
+SKIPN:	INC	HL
+	LD	A,(HL)
+	OR	A
+	JP	Z,ENDIT	;EOL
+	CP	3Ah	;':'
+	JR	Z,SKIPN
+	CP	3Bh	;';'
+	JR	Z,SKIPN
+	CP	'.'
+	JR	Z,SKIPN
+	CALL	IFVALID
+	JR	Z,SKIPN2
+	CP	'!'
+	JR	NC,SKIPN
+SKIPN2:	JP	PCMD	;Skip the filename and return on its terminator
+;
+SKIPOPT:
+	INC	HL
+	LD	A,(HL)
+	OR	A
+	JR	Z,ENDIT
+	CP	']'
+	JR	NZ,SKIPOPT	
+	INC	HL
+	JP	PCMD
+;
+DOIT:	LD	HL,(COUNT)
+DOIT1:	CALL	$-$
+	PUSH	AF
+	OR	A
+	JR	Z,DOIT2
+	LD	HL,(COUNT)
+	INC	HL
+	LD	(COUNT),HL
+DOIT2:	POP	AF
+	RET	C	;OK
+ENDIT:	LD	SP,(WSP)
+	LD	HL,(COUNT)
+	LD	BC,(NCOUNT)
+	RET
+;
+IFVALID:
+	PUSH	HL
+	PUSH	BC
+	LD	B,INVEND-INVAL
+	LD	HL,INVAL
+IFVAL1:	CP	(HL)
+	JR	Z,RTZ
+	INC	HL
+	DJNZ	IFVAL1
+	AND	A	;NZ since A>20h
+RTZ:	POP	BC
+	POP	HL
+	RET	
+;
+PUTNAM:	LD	DE,BUF128
+	LD	BC,128
+	LDIR
+	LD	HL,BUF128
+INVF1:	LD	A,(HL)
+	INC	HL
+	CP	3Ah	;':'
+	JR	Z,INVF1
+	CP	3Bh	;';'
+	JR	Z,INVF1
+	CP	'.'
+	JR	Z,INVF1
+	CALL	IFVALID
+	JR	Z,TRM2
+	CP	'!'
+	JR	NC,INVF1
+TRM2:	DEC	HL
+	LD	(HL),'$'
+	LD	HL,BUF128
+	CALL	PRIHL
+	LD	HL,CRLF
+	JP	PRIHL
+
+INVAL:	DEFB	0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
+	DEFB	21,22,23,24,25,26,27,28,29,30,31,32,58,59,'<=>.,[]/\|'
+INVEND:
+XINP:	DEFB	127,0
+BUF128:	DEFS	128
+LNAME:	DEFW	0
+UPFCB:	DEFW	0,QFCB
+QFCB:	DEFS	38
+TFCB:	DEFS	38
+COUNT:	DEFW	0
+NCOUNT:	DEFW	0
+EPF:	DEFB	0
+WSP:	DEFW	0
+UPRMPT:	DEFW	0
+OBUF:	DEFW	0
+NMATCH$:
+	DEFB	'Warning: No files match $'
+INVF$:	DEFB	'Warning: Could not parse $'
+CRLF:	DEFB	13,10,'$'
+;
+PRIHL:	ex	de,hl
+	ld	c,9
+	jp	5

@@ -1,0 +1,23 @@
+/* XPM */
+static char * report_xpm[] = {
+"16 16 4 1",
+" 	c none",
+".	c #000000000000",
+"X	c #00000000FFFF",
+"o	c #FFFFFFFFFFFF",
+"                ",
+" .............. ",
+" .XXXXXXXXXXXX. ",
+" .oooooooooooo. ",
+" .o.o..o.....o. ",
+" .oooooooooooo. ",
+" .o..........o. ",
+" .oooooooooooo. ",
+" .o.o..o.....o. ",
+" .oooooooooooo. ",
+" .o.o..o.....o. ",
+" .oooooooooooo. ",
+" .o.o..o.....o. ",
+" .oooooooooooo. ",
+" .............. ",
+"                "};

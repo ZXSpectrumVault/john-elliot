@@ -1,0 +1,368 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;   JOYCE/ANNE v2.1.0: PCW emulator                                           ;
+;                                                                             ;
+;   Copyright (C) 1998-1999, John Elliott <jce@seasip.demon.co.uk>            ;
+;                                                                             ;
+;    This program is free software; you can redistribute it and/or modify     ;
+;    it under the terms of the GNU Library General Public License as          ;
+;    published by the Free Software Foundation; either version 2 of the       ;
+;    License, or(at your option) any later version.                           ;
+;                                                                             ;
+;    This program is distributed in the hope that it will be useful,          ;
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of           ;
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            ;
+;    GNU Library General Public License for more details.                     ;
+;                                                                             ;
+;    You should have received a copy of the GNU Library General Public        ;
+;    License along with this program; if not, write to the Free Software      ;
+;    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.                ;
+;                                                                             ;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	org	0100h
+
+FCB	EQU	005Ch
+FDOS	EQU	5
+CR	EQU	0Dh
+LF	EQU	0Ah
+EOF	EQU	1Ah
+;
+;We start with protection against being run from DOS.
+;
+BASE:	DEFB	0EBh,04h	;DOS protection... JMPS LABE
+	EX	DE,HL
+	JP	BEGIN
+	DEFB	0B4h,09h	;DOS protection... MOV AH,9
+	DEFB	0BAh
+	DEFW	BVMES		;DOS protection... MOV DX,OFFSET BVMES
+	DEFB	0CDh,021h	;DOS protection... INT 21h.
+	DEFB	0CDh,020h	;DOS protection... INT 20h.
+
+	DEFB	cr,'JOYCE DOSDIR v'
+	include	version.inc
+	DEFB	' (c) John Elliott',cr,lf
+	DEFB	'Date: '
+	include	built.inc
+	DEFB	cr,lf,eof
+;
+
+BEGIN:	SUB	A		;Filter out the 8080s
+	JP	PE,BADVER
+	LD	C,0Ch		;Filter out CP/M <3
+	CALL	FDOS
+	CP	30h
+	JR	C,BADVER
+	XOR	A
+	DEFB	0EDh, 0FEh	;Get JOYCE version
+	INC	A		;Must return A=0FFh for Joyce v1.00
+	JR	Z,JRTSO
+BADVER:	LD	DE,BVMES	;Failed.
+	LD	C,9
+	JP	FDOS
+;
+JRTSO:	XOR	A	;A = 0:  called from CP/M
+	CALL	MAIN
+	RST	0
+		
+	DEFS	BASE + 078h - $
+	DEFB	'JOYCE',1,0,0	;File signature at end of first record.
+				;DB 'JOYCE',1;  2 expansion bytes.
+;
+BVMES:	DEFB	'This program will only run in the JOYCE emulator',cr,lf,'$'
+
+;
+MAIN:	XOR	A
+	LD	H,A
+	LD	L,A
+	LD	(BSLASH),A
+	LD	(CNT),HL
+	LD	(XPOS),HL
+	LD	DE,80h
+	LD	A,(DE)
+	LD	L,A
+	INC	DE
+	ADD	HL,DE		;0-terminate command line
+	LD	(HL),0
+	EX	DE,HL
+	PUSH	HL
+BSLP:	LD	A,(HL)
+	INC	HL
+	OR	A
+	JR	Z,CKIPSP
+	CP	'\'		;Found a backslash. Is it at the end?
+	JR	NZ,BSLP
+	LD	A,(HL)
+	OR	A
+	JR	NZ,BSLP
+	DEC	HL
+	LD	(HL),0		;Remove the backslash
+	LD	A,1
+	LD	(BSLASH),A
+CKIPSP:	POP	HL
+SKIPSP:	LD	A,(HL)
+	INC	HL
+	OR	A
+	JP	Z,SETCPM
+	CP	'-'
+	JR	Z,CKOPT1
+	CP	'['
+	JR	Z,CKOPT1
+	CP	' '
+	JR	Z,SKIPSP
+	CP	9
+	JR	Z,SKIPSP
+FINDEQ:	DEC	HL
+	LD	(DOSPTH),HL
+	JR	OPTLP
+;
+CKOPT1:	CALL	CKOPT
+	JR	SKIPSP
+;
+CKOPT3:	CALL	CKOPT
+	JR	OPTLP
+;
+SETCPM:	LD	A,(BSLASH)	;Don't default to *.* if there's a \ appended.
+	OR	A
+	JP	NZ,XFEND
+	LD	HL,CPMFSP
+	LD	(DOSPTH),HL
+OPTLP:	LD	A,(HL)
+	INC	HL
+	CP	'-'
+	JR	Z,CKOPT3
+	CP	'['
+	JR	Z,CKOPT3
+	OR	A
+	JR	NZ,OPTLP
+;
+;Directory loop:
+;
+DO_XFER:
+	LD	DE,(DOSPTH)
+	LD	HL,ENDPRG	;Returns 11 bytes FCB format name, then ASCIIZ pathname
+	LD	A,(CNT)
+	LD	B,A
+	LD	C,91h
+	CALL	JDOS
+	LD	A,H
+	OR	L
+	JR	Z,XFEND
+	LD	HL,CNT
+	INC	(HL)
+	CALL	PRDOSN
+	JR	DO_XFER
+;
+XFEND:	CALL	CRLF
+	LD	A,(BSLASH)
+	OR	A
+	JR	Z,XFEN1
+	LD	DE,DOSD$	;If there was a \, prompt for another line.
+	CALL	PRINT
+	LD	HL,7Fh
+	LD	(HL),L
+	INC	HL
+	LD	(HL),H
+	DEC	HL
+	EX	DE,HL
+	LD	C,0Ah
+	CALL	FDOS
+	CALL	CRLF
+	JP	MAIN
+;
+XFEN1:	LD	A,(CNT)
+	CALL	OPDEC3
+	LD	DE,FP$
+	CALL	PRINT
+	LD	A,(CNT)
+	OR	A
+	CALL	Z,HELPAD
+	RET	
+;
+HELPAD:	LD	DE,HELPA$
+	JP	PRINT
+;
+PRDOSN:	LD	HL,ENDPRG
+	CALL	OPFCB
+	LD	A,(XPOS)
+	ADD	A,15
+	LD	(XPOS),A
+	LD	E,A	;E=column
+	CALL	SCRW
+	SUB	E
+	JR	C,NEWLN
+	CP	12
+	JR	C,NEWLN
+	LD	DE,SEP$
+	JP	PRINT
+;
+NEWLN:	CALL	CRLF
+	XOR	A
+	LD	(XPOS),A
+	LD	A,(YPOS)
+	INC	A
+	LD	(YPOS),A
+	LD	E,A
+	CALL	SCRH
+	CP	E
+	RET	NZ
+	CALL	PGMODE
+	AND	A
+	RET	NZ
+	XOR	A
+	LD	(YPOS),A
+	LD	DE,MORE$
+	CALL	PRINT
+	CALL	INKEY
+	LD	DE,MOREC$
+	CALL	PRINT
+	CP	3
+	RET	NZ
+	POP	HL	;Calling address
+	RET		;Leave the program
+;
+CKOPT:	LD	A,(HL)
+	CP	'H'
+	JR	Z,HELP
+	CP	'?'
+	JR	Z,HELP
+;
+;
+	RET
+;
+HELP:	POP	HL	;Ret addr
+	LD	DE,HELP$
+;
+; fall through to...
+;
+	include print.lib
+;
+JDOS:	LD	A,10
+	DEFB	0EDh,0FEh
+	RET
+;
+CRLF:	PUSH	DE
+	LD	DE,CRLF$
+	CALL	PRINT
+	POP	DE
+	RET
+;
+OPDEC3:	LD	D,100
+	CALL	DGT
+	LD	D,10
+	CALL	DGT
+UNITS:	ADD	A,'0'
+	JP	PUTC
+
+DGT:	CP	D
+	RET	C
+	LD	E,'1'
+DGTL:	CP	D
+	JR	C,DGTL1
+	SUB	D
+	INC	E
+	JR	DGTL
+
+DGTL1:	PUSH	AF
+	LD	C,2
+	CALL	FDOS
+	POP	AF
+	RET
+;
+OPFCB:	LD	B,11
+OPLP:	LD	A,(HL)
+	AND	7Fh
+	CALL	PUTC
+	LD	A,B
+	CP	4
+	LD	A,'.'
+	CALL	Z,PUTC
+	INC	HL
+	DJNZ	OPLP
+	RET
+;
+PUTC:	PUSH	AF
+	PUSH	BC
+	PUSH	DE
+	PUSH	HL
+	LD	E,A
+	LD	C,2
+	JP	FDPOPA
+;
+; Get the screen width from the host OS.
+;
+SCRW:	LD	A,(CW)
+	OR	A
+	RET	NZ
+	PUSH	BC
+	PUSH	DE
+	PUSH	HL
+	LD	DE,SCRWB
+	LD	C,31h
+	CALL	FDOS
+	LD	(CW),A
+POP3:	POP	HL
+	POP	DE
+	POP	BC
+	RET
+;	
+; Get the screen height from the host OS.
+;
+SCRH:	LD	A,(CH)
+	OR	A
+	RET	NZ
+	PUSH	BC
+	PUSH	DE
+	PUSH	HL
+	LD	DE,SCRHB
+	LD	C,31h
+	CALL	FDOS
+	LD	(CH),A
+	JR	POP3
+;
+; Get the "pause each screen" setting from CP/M.
+;
+PGMODE:
+	PUSH	BC
+	PUSH	DE
+	PUSH	HL
+	LD	DE,PGMB
+	LD	C,31h
+	CALL	FDOS
+	JR	POP3
+;
+; Wait for a keypress
+;
+INKEY:	LD	C,6
+	LD	E,0FDh
+	JP	FDOS
+
+SCRWB:	DEFW	1Ah
+SCRHB:	DEFW	1Ch
+PGMB:	DEFW	2Ch
+CW:	DEFB	0
+CH:	DEFB	0
+FP$:	DEFB	' file(s) found.'
+CRLF$:	DEFB	cr,lf,'$'
+HELPA$:	DEFB	'Type DOSDIR [HELP] for help.',cr,lf,'$'
+XPOS:	DEFB	0
+YPOS:	DEFB	0
+MORE$:	DEFB	'[More]$'
+MOREC$:	DEFB	8,8,8,8,8,8,'      ',8,8,8,8,8,8,'$'
+DOSD$:	DEFB	'DOSDIR>$'
+;
+BSLASH:	DEFB	0
+CNT:	DEFW	0
+CPMFSP:	DEFB	'*.*',0
+DOSPTH:	DEFW	0
+SEP$:	DEFB	' | $'
+HELP$:	DEFB	'DOSDIR v1.32 for JOYCE',cr,lf,lf
+	DEFB	'Syntax:  DOSDIR {x:/path/}afn { \ }',cr,lf,lf
+	DEFB	'Lists host files accessible to JOYCE.',cr,lf
+	DEFB	'Note: If you have a path, you must append a filename.',cr,lf
+	DEFB	'For example: DOSDIR D:/DRDOS/*.*  not  D:/DRDOS ',cr,lf
+	DEFB	'A backslash \ at the end of a line means you can type another ',cr,lf
+	DEFB	'line. This is how to get lower-case filenames (eg: in Unix)',cr,lf 
+	DEFB	'$'
+
+ENDPRG:
+	END

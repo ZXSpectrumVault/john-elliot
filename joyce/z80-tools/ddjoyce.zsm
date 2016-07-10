@@ -1,0 +1,70 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;   JOYCE/ANNE v2.1.0: PCW emulator                                           ;
+;                                                                             ;
+;   Copyright (C) 1998-1999, John Elliott <jce@seasip.demon.co.uk>            ;
+;                                                                             ;
+;    This program is free software; you can redistribute it and/or modify     ;
+;    it under the terms of the GNU Library General Public License as          ;
+;    published by the Free Software Foundation; either version 2 of the       ;
+;    License, or(at your option) any later version.                           ;
+;                                                                             ;
+;    This program is distributed in the hope that it will be useful,          ;
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of           ;
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            ;
+;    GNU Library General Public License for more details.                     ;
+;                                                                             ;
+;    You should have received a copy of the GNU Library General Public        ;
+;    License along with this program; if not, write to the Free Software      ;
+;    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.                ;
+;                                                                             ;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	include	org.inc
+
+FCB	EQU	005Ch
+FDOS	EQU	5
+CR	EQU	0Dh
+LF	EQU	0Ah
+EOF	EQU	1Ah
+
+BASE:	JP	BEGIN	;First time round, check for JOYCE
+
+	DEFB	cr,'JOYCE GIOS v'
+	include	version.inc
+	DEFB	cr,lf
+	DEFB	'Date: '
+	include	built.inc
+	DEFB	cr,lf
+	DEFB	'Copyright John Elliott',cr,lf,eof
+;
+BEGIN:	SUB	A
+	JP	PE,BADVER
+	PUSH	DE
+	XOR	A
+	DEFB	0EDh,0FEh	;Check for JOYCE
+	INC	A
+	JR	Z,INIT
+BADVER:	LD	DE,BVMES
+	LD	C,9
+	CALL	FDOS
+	RST	0
+;
+INIT:	LD	HL,BVM2
+	LD	(BADVER+1),HL
+	LD	A,11
+	LD	C,6
+	LD	L,0		;For JOYCE prior to v1.20
+	DEFB	0EDh,0FEh
+	BIT	1,L
+	JR	Z,BADVER
+	LD	HL,MAIN		;Bypass checks on subsequent calls
+	LD	(BASE+1),HL
+	POP	DE
+MAIN:	LD	C,4
+	LD	A,11
+	DEFB	0EDh,0FEh
+	RET
+
+BVMES:	DEFB	'JOYCE emulator not present',cr,lf,'$'
+BVM2:	DEFB	'JOYCE GSX support is not present',cr,lf,'$'
+

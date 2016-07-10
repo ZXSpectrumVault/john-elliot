@@ -1,0 +1,678 @@
+;************************************************************************
+;
+;   TAPTOOLS v1.0.6 - Tapefile manipulation utilities
+;
+;   Copyright (C) 1996, 2005, 2010  John Elliott <jce@seasip.demon.co.uk>
+;
+;   This program is free software; you can redistribute it and/or modify
+;   it under the terms of the GNU General Public License as published by
+;   the Free Software Foundation; either version 2 of the License, or
+;   (at your option) any later version.
+;
+;   This program is distributed in the hope that it will be useful,
+;   but WITHOUT ANY WARRANTY; without even the implied warranty of
+;   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;   GNU General Public License for more details.
+;
+;   You should have received a copy of the GNU General Public License
+;   along with this program; if not, write to the Free Software
+;   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+;
+;************************************************************************/
+
+;
+; This program is the second block in any tape file constructed by dsk2tap.
+; It 'plays back' the following blocks, writing them to disc.
+;
+; We will use the top third of the screen for output, and put a stripe in the
+; bottom third. The middle third is where our code lives; therefore code and
+; stack have to fit in 2k.
+;
+
+	org	4800h
+
+DOS_REF_XDPB	equ	0151h
+DD_WRITE_SECTOR	equ	0166h
+DD_FORMAT	equ	016Ch
+DD_L_XDPB	equ	0187h
+DD_L_OFF_MOTOR	equ	019Ch
+
+LOAD_BYTES	equ	0556h
+
+STACK		equ	5000h
+
+;
+; System variables
+;
+BANKM		equ	5B5Ch
+FLAGS3		equ	5B66h
+STRIP1		equ	5B7Ch
+LASTK		equ	5C08h
+BORDCR		equ	5C48h
+UDG		equ	5C7Bh
+ATTR_P		equ	5C8Dh
+MASK_P		equ	5C8Eh
+ATTR_T		equ	5C8Fh
+MASK_T		equ	5C90h
+
+COMMA	equ	6
+
+	jp	begin
+;
+; Parameters
+;
+drive:		defb	'A'
+;
+; Variables area
+;
+oldsp:		defw	0	;Old stack pointer
+errsp:		defw	0	;Stack pointer in use at start of main loop
+data_ptr:	defw	0	;Where to read the next instruction from
+block:		defb	0	;Block number of the next block to load
+
+header:		defs	17	;Header of a tape block being loaded
+
+				;Default geometry: +3DOS 173k
+geom:		defb	0	;+0: Format type
+		defb	0	;+1: Sidedness
+g_cyls:		defb	40	;+2: Cylinders
+g_sectors:	defb	9	;+3: Sectors
+g_psh:		defb	2	;+4: Physical sector shift
+		defb	1	;+5: Reserved tracks
+		defb	3	;+6: Block shift
+		defb	2	;+7: Directory blocks
+		defb	2Ah	;+8: Read/write gap
+		defb	52h	;+9: Format gap
+	
+xdpb:		defw	0	;Address of +3DOS XDPB
+p3magic:	defb	'PLUS3DOS'
+bc0:		defb	0	;Old BORDCR
+ap0:		defw	0	;Old ATTR_P
+at0:		defw	0	;Old ATTR_T
+;
+; Entry point
+;
+begin:	ld	(oldsp), sp
+	ld	sp, STACK
+	push	iy
+	push	ix
+
+	ld	hl, 4000h	;Clear the top third of the screen.
+	ld	de, 4001h
+	ld	bc, 7FFh
+	push	bc
+	ld	(hl), l
+	ldir
+	pop	bc
+	ld	hl, 5000h	;And the bottom third
+	ld	de, 5001h
+	ld	(hl), l
+	ldir
+
+	ld	hl,5800h	;Set all screen attributes to white on white
+	ld	de,5801h	
+	ld	bc,767
+	ld	(hl), 3Fh
+	ldir
+
+	ld	hl, (ATTR_P)	;Save system variables that we will touch.
+	ld	(ap0), hl
+	ld	hl, (ATTR_T)
+	ld	(at0), hl
+	ld	a, (BORDCR)
+	ld	(bc0), a
+
+	ld	a, 38h
+	ld	(BORDCR), a
+	ld	a, 7
+	out	(254), a
+
+
+	ld	hl, (UDG)
+	push	hl
+	ld	hl, STRIP1
+	ld	(UDG), hl
+
+	ld	hl, 47h		;Bright white on black
+	ld	(ATTR_T), hl
+	ld	(ATTR_P), hl
+	ld	hl, stripe
+	call	print
+	ld	hl, 38h		;Black on white
+	ld	(ATTR_T), hl
+	ld	(ATTR_P), hl
+
+	pop	hl
+	ld	(UDG), hl
+
+	ld	(errsp), sp
+;
+; Check that +3DOS can, in fact, be paged in.
+;
+	call	go_dos
+	ld	hl, 8
+	ld	de, p3magic
+	ld	b, 8
+ckm:	ld	a, (de)
+	cp	(hl)
+	jp	nz, notpl3
+	inc	hl
+	inc	de
+	djnz	ckm
+	call	go_48
+
+	ld	a, (FLAGS3)	;Check that there's a disc interface.
+	bit	4, a
+	ld	hl, nodisk
+	jp	z, diewith
+	ld	hl, conf1	;Prompt for confirmation, since this is going
+	call	print		;to format the chosen floppy.
+	ld	a, (FLAGS3)
+	bit	5, a		;If there's a second drive, prompt for that
+	ld	hl, conf2	;as well.
+	call	nz, print
+	ld	hl, conf3
+	call	print
+;
+; Wait for (interrupt-driven) keypress.
+;
+ckc1:	xor	a
+	ld	(LASTK), a
+ckc2:	ld	a, (LASTK)
+	or	a
+	jr	z, ckc2
+	cp	'a'
+	jr	c, ckc2
+	cp	'z'+1
+	jr	nc, ckc2
+	sub	20h		;Force uppercase
+	cp	'Q'
+	jp	z, done
+	cp	'A'
+	jr	z, go_a
+	cp	'B'		;Drive B: selected
+	jr	nz, ckc1	
+	ld	a, (FLAGS3)	;But is one present?
+	bit	5,a
+	jr	z, ckc1		;If not, ignore 'B' as a keystroke
+;
+; We have the goahead.
+;	
+go_a:	ld	(drive),a
+	ld	hl, cls
+	call	print
+
+;
+; Reference the DPB. We will want it later.
+;
+	ld	a, (drive)
+	call	go_dos
+	call	DOS_REF_XDPB
+	call	go_48
+	jp	nc, doserr
+	ld	(xdpb), ix	;IX -> dpb
+;
+; Assume the first operation is L, & first block is 0 (ie, load block 0).
+;
+	ld	a, '0'
+	ld	(block), a
+	ld	hl, 24000
+	ld	(data_ptr), hl
+	ld	(hl), 'L'
+
+mainloop:
+	ld	hl, (data_ptr)
+	ld	a,(hl)
+	cp	'F'		;Format a track
+	jp	z, format
+	cp	'L'		;Load a block
+	jp	z, load
+	cp	'Q'		;Quit
+	jp	z, done
+	cp	'U'		;Uncompress
+	jp	z, uwrite
+	cp	'W'		;Write
+	jp	z, write
+	cp	'X'		;Set geometry
+	jp	z, setdpb	
+
+unknown:
+	push	af		;Unknown operation
+	ld	hl, unk_op
+	call	print		;Print message
+	pop	af
+	call	hexa		;Print what the unknown command byte was
+	jp	done
+;
+hexa:	push	af		;Display the byte in A as hex
+	call	hexa1
+	pop	af
+	ret
+;
+hexa1:	push	af
+	rrca			;High nibble
+	rrca
+	rrca
+	rrca
+	call	hexn
+	pop	af		;Fall through to low nibble
+hexn:	and	0Fh
+	cp	10
+	jr	c, hexn1
+	add	a,7
+hexn1:	add	a,'0'
+	rst	10h
+	ret	
+;
+;;; Diagnostic code to pause, so I can see what's happening
+;;;
+;;;diag:	out	(0FEh), a
+;;;	push	bc
+;;;	push	de
+;;;	ld	e, 4
+;;;diag0:	ld	bc, 0
+;;;diag1:	dec	bc
+;;;	ld	a, b
+;;;	or	c
+;;;	jr	nz, diag1
+;;;	dec	e
+;;;	jr	nz, diag0
+;;;	pop	de
+;;;	pop	bc
+;;;	ret
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+; Major operations:
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+; 1. Load the next block from tape.
+;
+load:	call	go_dos
+	call	DD_L_OFF_MOTOR	;DD L OFF MOTOR: Switch drive motor off
+	call	go_48		;while the tape is running.
+	ld	hl, play
+	call	print		;"Press PLAY on tape"	
+	ld	ix, header
+	ld	de, 17		;Load header
+	xor	a
+	scf
+	call	LOAD_BYTES
+	jr	c, loadok
+load01:	ld	hl, lderr	;If that failed, retry
+	call	print
+	jr	load
+;
+loadok:
+	ld	a, (header)	;Check for magic number: 'D' plus blocknumber
+	cp	'D'
+	jr	nz, badblk	;No 'D'
+	ld	a, (header+1)
+	ld	c, a		;Block number
+	ld	a, (block)
+	cp	c		;Expected block number
+	jr	z, blkok
+badblk:	ld	a, (block)	;They're different. Warn the user
+	ld	(srchb), a
+	ld	hl,badbn
+	call	print		;Warning message
+	call	prname		;Show what we found
+	jr	load 		;And retry
+;
+; OK, header loaded. Print the filename.
+;
+blkok:	ld	hl, lding	;"Loading xx"
+	call	print
+	call	prname
+	ld	de, (header+11)	;Length of data block
+	ld	ix, 24000
+	ld	a, 0FFh
+	scf
+	call	LOAD_BYTES	;Load data block
+	jr	nc, load01	;If that failed, warn and retry
+;
+; Block loaded.
+;
+	ld	hl, block	;Increase block counter, we're now on the next
+	inc	(hl)		;block
+	ld	hl, 24000
+	ld	(data_ptr), hl	;Reset instruction pointer to start of block
+	ld	hl, stop	;"Stop the tape"
+	call	print
+	jp	mainloop
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+; 2. Set geometry.
+;
+setdpb:	ld	hl, setting	;Say what we're doing
+	call	print
+	ld	hl, (data_ptr)	;Copy from the data buffer
+	inc	hl		;(which may be paged out by the switch to +3DOS)
+	ld	de, geom	;to geom, which won't.
+	ld	bc, 10
+	ldir
+	ld	hl, geom	;Then generate the appropriate DPB from that.
+	ld	ix, (xdpb)
+	call	go_dos
+	call	DD_L_XDPB
+	call	go_48
+	jp	nc, doserr	;If that failed, bail out
+	ld	de, 11		;Increase instruction pointer by 11 bytes
+jumpto:	ld	hl, (data_ptr)
+	add	hl, de
+	ld	(data_ptr), hl
+	jp	mainloop
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+; 3. Format a track.
+;
+format:
+	push	hl		;Show command & parameters
+	ld	hl, fmting
+	call	print		;"Formatting track nn"
+	pop	hl
+	inc	hl
+	ld	a, (hl)		;Track number
+	call	hexa
+	ld	d, a		;D = track to format
+	ld	a, COMMA
+	rst	10h
+;
+	ld	e, 0E5h		;E = filler byte
+	inc	hl		;HL -> format buffer
+	ld	a, (drive)
+	sub	'A'		;Unit number
+	ld	c, a
+	ld	b, 0		;Memory bank containing buffer
+	ld	ix, (xdpb)
+	call	go_dos
+	call	DD_FORMAT	;Do the format
+	call	go_48
+	jp	nc,doserr	;Bail if it didn't work
+
+	ld	a, (g_sectors)	;Sectors / track
+	add	a, a		;*2
+	add	a, a		;*4
+	add	a, 2		;Plus command byte and track ID
+	ld	e, a
+	ld	d, 0		;DE = offset to next command
+	jp	jumpto
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+; 4. Write a sector (compressed).
+;
+uwrite:	call	wrshow		;Print "Writing sector nnn"
+	call	secsize		;Calculate sector size in HL
+	push	hl
+
+	ld	hl, (data_ptr)
+	inc	hl
+	ld	d, (hl)		;D = track
+	inc	hl
+	ld	e, (hl)		;E = sector
+	inc	hl
+	ld	a, (hl)		;A = the byte to write
+	ld	(uwr1+1), a
+	call	go_dos		;Decompress the sector into a temporary buffer
+				;in RAM 7.
+	ld	hl, 0C000h	;Buffer at the start of the shadow screen.
+	pop	bc		;BC = Sector size
+	push	hl
+uwr1:	ld	(hl), 0		;Fill the shadow screen with (secsize)
+	inc	hl		;copies of the data byte
+	dec	bc	
+	ld	a, b
+	or	c
+	jr	nz, uwr1
+
+	ld	a, (drive)
+	sub	'A'
+	ld	c, a		;Unit
+	ld	b, 7		;Bank
+	pop	hl		;Transfer address = 0C000h
+	ld	ix, (xdpb)
+	call	DD_WRITE_SECTOR
+	call	go_48
+	jp	nc, doserr	;Bail out if failed
+;
+; Skip to next command.
+;
+	ld	de, 4		;Command, track, sector, data
+	jp	jumpto
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+; 5. Write a sector (uncompressed).
+;
+write:	call	wrshow		;Show what we are doing
+
+	ld	a, (drive)
+	sub	'A'
+	ld	c, a		;C=Unit
+	ld	b, 0		;B=Bank containing data
+	ld	hl, (data_ptr)
+	inc	hl	
+	ld	d, (hl)		;D=track
+	inc	hl
+	ld	e, (hl)		;E=sector
+	inc	hl		;HL -> data
+	ld	ix, (xdpb)	;IX -> XDPB
+	call	go_dos
+	call	DD_WRITE_SECTOR	;Write the sector
+	call	go_48
+	jp	nc, doserr	;And quit if failed
+;
+; Now skip over the buffer
+;
+	call	secsize
+nopsh:	ex	de, hl		;DE = sector size
+	inc	de		;Command byte
+	inc	de		;track
+	inc	de		;sector
+	jp	jumpto
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+; Calculate the size of a sector in bytes, from the physical sector shift 
+; we're using.
+;
+secsize:
+	ld	a, (g_psh)
+	ld	hl, 128		;0 => 128, 1 => 256, 2 => 512 etc.
+	or	a
+	ret	z
+	ld	b, a
+getpsh:	add	hl, hl		;HL := 2^(7+PSH)
+	djnz	getpsh	
+	ret
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+; Show what sector is being written.
+;
+wrshow:	ld	hl, wrting	;"Writing track x"
+	call	print
+	ld	hl, (data_ptr)
+	inc	hl
+	ld	a, (hl)		;Track number
+	inc	hl
+	ld	c, (hl)		;Sector number
+	push	bc
+	call	hexa		;Show track
+	ld	hl, sector	;" sector "
+	call	print
+	pop	bc
+	ld	a, c		;Show sector
+	call	hexa
+	ld	a, COMMA
+	rst	10h
+	ret
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+; Utility functions
+;
+; Switch to +3DOS memory configuration.
+; On a Spectrum 48, does nothing.
+; On a Spectrum 128, pages in the editor ROM.
+;
+go_dos:
+	push	af
+	push	bc
+	ld	bc, 7FFDh
+	di
+	ld	a, (BANKM)
+	res	4, a
+	or	7
+	ld	(BANKM), a
+	out	(c),a
+	ei
+	pop	bc
+	pop	af
+	ret
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+; Switch to 48 BASIC memory configuration
+;
+go_48:
+	push	af
+	push	bc
+	ld	bc, 7FFDh
+	di
+	ld	a, (BANKM)
+	set	4, a
+	and	0F8h
+	ld	(BANKM), a
+	out	(c),a
+	ei
+	pop	bc
+	pop	af
+	ret
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+; Print the name of a tape block
+;
+prname:
+	ld	hl, header + 1
+	ld	b, 10
+prname1:
+	ld	a, (hl)
+	rst	10h
+	inc	hl
+	djnz	prname1
+	ld	a, COMMA
+	rst	10h
+	ret
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+; Spectrum +3DOS ROM not detected. Abort.
+;
+notpl3:	ld	hl, np3msg
+	jp	diewith
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+; Render a +3DOS error. We just do them all as "+3DOS error nn"
+;
+doserr:	cp	10
+	jr	c, doser2
+	sub	10
+	ld	l, '0'
+doser0:	inc	l
+	sub	10
+	jr	nc, doser0
+	add	a, 10+'0'
+	ld	h, a
+	jr	doser3	
+
+doser2:	add	a, '0'
+	ld	h, a
+	ld	l, ' '
+doser3:	ld	(doser1), hl
+	ld	hl, doserm	;And fall through
+;
+; Fail with an error message
+;
+diewith:
+	call	go_48		;Ensure the 48 BASIC ROM is in
+	call	print		;Print the message
+;
+; And fall through
+;
+done:
+	ld	hl, (ap0)	;Restore system variables
+	ld	(ATTR_P), hl
+	ld	hl, (at0)
+	ld	(ATTR_T), hl
+	ld	a, (bc0)
+	ld	(BORDCR), a
+	rrca
+	rrca
+	rrca
+	and	7
+	out	(254), a
+	ld	sp, (errsp)	;Revert to BASIC's stack
+	pop	ix
+	pop	iy
+	ld	sp, (oldsp)
+	ret
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; 
+; Print a zigamorph-terminated message.
+;
+print:	push	hl
+	ld	a, 2
+	call	1601h	;Ensure the screen is the output channel
+	pop	hl
+print1:	ld	a, (hl)
+	cp	0FFh	;If Zigamorph found, return.
+	ret	z
+	rst	10h	;Else print character.
+	inc	hl
+	jr	print1
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; 
+; Messages:
+;
+unk_op:	defb	22,0,0,'Unknown command code ',0FFh
+
+play:	defb	22,0,0,'Press PLAY on tape',COMMA,0FFh
+stop:	defb	22,0,0,'Press STOP on tape',COMMA,COMMA,COMMA,COMMA,COMMA,0FFh
+lderr:	defb	22,2,0,'Load error. Rewind',COMMA,0FFh
+lding:	defb	22,2,0,'Loading block ',0FFh
+setting:
+	defb	22,2,0,'Setting disk geometry',COMMA,0FFh
+fmting:	defb	22,2,0,'Formatting track ',0FFh
+wrting:	defb	22,2,0,'Writing track ',0FFh
+sector:	defb	' sector ',0FFh
+badbn:	defb	22,2,0,'Searching '
+srchb:	defb	'* Found ',0FFh
+doserm:	defb	22,0,0,'+3DOS error '
+doser1:	defb	'00',COMMA,COMMA,0FFh
+np3msg:	defb	22,0,0,'Cannot select +3DOS ROM',COMMA,0FFh
+nodisk:	defb	22,0,0,'No disk interface',COMMA,0FFh
+		;1...5...10...15...20...25...30..
+conf1:	defb	22,0,0,'Press A to write to A:',COMMA,0FFh
+conf2:	defb	'Press B to write to B:',COMMA,0FFh
+conf3:	defb	'Press Q to quit',0FFh
+cls:	defb	22,0,0,COMMA,COMMA,COMMA,COMMA,COMMA,COMMA,0FFh
+stripe:	defb	22,21,0
+	defb	'Disk Image Writer         '
+	defb	16, 2, 144 
+	defb	17, 6, 145
+	defb	16, 4, 144
+	defb	17, 5, 145
+	defb	16, 0, 144, 143
+	defb	0FFh
+
+	end
+

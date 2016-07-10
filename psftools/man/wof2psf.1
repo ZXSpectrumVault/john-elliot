@@ -1,0 +1,77 @@
+.\" -*- nroff -*-
+.\"
+.\" wof2psf.1: wof2psf man page
+.\" Copyright (c) 2005, 2007 John Elliott
+.\"
+.\"
+.\"
+.\" psftools: Manipulate console fonts in the .PSF format
+.\" Copyright (C) 2005, 2007  John Elliott
+.\"
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2 of the License, or
+.\" (at your option) any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program; if not, write to the Free Software
+.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+.\"
+.TH wof2psf 1 "11 April, 2008" "Version 1.0.7" "PSF Tools"
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH NAME
+wof2psf - Convert a Hercules WriteOn font to PC Screen Font format
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH SYNOPSIS
+.PD 0
+.B wof2psf
+.RI [ "--codepage=page" ]
+.RI [ "--psf1" ]
+.RI [ "--psf2" ]
+.RI [ INPUTFILE 
+.RI [ OUTPUTFILE ]]
+.P
+.PD 1
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH DESCRIPTION
+wof2psf converts a font in the Hercules WriteOn format to PSF.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH OPTIONS
+.TP
+.B --psf1
+Force output in the PSF1 format.
+.TP
+.B --psf2
+Force output in the PSF2 format (default).
+.TP
+.B --codepage=page
+Add a Unicode directory for the specified codepage, which can be identified
+by number or name. See psfpages(1) for a list of valid codepage names.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.\".SH BUGS
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH SEE ALSO
+psf2wof(1), psfpages(1)
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH AUTHOR
+John Elliott <jce@seasip.demon.co.uk>.
+.PP

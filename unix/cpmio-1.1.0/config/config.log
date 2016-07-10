@@ -1,0 +1,74 @@
+This file contains any messages produced by compilers while
+running configure, to aid debugging if configure makes a mistake.
+
+configure:558: checking for a BSD compatible install
+configure:611: checking whether build environment is sane
+configure:668: checking whether make sets ${MAKE}
+configure:714: checking for working aclocal
+configure:727: checking for working autoconf
+configure:740: checking for working automake
+configure:753: checking for working autoheader
+configure:766: checking for working makeinfo
+configure:786: checking for gcc
+configure:899: checking whether the C compiler (gcc  ) works
+configure:915: gcc -o conftest    conftest.c  1>&5
+configure:941: checking whether the C compiler (gcc  ) is a cross-compiler
+configure:946: checking whether we are using GNU C
+configure:955: gcc -E conftest.c
+configure:974: checking whether gcc accepts -g
+configure:1008: checking for ranlib
+configure:1042: checking for dirent.h that defines DIR
+configure:1055: gcc -c -g -O2  conftest.c 1>&5
+configure:1080: checking for opendir in -ldir
+configure:1099: gcc -o conftest -g -O2   conftest.c -ldir   1>&5
+/usr/bin/ld: cannot find -ldir
+collect2: ld returned 1 exit status
+configure: failed program was:
+#line 1088 "configure"
+#include "confdefs.h"
+/* Override any gcc2 internal prototype to avoid an error.  */
+/* We use char because int might match the return type of a gcc2
+    builtin and then its argument prototype would still apply.  */
+char opendir();
+
+int main() {
+opendir()
+; return 0; }
+configure:1163: checking how to run the C preprocessor
+configure:1184: gcc -E  conftest.c >/dev/null 2>conftest.out
+configure:1243: checking for ANSI C header files
+configure:1256: gcc -E  conftest.c >/dev/null 2>conftest.out
+configure:1323: gcc -o conftest -g -O2   conftest.c  1>&5
+configure:1350: checking for fcntl.h
+configure:1360: gcc -E  conftest.c >/dev/null 2>conftest.out
+configure:1350: checking for unistd.h
+configure:1360: gcc -E  conftest.c >/dev/null 2>conftest.out
+configure:1350: checking for sys/vfs.h
+configure:1360: gcc -E  conftest.c >/dev/null 2>conftest.out
+configure:1350: checking for windows.h
+configure:1360: gcc -E  conftest.c >/dev/null 2>conftest.out
+configure:1356: windows.h: No such file or directory
+configure: failed program was:
+#line 1355 "configure"
+#include "confdefs.h"
+#include <windows.h>
+configure:1350: checking for winnt.h
+configure:1360: gcc -E  conftest.c >/dev/null 2>conftest.out
+configure:1356: winnt.h: No such file or directory
+configure: failed program was:
+#line 1355 "configure"
+#include "confdefs.h"
+#include <winnt.h>
+configure:1350: checking for utime.h
+configure:1360: gcc -E  conftest.c >/dev/null 2>conftest.out
+configure:1388: checking for off_t
+configure:1422: checking for 8-bit clean memcmp
+configure:1440: gcc -o conftest -g -O2   conftest.c  1>&5
+configure:1458: checking whether utime accepts a null argument
+configure:1479: gcc -o conftest -g -O2   conftest.c  1>&5
+configure:1503: checking for vprintf
+configure:1531: gcc -o conftest -g -O2   conftest.c  1>&5
+configure:1610: checking for mkdir
+configure:1638: gcc -o conftest -g -O2   conftest.c  1>&5
+configure:1610: checking for rmdir
+configure:1638: gcc -o conftest -g -O2   conftest.c  1>&5

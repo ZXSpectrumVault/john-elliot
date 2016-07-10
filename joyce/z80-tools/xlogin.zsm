@@ -1,0 +1,190 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;   JOYCE/ANNE v2.1.0: PCW emulator                                           ;
+;                                                                             ;
+;   Copyright (C) 1998-1999, John Elliott <jce@seasip.demon.co.uk>            ;
+;                                                                             ;
+;    This program is free software; you can redistribute it and/or modify     ;
+;    it under the terms of the GNU Library General Public License as          ;
+;    published by the Free Software Foundation; either version 2 of the       ;
+;    License, or(at your option) any later version.                           ;
+;                                                                             ;
+;    This program is distributed in the hope that it will be useful,          ;
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of           ;
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            ;
+;    GNU Library General Public License for more details.                     ;
+;                                                                             ;
+;    You should have received a copy of the GNU Library General Public        ;
+;    License along with this program; if not, write to the Free Software      ;
+;    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.                ;
+;                                                                             ;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	include	org.inc
+	include	ver.inc
+;
+;XLOGIN by John Elliott, 14-12-1998
+;
+; Standard FID header...
+;
+	JP	FIDEMS
+	DEFB	26,26,26,26,26,26,26,26,'FID'
+	DEFW	version
+	DEFS	10H
+;
+;Addresses in the Amstrad XBIOS jumpblock
+;
+DDRDSEC	EQU	0086h	;Read a sector
+DDLOGIN	EQU	0092h	;Log in a disc
+DDSELFM	EQU	0095h	;Select standard format
+DDXDPB	EQU	00A1h	;Generate XDPB from disc spec
+;
+;Philosophy: Capture a call to DD_LOGIN, and if it fails, attach our own processing.
+;           This works on the assumption that normal discs are going to be read more
+;           frequently than the PCW16 extended format that XLOGIN detects. 
+;            If the reverse is true, just swap the "OLOGIN" and "NLOGIN" references
+;           in the lines marked [*] below.
+;
+;           DD_LOGIN takes C and IX as parameters, returns values in AF, and can corrupt
+;                    BC,DE,HL. 
+;           All the other DD_ calls here preserve IX, so we only have to bother with
+;                    preserving C.                    
+;
+OLOGIN:	JP	0
+
+XLOGIN:	CALL	OLOGIN		;[*] Swap these lines to give our code priority over
+	CALL	NC,NLOGIN	;[*] the native login code.
+	RET
+;
+JLOGIN:	CALL	OLOGIN		; JOYCE login code: Force discs to double-track.
+	JR	C,JLOGOK	; This improves support for 180k type formats
+	CALL	NLOGIN		; in Joyce's emulated 3.5" drives.
+	RET	NC
+JLOGOK:	SET	7,(IX+17)
+	SCF
+	RET
+;
+NLOGIN:	XOR	A
+	CALL	DDSELFM	;Attempt to select format 0. Does not affect C.
+	RET	NC
+	PUSH	BC
+	LD	DE,0		;Track 0 sector 0
+	LD	B,D		;Bank 0
+	LD	HL,FIDEMS	;Buffer address in bank 0.
+	CALL	DDRDSEC		;Read sector. Can corrupt C, hence the POP below
+	POP	BC
+	RET	NC
+;
+;Is the sector one of them there extended PCW16 ones?
+;
+	LD	A,(FIDEMS)
+	CP	0EBh		;DOS format, must start EB ...  or E9 ...
+	JR	Z,MAYBE
+	CP	0E9h
+	JR	Z,MAYBE
+BADFMT:	XOR	A		;Return a "bad format" error
+	LD	A,6
+	RET
+;
+MAYBE:	LD	HL,FIDEMS+2Bh	;"Label" must read CP/M????DSK
+	LD	DE,TESTID
+	LD	B,11
+	CALL	CP$
+	JR	NZ,BADFMT
+	LD	HL,FIDEMS+7Ch	;Disc spec must read "CP/M<spec>"
+	LD	DE,TESTID
+	LD	B,4
+	CALL	CP$
+	JR	NZ,BADFMT
+	LD	HL,FIDEMS+80h	;Got a disc spec. Hand off to DD_XDPB to find out 
+				;if it's suitable.
+	JP	DDXDPB		;Construct the XDPB from it. 
+;
+;Compare two strings of bytes. The one at DE can have ? marks in it.
+;
+CP$:	LD	A,(DE)
+	CP	'?'
+	JR	Z,CPS1	;'?' matches everything
+	CP	(HL)
+	RET	NZ
+CPS1:	INC	HL
+	INC	DE
+	DJNZ	CP$
+	XOR	A
+	RET
+;
+;Template for a valid disc label
+;
+TESTID:	DEFB	'CP/M????DSK'
+;
+;Everything after this point gets used for the sector buffer once FIDEMS returns.
+;
+FIDEMS:	LD	A,D		;Must be FID environment 0
+	OR	A
+	JR	NZ,BADVER
+	CALL	IFCPM		;Must be running under CP/M
+	JR	NZ,BADVER
+
+	XOR	A
+	DEFB	0EDh,0FEh	;Check for JOYCE. Returns A=0FFh if JOYCE present.
+	INC	A
+	JR	NZ,NJOYCE
+	LD	A,1
+	LD	(IJOYCE),A
+NJOYCE:
+;
+;Environment is satisfactory
+;
+	LD	HL,DDLOGIN	;Save jump to previous DD_LOGIN. At least, it had
+	LD	DE,OLOGIN	;just better be a jump and not a JR!
+	LD	BC,3
+	LDIR
+	LD	A,0C3h		;Insert a jump to us in DD_LOGIN.
+	LD	(DDLOGIN),A
+	LD	HL,XLOGIN
+	LD	(DDLOGIN+1),HL
+
+	LD	A,(IJOYCE)
+	OR	A
+	JR	Z,NJOY2
+	LD	HL,JLOGIN
+	LD	(DDLOGIN+1),HL	;JOYCE special login code
+	LD	HL,DDJMSG
+	SCF
+	RET
+
+NJOY2:	LD	HL,DDLMSG	;Sign on.
+	SCF
+	RET
+;
+BADVER:	LD	HL,DDXMSG	;Failed to load. Say why.
+	XOR	A
+	RET
+;
+IJOYCE:	DEFB	0
+;
+DDJMSG:	DEFB	'XLOGIN v'
+	include	version.inc
+	DEFB	' loaded in JOYCE: double track mode in use.',13,10,0FFh
+DDLMSG:	DEFB	'XLOGIN v'
+	include	version.inc
+	DEFB	' loaded and operational.',13,10,0FFh
+DDXMSG:	DEFB	'XLOGIN v'
+	include	version.inc
+	DEFB	' failed to load - probably not CP/M.',13,10,0FFh
+;
+;Check for CP/M as opposed to LocoScript. 
+;
+IFCPM:	LD	HL,0FC00h	;BIOS jumpblock. It should contain at least 30 jumps.
+	LD	DE,3		;If it doesn't, there isn't a BIOS there.
+	LD	B,30
+IFCPML:	LD	A,(HL)
+	CP	0C3h
+	RET	NZ
+	ADD	HL,DE
+	DJNZ	IFCPML
+	XOR	A
+	RET
+;
+	DEFS	FIDEMS+512-$	;Remainder of 512-byte sector buffer
+ENDL:
+	END

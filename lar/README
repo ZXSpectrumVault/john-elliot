@@ -1,0 +1,25 @@
+
+  LAR - Library Archiver v5.1.2
+
+  Instructions for normal use of lar are in lar.doc.
+
+  Instructions for use of lar as a Midnight Commander extension are in 
+lbr.doc.
+
+New in version 5.1.2:
+=====================
+
+* Patches from Steven Hirsch to fix compilation under SuSE 9.2.
+ 
+New in version 5.1.1:
+=====================
+
+* Reorganising a library preserves time stamps, exact file sizes and CRCs.
+* In the verbose listing, years are displayed using all 4 digits.
+* When a library is reorganised or a new library is created, the number of
+ slots requested will be allocated (previously, if the number was a multiple
+ of 4, one fewer slot than requested would be allocated).
+* All files are opened in binary mode. 
+
+  Thanks to C.B.Falconer for suggesting these modifications, and yes, I know
+it was more than a year ago.

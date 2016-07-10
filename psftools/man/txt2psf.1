@@ -1,0 +1,122 @@
+.\" -*- nroff -*-
+.\"
+.\" txt2psf.1: psf2txt man page
+.\" Copyright (c) 2005, 2007 John Elliott
+.\"
+.\"
+.\"
+.\" psftools: Manipulate console fonts in the .PSF format
+.\" Copyright (C) 2005, 2007  John Elliott
+.\"
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2 of the License, or
+.\" (at your option) any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program; if not, write to the Free Software
+.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+.\"
+.TH txt2psf 1 "11 April, 2008" "Version 1.0.7" "PSF Tools"
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH NAME
+txt2psf - compile a PC Screen Font file from a textual description
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH SYNOPSIS
+.PD 0
+.B txt2psf
+.RI [ --psf1 ]
+.RI [ --psf2 ]
+.RI [ INPUTFILE 
+.RI [ OUTPUTFILE ]]
+.P
+.PD 1
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH DESCRIPTION
+.LP 
+txt2psf converts an ASCII source file to a font in the .PSF format.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH INPUT FILE FORMAT
+.LP
+The source file is composed of a header, followed by a series of 
+character definitions. The first line of the header must be "%PSF2"; it
+is followed by these fields, each on a separate line, in any order:
+.TP
+.B "Version: nnn"
+File format version; currently this must be 0.
+.TP
+.B "Flags: nnn"
+This is 1 if the font should include a Unicode table, else 0.
+.TP
+.B "Length: nnn"
+The number of characters in this font. If it is too low, the extra 
+characters will be ignored. Too high, and the extras will be left blank.
+.TP
+.B "Width: nnn"
+The width of a character cell.
+.TP
+.B "Height: nnn"
+The height of a character cell.
+.LP
+After the header, character definitions follow. Each character definition
+starts as a "%" on a line by itself. It is then followed by two fields, in
+any order.
+.TP
+.B "Bitmap: bitmapdata"
+The bitmap is composed of width*height cells, each of which is either a '-' 
+(zero) or a '#' (black). Whitespace is ignored. The bitmap can be 
+spread over several lines; the bitmaps created by psf2txt(1) are, for example.
+.TP
+.B "Unicode: unicodestring"
+This describes the Unicode characters this bitmap represents. It is formed 
+"[single];[sing]e];...[sequence];[sequence];..." where 
+.I single 
+is a single hexadecimal number, and
+.I sequence 
+is two or more hexadecimal numbers separated by + signs. 
+So "[41];" is an example of a single character, and "[00B4+0065];" 
+is an example of a sequence. If the bitmap doesn't represent
+any Unicode characters this field may be blank or simply missing.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH OPTIONS
+.TP
+.B --psf1
+Force the resulting file to be in PSF1 format.
+.TP
+.B --psf2
+Force the resulting file to be in PSF2 format.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH BUGS
+.LP
+The file format is too rigid, and the parser (such as it is) a quick hack.
+.LP
+The "Length:" header should not be necessary; txt2psf should be able to
+calculate the file size itself.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH SEE ALSO
+psf2txt(1)
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH AUTHOR
+John Elliott <jce@seasip.demon.co.uk>.
+.PP

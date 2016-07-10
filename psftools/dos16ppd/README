@@ -1,0 +1,70 @@
+psftools-1.0.3: Notes on DOS build
+==================================
+
+  This archive contains the PSF Tools as compiled for 16-bit DOS using 
+Pacific C. The following points apply particularly:
+
+1. Compared to the Unix build, this has received very little testing. 
+  Be careful when using it!
+
+2. In the Unix version, the codepage tables are compiled into the programs. 
+  This isn't possible in the DOS version (at least with the Pacific C 
+  compiler) so instead each table is stored in its own .CP2 file. These must
+  be kept in the same directory as the programs if you want to use any 
+  codepage features (such as making CPI files).
+
+3. The DOS command line is restricted, being only 128 characters long. Most
+  psftools commands shouldn't find this too restrictive, since they usually
+  just take two filename arguments. The exception is psfs2cpi, which tends to
+  go for rather long argument strings:
+
+    psfs2cpi +437 psf psf psf +850 psf psf psf ...  output.cpi
+
+    Accordingly, the DOS version of psfs2cpi can also take its filename list
+  from a text file:
+
+    psfs2cpi @filename.txt output.cpi
+
+  where filename.txt contains the "+437 psf psf psf +850 psf psf psf" etc.
+
+4. FNTS2FON takes a font ID option. In the UNIX version, this can include
+ spaces (escaped to hide them from the shell). The DOS command line doesn't 
+ work the same way, so _ characters should be used to represent spaces.
+
+5. LOADPSF has been included; this loads a PSF file into the video card's 
+  character generator. It supports the following video cards:
+	* EGA/VGA
+	* IBM Convertible
+	* Hercules Plus / Hercules InColor
+  Fonts loaded into the EGA/VGA will last only until a video 
+  mode change, whereupon the characters will be reset to normal. If you want 
+  the characters to stay loaded, the best way to do that is the "official" 
+   way -- convert to a CPI file and load that with DISPLAY.SYS and MODE.
+
+    in CONFIG.SYS:   DEVICEHIGH=C:\DOS\DISPLAY.SYS CON=(EGA,0,1)
+   
+                     (note the "EGA,0,1" which stops the ROM font being used).
+ 
+    and then type  MODE CON CP PREPARE=((437)myfile.cpi)
+                   MODE CON CP SELECT 437
+
+   However, LOADPSF does support double (512-character) fonts, which 
+  DISPLAY.SYS and MODE do not. When asked to load a 512-character font, it 
+  will select the first 256 characters for normal use and the second 256 
+  for high intensity. A number of options can be used to alter this:
+
+   --first: Treat the font like a normal 256-character font and ignore 
+           anything after the first 256 characters.
+   --second: As above but use characters 256-511, not 0-255.
+   --alt:   If loading a 256-character font, load it into the high intensity
+           set. If loading a 512-character font, swap the halves over so that
+           the first 256 characters are used for high intensity and the second
+           256 for normal.
+
+     On a Hercules system, attempts to load a PSF file larger than 256 
+   characters will select the "48k RAMfont" mode, in which the attribute
+   of a character determines what font is used to display it. If the font
+   has more than 1024 characters, the card will be switched to "Full" mode,
+   which requires that no other graphics card (except the Hercules Color Card)
+   be present in the computer. If the --first or --second option is present,
+   the 48k RAMfont mode will not be used. 

@@ -1,0 +1,67 @@
+#! /bin/sh
+
+#
+# LBR Virtual filesystem executive v5.10
+#
+# Based on the "lha" vfs by Joseph M. Hinkle
+#
+# Copyright (C) 1998 John Elliott
+# May be distributed under the terms of the GNU Public License
+# <jce@seasip.demon.co.uk>
+#
+
+# Wrapper for the "lar" (v5.10 and later) archiver
+
+# Define your awk
+AWK=mawk
+# Define which archiver you are using with appropriate options
+LBR_LIST="lar tl"
+LBR_PUT="lar u"
+LBR_GET="lar p"
+
+# Define the temporary name of a command to be run from the archive
+TMPCMD=/tmp/mc-cmd.$$
+
+# The 'list' command executive
+
+mc_lbr_fs_list()
+{
+   eval $LBR_LIST $1
+}
+
+# The 'copyout' command executive to copy displayed files to a destination
+
+mc_lbr_fs_copyout()
+{
+   eval $LBR_GET $1 $2 > $3  2> /dev/null
+}
+
+# The 'copyin' command executive to add something to the archive
+
+mc_lbr_fs_copyin ()
+{
+   # This isn't called from this version of mc
+   eval $LBR_PUT $1 $3  2> /dev/null
+}
+
+# The 'run' command executive to run a command from within an archive
+
+mc_lbr_fs_run()
+{
+   trap "rm $TMPCMD; exit 0" 1 2 3 4 15
+   eval $LBR_GET $1 $2 > $TMPCMD  2> /dev/null
+   chmod a+x $TMPCMD  2> /dev/null
+   $TMPCMD 2> /dev/null
+   rm $TMPCMD
+}
+
+
+# The main routine
+case "$1" in
+   list) mc_lbr_fs_list $2; exit $?;;
+   copyout) mc_lbr_fs_copyout $2 $3 $4; exit $?;;
+   copyin)  mc_lbr_fs_copyin  $2 $3 $4; exit $?;;
+   run)     mc_lbr_fs_run     $2 $3 $4; exit $?;;
+esac
+exit 1
+

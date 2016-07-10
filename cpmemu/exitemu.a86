@@ -1,0 +1,17 @@
+;Author:  John Elliott, 14 October 1997
+;Version: 1.00
+;
+;EXITEMU - Stop DOSEMU from CP/M-86 (1.1)
+;
+;To cross-assemble from DOS:
+;
+;RASM86 EXITEMU
+;LINKCMD EXITEMU
+;
+	mov	ax,0ffffh
+	int	0e6h		;Quit DOSEMU. 
+	mov	cl,0
+	mov	dl,0		;If not in DOSEMU, return to CP/M.
+	int	0e0h
+
+	end

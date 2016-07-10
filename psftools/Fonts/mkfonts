@@ -1,0 +1,129 @@
+#! /bin/sh
+PSFXFORM=../tools/psfxform
+TXT2PSF=../tools/txt2psf
+PSFS2CPI=../tools/psfs2cpi
+CPIDCOMP=../tools/cpidcomp
+PSF2RAW=../tools/psf2raw
+PSF2ZX=../tools/psf2zx
+
+until [ -z "$1" ]
+do
+ARG=$1
+	#
+	# Firstly, build the PSF files from the text descriptions.
+	#
+	$TXT2PSF ${ARG}06.txt ${ARG}06.psf
+	$TXT2PSF ${ARG}08.txt ${ARG}08.psf
+	$TXT2PSF ${ARG}16.txt ${ARG}16.psf
+	$TXT2PSF ${ARG}14.txt ${ARG}14.psf
+	#
+	# Secondly, build the DOS CPI files. The first three correspond to 
+	# ega.cpi, ega2.cpi and ega3.cpi
+	#
+	$PSFS2CPI +437 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf \
+	         +850 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf \
+	         +860 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf \
+	         +863 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf \
+	         +865 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf \
+	         ${ARG}.cpi              
+	$PSFS2CPI +850 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf \
+	         +852 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf \
+	         +857 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf \
+	         +861 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf \
+	         +869 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf \
+	         +737 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf \
+	         ${ARG}2.cpi
+	$PSFS2CPI +437 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf \
+	         +850 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf \
+	         +852 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf \
+	         +855 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf \
+	         +866 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf \
+	         ${ARG}3.cpi
+	#
+	# DRDOS's compression system allows all the fonts to be fitted in one 
+	# CPI file... 
+	#
+	$PSFS2CPI --drfont \
+		+437 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf ${ARG}06.psf  \
+		+850 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf ${ARG}06.psf  \
+		+852 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf ${ARG}06.psf  \
+		+855 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf ${ARG}06.psf  \
+		+857 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf ${ARG}06.psf  \
+		+858 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf ${ARG}06.psf  \
+		+860 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf ${ARG}06.psf  \
+		+861 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf ${ARG}06.psf  \
+		+863 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf ${ARG}06.psf  \
+		+865 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf ${ARG}06.psf  \
+		+866 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf ${ARG}06.psf  \
+		+869 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf ${ARG}06.psf  \
+		+737 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf ${ARG}06.psf  \
+		+775 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf ${ARG}06.psf  \
+		+819=8859-1 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf ${ARG}06.psf  \
+		+912=8859-2 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf ${ARG}06.psf  \
+		+913=8859-3 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf ${ARG}06.psf  \
+		+914=8859-4 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf ${ARG}06.psf  \
+		+919=8859-10 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf ${ARG}06.psf  \
+		+920=8859-9 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf ${ARG}06.psf  \
+		+28591=8859-1 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf ${ARG}06.psf \
+		+28592=8859-2 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf ${ARG}06.psf \
+		+28593=8859-3 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf ${ARG}06.psf \
+		+28594=8859-4 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf ${ARG}06.psf \
+		+28595=8859-5 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf ${ARG}06.psf \
+		+28597=8859-7 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf ${ARG}06.psf \
+		+28599=8859-9 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf ${ARG}06.psf \
+		+28600=8859-10 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf ${ARG}06.psf \
+		+28603=8859-13 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf ${ARG}06.psf \
+		+28605=8859-15 ${ARG}16.psf ${ARG}14.psf ${ARG}08.psf ${ARG}06.psf \
+	         ${ARG}_dr.cpi
+	#
+	# ... as does Windows NT's 32-bit codepage format. Rather than repeat
+	# that great big command, just inflate the DRFONT file we created.
+	#
+	$CPIDCOMP --nt ${ARG}_dr.cpi ${ARG}_nt.cpi
+	#
+	# My font editor for PC-GEM takes fonts in PSF1 format:
+	#
+	$PSFXFORM --psf1 --codepage=PCGEM ${ARG}06.psf ${ARG}gem06.psf
+	$PSFXFORM --psf1 --codepage=PCGEM ${ARG}08.psf ${ARG}gem08.psf
+	$PSFXFORM --psf1 --codepage=PCGEM ${ARG}14.psf ${ARG}gem14.psf
+	$PSFXFORM --psf1 --codepage=PCGEM ${ARG}16.psf ${ARG}gem16.psf
+	#
+	# PCW font editors prefer their fonts as raw byte sequences
+	#
+	$PSFXFORM --codepage=AMSTRAD ${ARG}08.psf | $PSF2RAW > ${ARG}pcw.udg
+	# 
+	# The Sinclair PC200 / Amstrad PPC computers have a font ROM with 8 
+	# fonts. 
+	#
+	$PSFXFORM --codepage=PPCGREEK --height=16 ${ARG}14.psf | $PSF2RAW > part1
+	$PSFXFORM --codepage=PPCGREEK --height=16 ${ARG}08.psf | $PSF2RAW > part2
+	$PSFXFORM --codepage=PPC865   --height=16 ${ARG}14.psf | $PSF2RAW > part3
+	$PSFXFORM --codepage=PPC865   --height=16 ${ARG}08.psf | $PSF2RAW > part4
+	$PSFXFORM --codepage=PPC860   --height=16 ${ARG}14.psf | $PSF2RAW > part5
+	$PSFXFORM --codepage=PPC860   --height=16 ${ARG}08.psf | $PSF2RAW > part6
+	$PSFXFORM --codepage=PPC437   --height=16 ${ARG}14.psf | $PSF2RAW > part7
+	$PSFXFORM --codepage=PPC437   --height=16 ${ARG}08.psf | $PSF2RAW > part8
+	cat part1 part2 part3 part4 part5 part6 part7 part8 > ${ARG}ppc.rom
+	#
+	# While the PC1512 contents itself with four, of which the middle two 
+	# are the same.
+	#
+	$PSFXFORM --codepage=PPCGREEK ${ARG}08.psf | $PSF2RAW > part1
+	$PSFXFORM --codepage=PPC865   ${ARG}08.psf | $PSF2RAW > part2
+	$PSFXFORM --codepage=PPC437   ${ARG}08.psf | $PSF2RAW > part3
+	cat part1 part2 part2 part3 > ${ARG}1512.rom
+	rm -f part1 part2 part3 part4 part5 part6 part7 part8
+	#
+	# TAP file for Spectrums
+	#
+	$PSF2ZX --tap ${ARG}08.psf ${ARG}08.tap
+	#
+	# BDFs for X11. Make two versions - one with ISO10646 encoding, and 
+	# one with DOS codepage 437 encoding.
+	psf2bdf --iso10646 --fontname=-misc-gemsans-medium-r-normal--17-1-75-75-p-99-iso10646-1 --descent=3 ${ARG}16.psf ${ARG}16u.bdf
+	psf2bdf --codepage=437 --fontname=-misc-gemsans-medium-r-normal--17-1-75-75-p-99-dosencoding-cp437 --descent=3 ${ARG}16.psf ${ARG}16d.bdf
+	#
+	# Now do the next font
+	#
+	shift
+done

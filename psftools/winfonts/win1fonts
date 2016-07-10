@@ -1,0 +1,102 @@
+#! /bin/sh
+#
+# Build the Windows 1.x FON files from .FNT files; then compare them against
+# the originals to show they're identical.
+#
+../fnts2fon System_21.fnt Terminal_12.fnt nlofonts.fon \
+--winver=1.0 --modname=FONTS --idbase=27 --idstep=2 --sysfont=0 \
+--checksum16=60453 --checksum32=190407523 --mzextra=124 --stub=1 \
+--fontid="FONTRES 200,96,48 : System, Terminal (Set #2)" \
+--dosmsg="This program requires Microsoft Windows."
+../fnts2fon System_31.fnt Terminal_31.fnt nhifonts.fon \
+--winver=1.0 --modname=FONTS --idbase=28 --idstep=2 --sysfont=0 \
+--checksum16=60453 --checksum32=190407531 --mzextra=124 --stub=1 \
+--fontid="FONTRES 133,96,72 : System, Terminal (Set #3)" \
+--dosmsg="This program requires Microsoft Windows."
+../fnts2fon Courier_8.fnt Courier_10.fnt Courier_12.fnt ncoura.fon \
+--winver=1.0 --modname=COURA --idbase=4 --idstep=1 \
+--checksum16=60453 --checksum32=190350716 --mzextra=123 --stub=1 \
+--fontid="FONTRES 200,96,48 : Courier 8,10,12 (Set #2)" \
+--dosmsg="This program requires Microsoft Windows."
+../fnts2fon Courier_8_1.fnt Courier_10_1.fnt Courier_12_1.fnt ncourb.fon \
+--winver=1.0 --modname=COURB --idbase=12 --idstep=1 \
+--checksum16=60453 --checksum32=190350734 --mzextra=123 --stub=1 \
+--fontid="FONTRES 133,96,72 : Courier 8,10,12 (Set #3)" \
+--dosmsg="This program requires Microsoft Windows."
+../fnts2fon Courier_8_2.fnt Courier_10_2.fnt Courier_12_2.fnt ncourc.fon \
+--winver=1.0 --modname=COURC --idbase=18 --idstep=1 \
+--checksum16=60453 --checksum32=190350754 --mzextra=122 --stub=1 \
+--fontid="FONTRES 83,60,72 : Courier 8,10,12 (Set #4)" \
+--dosmsg="This program requires Microsoft Windows."
+../fnts2fon Courier_8_3.fnt Courier_10_3.fnt Courier_12_3.fnt ncourd.fon \
+--winver=1.0 --modname=COURD --idbase=24 --idstep=1 \
+--checksum16=60453 --checksum32=190350769 --mzextra=124 --stub=1 \
+--fontid="FONTRES 167,120,72 : Courier 8,10,12 (Set #5)" \
+--dosmsg="This program requires Microsoft Windows."
+../fnts2fon Helv_8.fnt Helv_10.fnt Helv_12.fnt nhelva.fon \
+--winver=1.0 --modname=HELVA --idbase=1 --idstep=1 \
+--checksum16=60453 --checksum32=190350825 --mzextra=120 --stub=1 \
+--fontid="FONTRES 200,96,48 : Helv 8,10,12 (Set #2)" \
+--dosmsg="This program requires Microsoft Windows."
+../fnts2fon Helv_8_1.fnt Helv_10_1.fnt Helv_12_1.fnt nhelvb.fon \
+--winver=1.0 --modname=HELVB --idbase=8 --idstep=1 \
+--checksum16=60453 --checksum32=190350844 --mzextra=120 --stub=1 \
+--fontid="FONTRES 133,96,72 : Helv 8,10,12 (Set #3)" \
+--dosmsg="This program requires Microsoft Windows."
+../fnts2fon Helv_8_2.fnt Helv_10_2.fnt Helv_12_2.fnt nhelvc.fon \
+--winver=1.0 --modname=HELVC --idbase=15 --idstep=1 \
+--checksum16=60453 --checksum32=190350869 --mzextra=119 --stub=1 \
+--fontid="FONTRES 83,60,72 : Helv 8,10,12 (Set #4)" \
+--dosmsg="This program requires Microsoft Windows."
+../fnts2fon Helv_8_3.fnt Helv_10_3.fnt Helv_12_3.fnt nhelvd.fon \
+--winver=1.0 --modname=HELVD --idbase=21 --idstep=1 \
+--checksum16=60453 --checksum32=190350889 --mzextra=121 --stub=1 \
+--fontid="FONTRES 167,120,72 : Helv 8,10,12 (Set #5)" \
+--dosmsg="This program requires Microsoft Windows."
+../fnts2fon Tms\ Rmn_12.fnt Tms\ Rmn_10.fnt Tms\ Rmn_12_1.fnt ntmsra.fon \
+--winver=1.0 --modname=TMSRA --idbase=41 --idstep=1 \
+--checksum16=60453 --checksum32=190350944 --mzextra=123 --stub=1 \
+--fontid="FONTRES 200,96,48 : Tms Rmn 8,10,12 (Set #2)" \
+--dosmsg="This program requires Microsoft Windows."
+../fnts2fon Tms\ Rmn_8.fnt Tms\ Rmn_10_1.fnt Tms\ Rmn_12_2.fnt ntmsrb.fon \
+--winver=1.0 --modname=TMSRB --idbase=45 --idstep=1 \
+--checksum16=60453 --checksum32=190350958 --mzextra=123 --stub=1 \
+--fontid="FONTRES 133,96,72 : Tms Rmn 8,10,12 (Set #3)" \
+--dosmsg="This program requires Microsoft Windows."
+../fnts2fon Tms\ Rmn_8_1.fnt Tms\ Rmn_10_2.fnt Tms\ Rmn_12_3.fnt ntmsrc.fon \
+--winver=1.0 --modname=TMSRC --idbase=48 --idstep=1 \
+--checksum16=60453 --checksum32=190350973 --mzextra=122 --stub=1 \
+--fontid="FONTRES 83,60,72 : Tms Rmn 8,10,12 (Set #4)" \
+--dosmsg="This program requires Microsoft Windows."
+../fnts2fon Tms\ Rmn_8_2.fnt Tms\ Rmn_10_3.fnt Tms\ Rmn_12_4.fnt ntmsrd.fon \
+--winver=1.0 --modname=TMSRD --idbase=51 --idstep=1 \
+--checksum16=60453 --checksum32=190350989 --mzextra=124 \
+--fontid="FONTRES 167,120,72 : Tms Rmn 8,10,12 (Set #5)" --stub=1 \
+--dosmsg="This program requires Microsoft Windows."
+#
+# fnts2fon can't handle the vector fonts yet
+#
+#../fnts2fon Script_36.fnt nscript.fon --mzextra=123 \
+#--winver=1.0 --modname=SCRIPT --idbase=1 --idstep=1 \
+#--checksum16=7480 --checksum32=189692135 --mzextra=123 --stub=2 \
+#--fontid="FONTRES CONTINUOUSSCALING : Script (Set #1)" \
+#--dosmsg="This program requires Microsoft Windows"
+#../fnts2fon Roman_36.fnt Roman_36_1.fnt Roman_36_2.fnt Roman_36_3.fnt nroman.fon \
+#--winver=1.0 --modname=ROMAN --idbase=1 --idstep=1 \
+#--fontid="FONTRES CONTINUOUSSCALING : Roman (Set #1)" \
+#--dosmsg="This program requires Microsoft Windows"
+
+diff lofonts.fon nlofonts.fon
+diff hifonts.fon nhifonts.fon
+diff coura.fon ncoura.fon
+diff courb.fon ncourb.fon
+diff courc.fon ncourc.fon
+diff courd.fon ncourd.fon
+diff helva.fon nhelva.fon
+diff helvb.fon nhelvb.fon
+diff helvc.fon nhelvc.fon
+diff helvd.fon nhelvd.fon
+diff tmsra.fon ntmsra.fon
+diff tmsrb.fon ntmsrb.fon
+diff tmsrc.fon ntmsrc.fon
+diff tmsrd.fon ntmsrd.fon

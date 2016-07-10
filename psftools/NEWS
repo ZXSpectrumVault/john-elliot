@@ -1,0 +1,9 @@
+What's new in psftools-1.0.7:
+
+	* Codepages: The PPCGREEK codepage had the two lower-case sigmas the
+	 wrong way round. Various other corrections made to the PPCGREEK and
+	 PPC860 codepages.
+
+	* New programs: psf2bbc / bbc2psf to convert to/from a BBC Micro
+	 soft font.
+

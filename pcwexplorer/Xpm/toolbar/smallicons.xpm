@@ -1,0 +1,23 @@
+/* XPM */
+static char * smallicons_xpm[] = {
+"16 16 4 1",
+" 	c none",
+".	c #000000000000",
+"X	c #00000000FFFF",
+"o	c #FFFFFFFFFFFF",
+"                ",
+" .............. ",
+" .XXXXXXXXXXXX. ",
+" .oooooooooooo. ",
+" .o...oooooooo. ",
+" .o.o..ooooooo. ",
+" .o.oo.oo...oo. ",
+" .o.oo.oo.o..o. ",
+" .o....oo.oo.o. ",
+" .ooooooo.oo.o. ",
+" .oo..ooo....o. ",
+" .oooooooooooo. ",
+" .oooooooo..oo. ",
+" .oooooooooooo. ",
+" .............. ",
+"                "};

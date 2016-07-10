@@ -1,0 +1,32 @@
+SNAPLD v1.02                                        10 June 2005, John Elliott
+==============================================================================
+
+  SNAPLD is a .SNA loader for the Spectrum +3. As supplied, it's interactive;
+you input the name of the SNA file to load and a couple of other parameters,
+and it loads and runs it. If you want to change it to load a given snapshot
+file, then edit the BASIC loader (DISK) and replace the INPUT statements with
+LET statements.
+
+  The three questions you are asked are:
+
+* SNA file to load> 
+
+   - This one is fairly straightforward.
+
+* Loader address>
+
+   - SNAPLD needs to overwrite 14 bytes of the SNA file for its final stage
+    loader. If you just press ENTER at this prompt, SNAPLD will either use 
+    the bytes just before the stack pointer of the SNA file, or the first 14
+    bytes of screen memory. If this causes your SNA file to crash, or you 
+    know that there's free space elsewhere in the file, you can enter a 
+    different number here.
+
+* Lock paging (y/N)>
+
+   - If you enter 'y' or 'Y' here, SNAPLD will load the SNA file in 48k mode.
+    If you enter anything else (including just pressing ENTER) then the SNA 
+    file will be loaded in USR0 mode; which has the advantage that if a 
+    Multiface 3 is fitted, snapshots can be saved to disc. There are a few
+    games (such as Alien 8) which only work if the memory paging is locked.
+

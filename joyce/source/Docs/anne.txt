@@ -1,0 +1,1625 @@
+ANNE v2.2.8
+
+John Elliott
+
+Abstract
+
+ANNE is an Amstrad PcW16 emulator for UNIX and Windows. It only 
+emulates the PcW16; use JOYCE for other PCW / PcW models.
+
+
+Table of Contents
+
+
+
+
+  Introduction
+
+  Copyright
+
+Copyright 1997,2001-7,2010,2014,2016 John Elliott. Parts 
+copyright 1994, 1995 Ian Collier; other parts copyright 1987, 
+1999 Caldera[footnote:
+The copyright message in the source files names Caldera. Actual 
+ownership of the copyrights has probably since passed to DRDOS 
+Inc.
+]. ANNE can be distributed freely under the conditions of the GNU 
+General Public License (sic) - see the file COPYING.
+
+  What ANNE does
+
+ANNE emulates a PcW16 computer - an 8-bit computer intended by 
+Amstrad as a word processor, and manufactured around 1996.
+
+  What's new?
+
+  Since v2.2.0:
+
+  JOYCE will now prompt you when a CP/M program attempts to 
+  access files outside the emulator (for example, the supplied 
+  IMPORT or EXPORT utilities). This warning can be controlled 
+  from f6=Settings | General | File Access...
+
+  The Windows version is distributed with the latest SDL.DLL.
+
+  Various compilation fixes on Unix platforms.
+
+  Since v2.1.0:
+
+  A crash that occurs when trying to load the rescue disc has 
+  been corrected.
+
+  Initial support for compiling under Mac OS X has been added.
+
+  It is now possible to use a folder on the host computer as a 
+  CP/M disc. 
+
+  Native GSX support is now present.
+
+  Can now boot CP/M.
+
+  Successfully detects when a disc image has been changed.
+
+  Does not let the mouse pointer go off the bottom of the PcW16 
+  screen.
+
+  Installation from a .CFI file (rather than a physical PcW16 
+  rescue disc) now works correctly.
+
+  With graphics acceleration turned on, the word processor 
+  display is not corrupted by scrolling.
+
+  Floppy acceleration is a whole lot better than it was before.
+
+  When you create a new disc image file, you will be asked 
+  whether it should be 720k or 1.4Mb. It will then be formatted, 
+  so you don't have to use the PcW16 file manager to format new 
+  discs. Instead, answer yes when it asks you if you want to 
+  create PcW16 folders on the disc.
+
+  <sec: concepts>Concepts
+
+When moving from a PcW to an emulator, the biggest change you 
+have to accustom yourself to is the way that ANNE handles discs. 
+Real PcW16s use real floppy discs[footnote:
+The PCW16 design allowed a hard drive interface to be added. ANNE 
+does not emulate this.
+]; you use the recovery disc to reload the system after a crash, 
+a data disc to save your work on, and so on.
+
+It is possible for ANNE to use real disc drives in the same way 
+that a PcW does. However this is pretty slow and awkward; since 
+the PC's got a hard drive, you might as well use it. 
+
+  Disc image files
+
+Each floppy disc is read into the PC's hard drive and stored as a 
+“disc image file”. This is a one-time process; once the disc 
+image files are created, the discs themselves are no longer 
+needed. 
+
+Disc image files have a number of advantages:
+
+  They are much faster than real floppy discs.
+
+  You don't have to be shuffling a stack of floppies every time 
+  you want to use ANNE.
+
+  If you want more discs, you don't have to go to the shop to buy 
+  them. You just create more disc image files.
+
+By convention, these have names ending in “.dsk”. So instead of 
+having a “manuscripts” disc, you would have a disc image file 
+called “manuscripts.dsk”. To normal Unix or Windows software, “
+manuscripts.dsk” is just one file, but PcW programs see it as a 
+disc with any number of PcW files on it.
+
+One consequence of this is that the PcW16's floppy drive has 
+nothing to do with your PC's real floppy drives. You can be 
+working with a “disc” in the PcW's drive even when there's 
+nothing in your real floppy drive(s). 
+
+Converting your PcW discs to disc image files is covered in 
+section [sec: setup].
+
+  Disc image folders
+
+ANNE 2.1.8 and later can use folders instead of CP/M disc image 
+files. In this system, one PcW disc corresponds to one PC folder. 
+This has the advantage that each PcW file corresponds exactly to 
+one PC file. For example, you could put text files in that 
+folder, and then use the PcW's “Import” facility to import files 
+from them.
+
+  Floppy Acceleration
+
+When you have floppy acceleration turned on, ANNE doesn't use 
+disc images any more. When programs refer to the 'disc drive', 
+they are actually looking at a directory called PcW16FS on your 
+hard drive. This is more convenient if you want to share files 
+between the PcW16 environment and the rest of the world, and you 
+don't have to worry about disc images only holding 1.4Mb.
+
+  ROMs
+
+A real PcW16 has 1 megabyte of flash ROM, which holds the 
+contents of the Cabinet, the built-in software, and the user 
+settings. In the case of a program crash, the contents of the 
+flash ROM could be lost, forcing a time-consuming reload from the 
+recovery disc and data backups.
+
+ANNE doesn't just use one flash ROM - it allows you to choose 
+from several. One (called “Previous session”) is automatically 
+saved when you leave ANNE; another (“Empty system”) is created 
+when the recovery disc is first read in. It is possible to save 
+others at any time; for example, if you have a Cabinet full of 
+documents, you can save a copy of the ROM, and revert to that 
+later if something goes wrong. 
+
+  The MENU key
+
+ANNE requires a Windows-style keyboard with a Menu key. On most 
+keyboards, Menu is between AltGr and Ctrl, to the right of the 
+space bar. Under Mac OS X, there is no Menu key (even if you've 
+plugged in a PC keyboard, SDL doesn't recognise the key) and you 
+should use Command-F9 (Windows+F9 on a PC keyboard) instead.
+
+  Compiling ANNE
+
+If you have downloaded ANNE as a binary for your platform (eg: 
+the full Windows install, or an RPM), you can skip this section.
+
+To compile ANNE, you will need:
+
+  SDL, the Simple DirectMedia Layer: <http://www.libsdl.org>. You 
+  need version 1.0.8 or later.
+
+  libxml, the xml parser used by GNOME <http://www.libxml.org/>. 
+  ANNE was tested with version 2.2.6.
+
+  libpng, the image library. <http://www.libpng.org/pub/png/>. 
+  You need version 1.0.6 or later.
+
+You should be able to compile with the commands:
+
+./configure
+
+make
+
+sudo make install 
+
+On systems with a GCC version earlier than 3.0, the first line 
+should be “./configure --with-ministl”.
+
+To cross-compile ANNE for Windows, you need the XMINGW32 
+cross-compiler pack from <http://www.libsdl.org>, and MINGW32 
+versions of the above libraries.
+
+  ANNE on Mac OS X
+
+I have successfully compiled ANNE on a Mac OS X (10.4.2) system. 
+The process (and indeed MacOS X support in general) is pretty new 
+and unpolished.
+
+Firstly, the three libraries mentioned above (SDL, libxml and 
+libpng) had to be compiled from source and installed using their “
+make install” commands; pre-packaged OS X versions didn't seem to 
+be suitable. 
+
+Secondly, the configure script needed to be told what the host 
+system was:
+
+./configure --host=powerpc-darwin-apple8.2.2
+
+make
+
+sudo make install
+
+Thirdly, this builds an ANNE that is still very much a UNIX 
+application; there's no application icon, no native OS X menu, 
+and so on. 
+
+
+
+  Known bugs
+
+This version of ANNE contains, or is thought to contain, the 
+following bugs:
+
+  Under MacOS X in full-screen mode, the mouse pointer can leave 
+  stray pixels where it has been.
+
+  The serial port support is untested. It is possible to use 
+  QTERM under CP/M, but the SIO device driver (SIO.FID) has not 
+  been tested.
+
+  The emulated PcW hangs if, from the front screen, you click 
+  'Help' then 'Index'.
+
+  Internet resources
+
+The latest versions of ANNE- and any future updates - will be 
+downloadable as part of the JOYCE suite, from 
+<http://www.seasip.info/Unix/Joyce/>.
+
+Announcements of new ANNE releases, if any, will be made to the 
+newsgroup <news:comp.sys.amstrad.8bit>. It is also on-topic to 
+discuss ANNE in this newsgroup.
+
+  <sec: setup>Setting Up
+
+  Directory organisation
+
+  Under Windows
+
+ANNE uses the same directories as its sister emulator JOYCE. 
+These comprise two directories - a “system” directory common to 
+all users (eg, “C:/Program Files/Joyce/lib” and a “user” 
+directory (eg: “C:/My Documents/Joyce”). Each of these 
+directories will have subdirectories called Boot (boot files and 
+boot disc images) and Disks (all other disc images). In the 
+remainder of this document you will see directory names which 
+look like “~/Joyce/Boot”; you should take the “~” to stand for 
+the “My Documents” directory.
+
+If you don't want ANNE to put its files in “My Documents”, then 
+you can override it. In ANNE, press [f9] for the menu, [f6] for 
+settings, and select “General”. Then enter the new directory 
+name, and press RETURN. You will need to copy the “Joyce” 
+directory from “My Documents” to the new directory you specified.
+
+  Under Unix
+
+ANNE uses two directories - a “system” directory common to all 
+users (by default, /usr/local/share/Joyce - see Appendix [sec: admins]
+) and a “user” directory for each user (by default, ~/Joyce). 
+Each of these directories will have subdirectories called Boot 
+(boot files and boot disc images) and Disks (all other disc 
+images).
+
+  Running ANNE for the first time
+
+  You will need:
+
+  A version of ANNE that installed correctly. 
+
+  A screen capable of 800x600x256 graphics. ANNE may well be 
+  faster in 256 colour mode than in (say) 16-bit mode. 
+
+  One of the following: 
+
+  A PcW16 rescue disc; 
+
+  A disc image of the PcW16 rescue disc, that you previously 
+    generated;
+
+  The rescue disc in .CFI format from Cliff Lawson's web page: 
+    <http://web.ukonline.co.uk/cliff.lawson/files/pcwos.zip>
+
+  The ANNE command
+
+Under Windows, ANNE should be run from the Start Menu. Under 
+Unix, the command to use is either “xanne” (to run in a window) 
+or “xanne -f” (to run full screen). Other command line options 
+are given in section [sec: cmdline].
+
+  <sec: addboot>Adding boot ROMs
+
+The first time ANNE is started, it will detect that no boot ROM 
+is present. You will be asked to provide it with a rescue disc. 
+
+The next menu that appears asks you for the location of the 
+rescue disc to use. 
+
+  If you are using real floppies, then select the correct drive 
+  (A: or B:). 
+
+  If you are using a pre-prepared DSK file, choose the correct 
+  file. 
+
+  If you are using a .CFI file, choose the file and then select “
+  Advanced”. On the menu that appears, select “.CFI - compressed 
+  raw”.
+
+Next select “Continue”. If all goes well, the boot ROM will now 
+be created and the boot menu will appear. The only usable option 
+will be “Empty system (Boot ROM only”) so select that. 
+
+You should then see the PcW16 memory test, followed by the “Fatal 
+OS checksum error” message. Use the ANNE menu (see below) to 
+insert the rescue disc again, and click the “power switch” icon. 
+If you get a “Disk bootstrap error”, click the power switch 
+again.
+
+When the OS install is complete and you have entered your user 
+details, use the ANNE menu to save the current system as a boot 
+ROM (f2=Disc; Disc management; Save current ROM as boot ROM). 
+Call it something like “Full system”.
+
+  Running ANNE for the second and subsequent times
+
+When ANNE has been set up, it will display a boot menu when 
+started. The menu will offer the following options:
+
+  Previous session The ROM saved when you last used ANNE. You 
+  would normally choose this option, unless the session has been 
+  corrupted by a program crash or you want to load an alternative 
+  ROM.
+
+  n. title ROMs that have been saved at earlier points. There 
+  will usually be one called “Empty system”, representing the 
+  state of the system just before the recovery disc is loaded. 
+
+  Other... Load a ROM from a disc file.
+
+  In Use
+
+  What is emulated
+
+  The Z80. 
+
+  2MB of memory and 2MB of Flash ROM.
+
+  The screen. 
+
+  The keyboard. 
+
+  The real-time clock 
+
+  A Centronics-only printer interface. You can print to a disc 
+  file or a UNIX command (eg, “lpr” for direct printer output). 
+
+  The mouse (either attached to a COM port, or directly driven). 
+  You will need a three-button mouse for the full effect.
+
+  The serial ports (emulation of these is rather sketchy)
+
+  The beeper.
+
+  The LocoLink interface (over the parallel port).
+
+  What is not emulated
+
+  The optional hard drive.
+
+  <sec: morediscs>How the disc drive is handled
+
+The basic concept of disc image files was described in section [sec: concepts]
+. There are several subtleties to be aware of:
+
+  Ejecting a disc
+
+To eject a disc, press the MENU key (OS X: Command+F9) for the 
+ANNE menu, then [f2] (Disc). If there is a disc in the PCW16's 
+drive, you can eject it by selecting the corresponding “eject” 
+option. Remember that ejecting discs from ANNE's emulated drive 
+doesn't have anything to do with whatever floppy drives are 
+actually fitted to the PC.
+
+  <sec: cmdline>Command-line options
+
+If you want ANNE to start with a disc in its emulated drive, then 
+use -A with a filename:
+
+xanne -A documents.dsk
+
+will start up with "documents.dsk”. in the drive. 
+
+To start up without asking which boot ROM to use, use the -E 
+option with a filename:
+
+xanne -E bootfile.rom
+
+  Non-floppy discs
+
+The following JOYCE utilities have not been tested on ANNE. Some 
+may work.
+
+  ANNEDRV.FID gives the emulated PcW16 a hard drive (available 
+  only under CP/M). It uses a similar "disc image file" system to 
+  the floppy drives, but the image files can be up to 8Mb in 
+  size.
+
+  REDIR.COM allows you to use one or more Unix directories as 
+  CP/M drives. It requires CP/M. This avoids the problem that the 
+  host PC can't see "inside" image files without extra software.
+
+  IMPORT.COM and EXPORT.COM will copy single files into or out of 
+  the ANNE environment. They require CP/M.
+
+All these utilities are on the file ANNEUTIL.DSK. You can get at 
+them with a command something like:
+
+xanne -A=/usr/local/lib/Joyce/Disks/anneutil.dsk
+
+and then start CP/M using “Run external program”. REDIR.COM and 
+its companion programs are in Group 1; the others are in Group 0.
+
+  Floppy Disc Acceleration
+
+As mentioned in section [sec: concepts], floppy disc acceleration 
+makes a directory on your hard drive appear to be the PcW16 
+floppy drive. This does not work with CP/M; for CP/M discs, use 
+the “Folder” option in the “Enter filename for disc image” menu. 
+
+  What if the speed is wrong? 
+
+  If ANNE is too slow
+
+One solution is to increase the CPU speed. Press [MENU], then 
+[f6] and select 'General'. Then enter the new speed.
+
+It may also be possible to improve the performance of ANNE by 
+changing the video refresh frequency. This is normally 12, but it 
+can be reduced to improve performance. If it is reduced to 3.75, 
+for example, then programs may appear a little jerky, but ANNE 
+should run at its full speed.
+
+To change the video refresh frequency, start ANNE. At the opening 
+screen, press [MENU], then [f6] and select 'Video'. Then enter 
+the new frequency and press RETURN.
+
+  If ANNE is too fast
+
+The built-in speed regulation in ANNE should stop it running too 
+fast. Possibly you could reduce the overall speed: press [MENU], 
+then [f6] and select 'General'. Then enter a new speed.
+
+  Peripherals in ANNE
+
+  The keyboard
+
+The keyboard is laid out to match the PcW16's own keyboard - a 
+UK-layout 102-key arrangement. The following keys have different 
+captions on the PcW16:
+
+[This is for a UK keyboard with XFree86. Other X servers may 
+behave differently].
+
+
+
+
+
+
++--------------+----------+--------------------------------+
+|   PC key     | PCW key  |             Notes              |
++--------------+----------+--------------------------------+
++--------------+----------+--------------------------------+
+|     ESC      |  STOP    |         ^C under CP/M          |
++--------------+----------+--------------------------------+
+|     F9       |  Blue    | Under Mac OS X, F9-F12 trigger |
++--------------+----------+--------------------------------+
+|     F10      | Yellow   | Exposé, so you may have to use |
++--------------+----------+--------------------------------+
+|     F11      |  Green   |     (eg) CTRL+F9 instead.      |
++--------------+----------+--------------------------------+
+|     F12      |   Red    |                                |
++--------------+----------+--------------------------------+
+| Scroll Lock  |  UNDO    |         ESC under CP/M         |
++--------------+----------+--------------------------------+
+|    Pause     |  Help    |                                |
++--------------+----------+--------------------------------+
+|     Alt      |  Task    |                                |
++--------------+----------+--------------------------------+
+
+
+
+
+
+
+  <sec: mousetypes>The Mouse
+
+The PcW16 uses a Mouse Systems type mouse, connected to its 
+second serial port (referred to by ANNE as COM3:). ANNE can 
+emulate the mouse as either:
+
+  No emulated mouse. 
+
+  Serial mouse on COM1 (the mouse is in the wrong socket)
+
+  Serial mouse on COM3 (the mouse is in the right socket)
+
+  Update ROSANNE directly (the ROSANNE mouse coordinates are 
+  updated directly, which produces much better results than the 
+  emulated serial mouse options)
+
+To choose which emulation is selected, press [MENU] in ANNE; then 
+[f6] for Settings, and choose Mouse. 
+
+It is possible to use ANNE with a real PcW16 (or compatible) 
+mouse - any serial mouse that uses the MouseSystems protocol 
+should be suitable. To do this, choose 'No emulated mouse', plug 
+the mouse into a serial port, and set the PcW16's COM3 to use 
+that port.
+
+  The disc drive
+
+Instead of a real disc drive, ANNE works with “disc image files” 
+on the computer's hard drive. These are fully described in 
+sections [sec: concepts] and [sec: morediscs]. If Rosanne 
+acceleration is turned on (section [sec: accel]), then instead of 
+disc image files, ANNE will use a directory on your hard drive.
+
+  The LocoLink interface
+
+ANNE allows two forms of LocoLink communication (only one under 
+Windows, though). In each case, you must have suitable software 
+(LocoLink or PcWLink). 
+
+  LocoLink to a real computer (requires Linux)
+
+  ANNE will act as the master. Connect the parallel port of your 
+  Linux box to the other computer (if it's another PC, use a 
+  LapLink cable; if it's a PcW, use the original LocoLink cable). 
+  Go into the settings for the printer port, and set it to “
+  Output to parallel port”. Then select the appropriate parallel 
+  port (normally /dev/parport0 or /dev/parport1).
+
+  LocoLink to another emulator
+
+  Go into the settings for the printer port and set it to “output 
+  to Socket”. On the screen that appears, select the correct 
+  socket type and name (see below) and ensure the “Client 
+  (Normal)” option is ticked.
+
+  Socket types and names
+
+  UNIX domain sockets (not supported on Windows) can be used to 
+  communicate with other emulators on the same computer. They 
+  work pretty much like normal files, and their names are normal 
+  filenames; so, for example, one might be called “
+  /tmp/locolink.socket”. When you are establishing a link, it is 
+  important that both ends are using the same socket name.
+
+  TCP/IP sockets can be used to communicate with other emulators 
+  not only on the same computer, but across a network or the 
+  Internet. However, ANNE does not perform any security checks on 
+  socket connections, so I strongly recommend that you do not use 
+  TCP/IP sockets while connected to the Internet. 
+
+  For a LocoLink master, the name of a TCP/IP socket is formed “
+  host:port” - for example, “localhost:8256”, “127.0.0.1:8512” or 
+  even “www.somewhere.com.invalid:8080”. 
+
+  The ANNE Menu
+
+If you press the Menu key (OS X: Command+F9), a menu will appear 
+at the top of the screen. It offers the following options:
+
+  ESC=return to ANNE
+
+Leaves the menu system.
+
+  f1 = Help
+
+Display the keyboard layout onscreen.
+
+  f2 = Discs
+
+Options for the floppy drive. Use this to "insert" and "eject" 
+discs, to read floppy discs into the ANNE environment, and to 
+modify boot ROM settings. It brings up the Discs menu below.
+
+  f5 = Reboot
+
+Simulates turning the PcW off and then on again.
+
+  f6 = Settings
+
+Settings for all aspects of the emulator. The Settings menu will 
+appear.
+
+  f7 = Debug
+
+Display the Debug menu ([sec: dbgmenu]). 
+
+  f8 = Action
+
+Display the Action menu ([sub:The-Action-Menu]).
+
+  f10 = Quit
+
+Leave ANNE. You will be asked for confirmation. Under OS X, use 
+Command+F10, because F10 by itself triggers Exposé.
+
+  <sub:The-Action-Menu>The Action Menu
+
+This menu has only one option: “Select PCW screen.” This is 
+intended for use with GSX programs (such as DR Graph) which exit 
+without shutting GSX down properly. In such cases, the program 
+will appear to hang, but selecting the PCW screen will display 
+the A> prompt.
+
+  <sec: dbgmenu>The Debug Menu
+
+There are four options here, intended mainly for advanced users 
+or ANNE developers. 
+
+  “Debug mode” puts the system in debug mode. This has no effect 
+  in the current release.
+
+  “CPU state” displays the values of the Z80 registers.
+
+  “RAM dump” writes out the contents of RAM to a file in the 
+  current directory called “anne.ram”. This is not a full 
+  snapshot facility; memory dumps can't be reloaded, and they 
+  don't contain CPU state.
+
+  “Power switch” simulates the power switch being pressed or 
+  released.
+
+  The Disks menu
+
+The Disks menu displays the status of the floppy drives, and 
+allows you to eject or insert discs. Each drive has three lines 
+in the menu:
+
+  The first line reads either “Drive A: (Ejected)” or “Drive A: 
+  (Filename)”. This shows whether there is a “disc” (.DSK file) 
+  in the drive or not.
+
+  The second line reads either “Eject” or “Insert...” depending 
+  whether there's a disc in the drive. “Eject” ejects the current 
+  disc (.DSK file); while “Insert...” brings up a window asking 
+  for the file to insert. You can also “insert” a real floppy 
+  drive; this allows the emulated PcW to access a real drive 
+  directly (if slowly). If you change the disc in the real drive, 
+  you may need to “eject” and “insert” the real drive, so that 
+  the PcW's own software can tell that the disc has changed. If 
+  you ask to “insert” a folder, and the folder you select has not 
+  previously been used in this way by JOYCE or ANNE, then you 
+  will be asked what format the folder should pretend to be in.
+
+  The bottom line for each drive reads “Read only”. If there is a 
+  tick beside it then the write protect holes on the disc have 
+  been opened and it cannot be written to.
+
+  If you select“Disc management...” then a menu appears allowing 
+  you to read in extra floppy discs, or convert .DSK files back 
+  to real discs.
+
+  The Disc Management menu
+
+There are six options:
+
+  Add a boot ROM from a file - Reads in a boot ROM and adds it to 
+  the opening menu.
+
+  Save current ROM as boot ROM - Saves the current ROM file and 
+  adds it to the opening menu.
+
+  Rename a boot ROM - Allows you to change the caption associated 
+  with a boot ROM.
+
+  Delete a boot ROM - Removes a boot ROM from the opening menu. 
+  Use this option with caution!
+
+  Convert floppy to ANNE.DSK file - Read in a normal (data) disc, 
+  storing the new disc image file in the “user discs” directory.
+
+  Write .DSK file back out to floppy - Convert a disc image file 
+  (either normal or start-of-day) back to a floppy disc.
+
+  The Settings menu
+
+Choose the item of hardware for which you want to make changes. 
+Note that if you make a change such as disconnecting or 
+connecting an interface, the emulated PcW may not pick it up 
+until the next reboot. 
+
+  Disc drives
+
+Note: The menus in this section only allows you to create 
+configurations that could exist on a real PcW16. By manually 
+editing ~/Joyce/annehw.xml, you can create “impossible” 
+configurations, such as a system with two floppy drives (CP/M and 
+Rosanne won't detect the second one.) If the configuration is “
+impossible”, the menus will look different as they attempt to 
+accommodate the changes.
+
+The settings in this menu are:
+
+  Drive A: settings: 
+
+This brings up its own menu, allowing you to set what type of 
+disc drive is attached to the PcW. The default type (“720k 3.5”) 
+in fact supports 1440k disc images as well. If you want to 
+emulate 5.25” drives or anything else unusual, select “other” and 
+manually enter the drive type, the number of cylinders[footnote:
+The drive documentation may call this figure the number of tracks 
+rather than the number of cylinders. Either way, it's usually 40 
+or 80.
+] it can access, and whether it's single or double-sided.
+
+  <sec: extradrv>Extra drives
+
+This menu allows you to set up drives C: - L: and N: - P:. 
+Obviously these drives don't exist on real PcW16s, but they can 
+on an ANNE system, though only under CP/M. You will need to have 
+a copy of ANNEDRV.FID on your start-of-day disc for these drives 
+to become available - see section [sec: joycedrv].
+
+For each drive, you can set it up in three ways:
+
+  As direct access to the PC's floppy drives. 
+
+  As a floppy drive that accesses a standard disc image file, 
+  just like the emulated A: drive.
+
+  As a hard drive with 8Mb of storage. The hard drive will also 
+  be stored on a .DSK file, but this .DSK file will not be usable 
+  in emulated floppy drives.
+
+To set up a drive, choose it from the list. Then choose or enter 
+the filename and drive type, as listed below:
+
+
+
+
+
+
++-----------------------------------------+--------------+---------------+
+|          Type of drive to use           | Choose file  | Choose option |
++-----------------------------------------+--------------+---------------+
++-----------------------------------------+--------------+---------------+
+|         Floppy drive A: or B:           |  A: or B:    | floppy drive  |
++-----------------------------------------+--------------+---------------+
+| Floppy drive using standard image file  |  .DSK file   | floppy drive  |
++-----------------------------------------+--------------+---------------+
+|  Hard drive using special image file    |  .DSK file   |  hard drive   |
++-----------------------------------------+--------------+---------------+
+
+
+
+
+
+
+  Memory
+
+This allows you to set the memory size of your emulated PcW. If 
+your computer is running very low on memory, the “Current memory 
+size” may be less than requested. 
+
+By default, ANNE uses maximum values - 2Mb of Flash ROM and 2Mb 
+of RAM. If you want it to behave like a real PcW16, set both of 
+these to 1Mb.
+
+  <sec: genopt>General options
+
+This screen allows you to choose the speed at which ANNE should 
+run. It also allows you to control the warning that appears when 
+a CP/M program attempts to access files outside the emulator (as, 
+for example, the supplied IMPORT and EXPORT utilities do). Select 
+“File Access...” and select one of three options:
+
+  Allow full access Programs running under CP/M will be able to 
+  read and write any file on your computer, without prompting. 
+  This is how ANNE 2.2.6 and previous versions behaved.
+
+  Prompt for each file When a CP/M program attempts to read or 
+  write a file, ANNE will display a prompt asking whether this 
+  should be allowed (see below).
+
+  No file access CP/M programs will not be able to access 
+  arbitrary files on your computer. The IMPORT and EXPORT 
+  utilities will not operate.
+
+If 'Prompt for each file' is selected, then when a CP/M program 
+attempts to open a file, the following warning will be displayed:
+
+Confirm host file access
+
+
+
+A CP/M program is attempting to access the file:
+
+bank_passwords.txt
+
+Do you want to allow access to this file?
+
+
+
+No
+
+No, and don't ask again
+
+Yes
+
+The prompt will offer three options:
+
+  No Access to the file will be blocked. You will be prompted 
+  again if the program attempts to read or write a different 
+  file.
+
+  No, and don't ask again Access to the file will be blocked, and 
+  the File Access settings screen will be switched to the “No 
+  file access” option, blocking all future file access. If you 
+  subsequently want to grant access again, this must be done 
+  through the File Access menu screen.
+
+  Yes Access to this file will be allowed. You will be prompted 
+  again if the program attempts to read or write a different 
+  file.
+
+  Mouse
+
+The mouse settings available here are:
+
+  Emulation mode: No mouse, Mouse on COM1:, Mouse on COM3: and 
+  Update ROSANNE directly (see section [sec: mousetypes]).
+
+  Video
+
+The Video settings allow you to change:
+
+  “Video refresh” - the number of times per second that the 
+  screen is redrawn. You can go up to 50Hz (ie, the screen is 
+  redrawn 50 times a second) or down to 0.01Hz (the screen is 
+  drawn once every 10 seconds). The default setting in ANNE is 
+  12Hz, which is fine for nearly all programs.
+
+  The beeper is usually emulated using the PC's sound card. You 
+  can also have it manifest as a red flash of the screen (“Visual 
+  Beeper”) or silence (“Disable beeper”).
+
+  Whether the PcW has a colour monitor (the default), a 
+  monochrome white monitor (like the real PcW16) or a monochrome 
+  green monitor.
+
+  Printer
+
+The following settings are available for the parallel printer 
+port:
+
+  Connected/Disconnected: Is the printer connected to the PcW?
+
+  Output to file: Output goes to a disc file. When you select 
+  this option, you are asked for the filename to send the output 
+  to.
+
+  Output to UNIX command: Output goes to a Unix pipeline. You can 
+  use this to send output to the Unix printing system (enter “lpr”
+   here, with any appropriate options).
+
+  Output to parallel port : Output goes to a real live parallel 
+  port, with no processing. This can be used to LocoLink to a 
+  real PcW.
+
+  Output to socket: Output is sent to another process, over a 
+  socket. This can be used to LocoLink to an emulated PcW (using 
+  JOYCE v2.1.0).
+
+  Under Windows, you also get the option to send data to LPT 
+  ports. 
+
+  Save settings
+
+If you do not save the settings, they will remain in force only 
+for the duration of your current ANNE session. The settings will 
+be saved to the file Joyce/annehw.xml in your home directory.
+
+  <sec: accel>Rosanne Acceleration
+
+Rosanne Acceleration allows certain functions normally performed 
+by the PcW16's Rosanne operating system to be taken over by the 
+emulator.
+
+To turn acceleration on, press the Menu key, then [F6] for the 
+Settings menu, and select “Rosanne acceleration”. If there is no 
+tick by 'Enabled', press SPACE. You will then see a list of 
+further options, each of which can be ticked and unticked as 
+required. 
+
+In general, acceleration replaces parts of Rosanne with calls to 
+special functions in the emulator. This can greatly improve 
+performance, though possibly at the cost of compatibility for 
+some programs. Rosanne acceleration has been tested on Rosanne 
+v1.12; it may or may not work with other versions of Rosanne.
+
+Acceleration must be turned off during a reload from the rescue 
+disc.
+
+  Memory Test
+
+Ticking this option will cause the “PLEASE WAIT. CHECKING MEMORY” 
+screen to be skipped.
+
+  Floppy disc
+
+If this option is ticked, then instead of using a disc image file 
+for its floppy drive, ANNE will use a directory on the hard drive 
+( ~/Joyce/PcW16FS). This has a number of advantages:
+
+  It's faster.
+
+  You can get files in and out of the PcW16 environment much more 
+  easily.
+
+  The resulting drive is not limited to 1.4Mb. 
+
+The directory does not have to exist; to create it, turn on 
+floppy disc acceleration, go into the File Manager, and press 
+Control-L. 
+
+Note that when floppy disc acceleration is turned on, asking ANNE 
+to insert or remove disc images will have no effect.
+
+  Graphics
+
+If this option is ticked, several low-level graphics operations 
+will be implemented in native code. This considerably improves 
+the speed of drawing of menus, dialogs, and those huge buttons on 
+the front screen.
+
+  ANNE Utilites
+
+The following utility programs are supplied with ANNE. They are 
+designed to access features of the emulator which have no 
+equivalent on a real PcW. You will find them on the disc image “
+utils16.dsk”.
+
+  <sec: joycedrv>ANNEDRV
+
+ANNEDRV.FID is a file which is used to add one or more extra disc 
+drives to CP/M running within ANNE. The first of these drives 
+will usually be drive C:.
+
+Unless the settings are changed (see section [sec: extradrv]) the 
+drives will be set up as 8Mb hard drives, called 
+~/Joyce/Disks/c.dsk, ~/Joyce/Disks/d.dsk, etc. This can be used 
+to share files between an install of JOYCE and an install of 
+ANNE. The drives cannot be accessed from Rosanne.
+
+  DDJOYCE.PRL
+
+DDJOYCE is new in v2.1.7. It is a GSX driver for the host PC's 
+graphics screen, allowing high-resolution colour graphics to be 
+used from CP/M.
+
+To use it, edit your ASSIGN.SYS file. Remove the entry which 
+reads
+
+01 @:DDSCREEN
+
+and replace it by
+
+01 @:DDJOYCE
+
+DDJOYCE has been tested with the Digital Research programs DR 
+Draw and DR Graph, with the following issues:
+
+  My copy of DR Graph insists on trying to access drive B: all 
+  the time, causing invisible “Please insert the disc for drive 
+  B:” messages. The program then appears to hang until you press 
+  RETURN to acknowledge the message.
+
+  When DR Graph shuts down, the screen goes blank. This is 
+  because DR Graph does not make a proper 'close workstation' 
+  call when it terminates. Use the Action menu to switch back to 
+  the PcW16 screen.
+
+  DR Draw works correctly, though text rendering is rather ugly.
+
+  DOSDIR
+
+DOSDIR displays the contents of a directory in the host 
+filesystem (the name DOSDIR is for compatibility with MYZ80). 
+Syntax is:
+
+     DOSDIR
+
+  or DOSDIR {x:/path/}filespec
+
+Note that if you include a path you must include a filename. The 
+command
+
+     DOSDIR C:/IMAGES/       is invalid, but
+
+     DOSDIR C:/IMAGES/*.*    is valid.
+
+To get lower-case commands, use:
+
+     A>DOSDIR \
+
+     DOSDIR>/usr/local/bin/* 
+
+  EMULIOS.RSX
+
+EMULIOS allows Digital Research Logo to use the 800x600 screen.
+
+To set it up, use the following commands (under CP/M):
+
+PIP EMULOGO.COM=LOGO.COM
+
+GENCOM EMULOGO
+
+GENCOM EMULOGO EMULIOS
+
+- Then EMULOGO.COM will behave as LOGO.COM, but using the 800x600 
+screen.
+
+The following commands will behave differently:
+
+  setpc Allows a number from 0 to 255
+
+  setbg Allows a number from 0 to 255
+
+  savepic The .PIC file saved is in Windows BMP format, and can 
+  be exported, renamed to .BMP, and loaded by paint programs.
+
+  loadpic The .PIC file loaded must be in Windows BMP format and 
+  have 256 colours, but its size does not have to be 800x600.
+
+  EXPORT
+
+EXPORT will write CP/M files out as UNIX files. It respects exact 
+file sizes.
+
+The syntax is:
+
+     EXPORT cpmfile                    { [O] }
+
+     EXPORT unixfile=du:cpmfile        { [O] }
+
+The first form of the command produce a UNIX file with the same 
+name as the CP/M file. 
+
+The second form creates a UNIX file with a name that may be 
+different from the CP/M name.
+
+If you're using UNIX rather than Windows, beware: because the 
+CP/M CCP renders all filenames into uppercase, it's very unlikely 
+you'll be able to pass directory names to EXPORT; if you say
+
+     EXPORT /home/fred/cpmfile
+
+EXPORT.COM will see "/HOME/FRED/CPMFILE", which probably won't 
+exist. To get
+
+round this, use:
+
+     A>EXPORT \
+
+     EXPORT>/home/fred/cpmfile
+
+  IMPORT
+
+IMPORT will read UNIX files into the CP/M filesystem. It sets 
+exact file sizes.
+
+The syntax is:
+
+     IMPORT {/path/}hostfile            { [O] }
+
+     IMPORT du:=/path/hostfile          { [O] }
+
+     IMPORT du:cpmfile=x:/path/hostfile { [O] }
+
+The first form imports the named file (or files) to the current 
+drive and user area.
+
+The second form imports the file (or files) to the specified 
+drive and user area, keeping the original name(s).
+
+The third form imports the files, changing their name(s) to match 
+the provided CP/M filename(s).
+
+If the [O] option is present, existing CP/M files with the same 
+name as an imported file will be overwritten without asking. 
+Otherwise you are asked for confirmation.
+
+Both filenames may include wildcards, and the second and third 
+forms can include CP/M driveletters and user numbers:
+
+     A:IMPORT \
+
+     IMPORT>2F:*.ASC=/usr/doc/*.txt
+
+will import all the .txt files in /usr/doc to drive F, group 2.
+
+Filenames are expanded case-sensitively, so you will normally 
+need to use the backslash, as above, to get lower-case letters 
+into the command line.
+
+  QUIT
+
+Syntax: 
+
+QUIT { number } { [O] }
+
+QUIT will exit ANNE. With no parameters, it will check whether 
+there are files on drive M: which may need saving, and if there 
+are it will ask for confirmation.
+
+The number parameter is the error level which ANNE should return. 
+If there is no number parameter, ANNE returns 98.
+
+The [O] option disables the M: drive check and quits immediately.
+
+  REDIR
+
+REDIR allows you to use one or more PC directories as drives 
+under CP/M. See the separate file REDIR.DOC for more information.
+
+  VGA and VGACOM
+
+VGA.FID allows CP/M programs to make direct use of the PC screen 
+and keyboard. This gives more text on the screen and faster 
+output.
+
+Once VGA.FID has loaded, type VGACOM ON to activate it, and 
+VGACOM OFF to deactivate it.
+
+Your PcW screen will now be 100 columns x 36 lines. Nearly all 
+the normal PcW escape codes are supported, which should enable 
+character-based programs to be run. Since screen output is now 
+being done by the host PC's processor, you should notice an 
+improvement in speed.
+
+The following escape codes work differently in the 800x600 VGA 
+mode:
+
+  ESC b / ESC c set colours (so the numbers in the PALETTE 
+  command actually have meaning).
+
+  ESC y sets 32x90 mode.
+
+  ESC z sets 36x100 mode.
+
+  ANNE utilities (PC hosted)
+
+If you don't want to use ANNE's own methods for converting 
+between disc files and image files, you can also use the dsktrans 
+program, which is installed with ANNE.
+
+The command to use is either:
+
+dsktrans /dev/fdn dskfile 
+
+    - Floppy disc to image file
+
+or 
+
+dsktrans dskfile /dev/fdn -otype floppy 
+
+    - Image to floppy disc.
+
+DSKTRANS isn't as versatile as CPCTRANS (for example, it can only 
+handle discs in recognisable PcW or +3DOS formats) but it doesn't 
+need telling what sort of disc it is using, and it is a native 
+(not DOS-hosted) program.
+
+  <sec: changes>Recent Changes
+
+  New in v2.2.7:
+
+  External file access by CP/M programs now prompts for each file 
+  being read / written.
+
+  New in v2.2.1:
+
+  Updated to the latest LibDsk and Lib765, to deal with a crash 
+  caused by buffer overflow.
+
+  New in v2.2.0:
+
+  Minor code cleanups only.
+
+  New in v2.1.9:
+
+  Added Meta+F9 as an alternative for Menu, allowing ANNE to be 
+  used in Mac OS X.
+
+  Other changes to improve performance on OS X.
+
+  Updated LibDsk to 1.1.9, fixing a bug in rcpmfs for files saved 
+  as User 1.
+
+  New in v2.1.8:
+
+  Exposed the 'rcpmfs' functionality in LibDsk, allowing folders 
+  to be used as disc images.
+
+  New in v2.1.7:
+
+  Native GSX driver, using Digital Research GEM code released 
+  under the GPL.
+
+  Added 'Select PCW screen' command.
+
+  New in v2.1.4:
+
+  Bug fix in mouse acceleration; the mouse pointer can't go off 
+  the bottom of the screen any more.
+
+  Bug fix: The floppy changeline is emulated correctly.
+
+  Bug fix: ANNE can tell the difference between 720k and 1440k 
+  disc images. This allows CP/M to boot from a 720k disc image. 
+
+  New in v2.1.3:
+
+  Bug fixes in the graphics and floppy acceleration code. 
+  Compatibility with the built-in applications is now much 
+  improved.
+
+  Bug fix: Installing from a .CFI file now works correctly.
+
+  When browsing for a disc image, does not default to the /dev 
+  directory (Unix) or drive A: (Windows).
+
+  Floppy disc image files are formatted by ANNE when they are 
+  created.
+
+  New in v2.1.2:
+
+  Added native acceleration options.
+
+  Compiles without modification under gcc 3.2 (if configured with 
+  the --with-stl option).
+
+  New in v2.1.0:
+
+  First release.
+
+ 
+
+  <sec: admins>For Unix system administrators
+
+First and foremost, don't run ANNE as the root user! ANNE gives 
+the PcW programs within it various methods to access the host 
+filesystem; it is entirely possible that a malicious PcW program 
+running within ANNE could damage important Unix files. 
+
+It is possible to set up a system-wide installation of ANNE with 
+default settings, boot discs and other discs. To do this, first 
+set up the desired configuration as a normal user. Then copy the 
+following files:
+
+  From ~user/Joyce to /usr/local/share/Joyce: annehw.xml
+
+  From ~user/Joyce/Boot to /usr/local/share/Joyce/Boot: anne*.rom 
+  and annebt.xml
+
+  From ~user/Joyce/Disks to /usr/local/share/Joyce/Disks: Any 
+  other .dsk files that should be common.
+
+This will then become the default configuration on your system. 
+Users will still be able to change settings or add additional 
+discs; these will be saved to their local configuration 
+directories.
+
+  <keycodes>Keyboard codes
+
+Note that many of these keys don't exist in a standard PC 
+keyboard. For example, the PC keyboard has no “$” key (it uses 
+SHIFT + 4 instead) so assigning codes to that key will have no 
+effect.
+
+
++-------+---------------+
+| Code  |      Key      |
++-------+---------------+
++-------+---------------+
+|  8    |   Backspace   |
++-------+---------------+
+|  9    |      Tab      |
++-------+---------------+
+|  12   |     Clear     |
++-------+---------------+
+|  13   |    Return     |
++-------+---------------+
+|  19   |     Pause     |
++-------+---------------+
+|  27   |    Escape     |
++-------+---------------+
+|  32   |     Space     |
++-------+---------------+
+|  33   |       !       |
++-------+---------------+
+|  34   |       “       |
++-------+---------------+
+|  35   |       #       |
++-------+---------------+
+|  36   |       $       |
++-------+---------------+
+|  38   |       &       |
++-------+---------------+
+|  39   |       '       |
++-------+---------------+
+|  40   |       (       |
++-------+---------------+
+|  41   |       )       |
++-------+---------------+
+|  42   |       *       |
++-------+---------------+
+|  43   |       +       |
++-------+---------------+
+|  44   |       ,       |
++-------+---------------+
+|  45   |       -       |
++-------+---------------+
+|  46   |       .       |
++-------+---------------+
+|  47   |       /       |
++-------+---------------+
+|  48   |       0       |
++-------+---------------+
+|  49   |       1       |
++-------+---------------+
+|  50   |       2       |
++-------+---------------+
+|  51   |       3       |
++-------+---------------+
+|  52   |       4       |
++-------+---------------+
+|  53   |       5       |
++-------+---------------+
+|  54   |       6       |
++-------+---------------+
+|  55   |       7       |
++-------+---------------+
+|  56   |       8       |
++-------+---------------+
+|  57   |       9       |
++-------+---------------+
+|  58   |       :       |
++-------+---------------+
+|  59   |       ;       |
++-------+---------------+
+|  60   |       <       |
++-------+---------------+
+|  61   |       =       |
++-------+---------------+
+|  62   |       >       |
++-------+---------------+
+|  63   |       ?       |
++-------+---------------+
+|  64   |       @       |
++-------+---------------+
+|  91   |       [       |
++-------+---------------+
+|  92   |       \       |
++-------+---------------+
+|  93   |       ]       |
++-------+---------------+
+|  94   |       ^       |
++-------+---------------+
+|  95   |       _       |
++-------+---------------+
+|  96   |       `       |
++-------+---------------+
+|  97   |       A       |
++-------+---------------+
+|  98   |       B       |
++-------+---------------+
+|  99   |       C       |
++-------+---------------+
+| 100   |       D       |
++-------+---------------+
+| 101   |       E       |
++-------+---------------+
+| 102   |       F       |
++-------+---------------+
+| 103   |       G       |
++-------+---------------+
+| 104   |       H       |
++-------+---------------+
+| 105   |       I       |
++-------+---------------+
+| 106   |       J       |
++-------+---------------+
+| 107   |       K       |
++-------+---------------+
+| 108   |       L       |
++-------+---------------+
+| 109   |       M       |
++-------+---------------+
+| 110   |       N       |
++-------+---------------+
+| 111   |       O       |
++-------+---------------+
+| 112   |       P       |
++-------+---------------+
+| 113   |       Q       |
++-------+---------------+
+| 114   |       R       |
++-------+---------------+
+| 115   |       S       |
++-------+---------------+
+| 116   |       T       |
++-------+---------------+
+| 117   |       U       |
++-------+---------------+
+| 118   |       V       |
++-------+---------------+
+| 119   |       W       |
++-------+---------------+
+| 120   |       X       |
++-------+---------------+
+| 121   |       Y       |
++-------+---------------+
+| 122   |       Z       |
++-------+---------------+
+| 127   |      Del      |
++-------+---------------+
+| 256   |   Keypad 0    |
++-------+---------------+
+| 257   |   Keypad 1    |
++-------+---------------+
+| 258   |   Keypad 2    |
++-------+---------------+
+| 259   |   Keypad 3    |
++-------+---------------+
+| 260   |   Keypad 4    |
++-------+---------------+
+| 261   |   Keypad 5    |
++-------+---------------+
+| 262   |   Keypad 6    |
++-------+---------------+
+| 263   |   Keypad 7    |
++-------+---------------+
+| 264   |   Keypad 8    |
++-------+---------------+
+| 265   |   Keypad 9    |
++-------+---------------+
+| 266   |   Keypad .    |
++-------+---------------+
+| 267   |   Keypad /    |
++-------+---------------+
+| 268   |   Keypad *    |
++-------+---------------+
+| 269   |   Keypad -    |
++-------+---------------+
+| 270   |   Keypad +    |
++-------+---------------+
+| 271   | Keypad ENTER  |
++-------+---------------+
+| 272   |   Keypad =    |
++-------+---------------+
+| 273   |   Up arrow    |
++-------+---------------+
+| 274   |  Down arrow   |
++-------+---------------+
+| 275   |  Right arrow  |
++-------+---------------+
+| 276   |  Left arrow   |
++-------+---------------+
+| 277   |    Insert     |
++-------+---------------+
+| 278   |     Home      |
++-------+---------------+
+| 279   |      End      |
++-------+---------------+
+| 280   |    Page up    |
++-------+---------------+
+| 281   |   Page down   |
++-------+---------------+
+| 282   |      F1       |
++-------+---------------+
+| 283   |      F2       |
++-------+---------------+
+| 284   |      F3       |
++-------+---------------+
+| 285   |      F4       |
++-------+---------------+
+| 286   |      F5       |
++-------+---------------+
+| 287   |      F6       |
++-------+---------------+
+| 288   |      F7       |
++-------+---------------+
+| 289   |      F8       |
++-------+---------------+
+| 290   |      F9       |
++-------+---------------+
+| 291   |      F10      |
++-------+---------------+
+| 292   |      F11      |
++-------+---------------+
+| 293   |      F12      |
++-------+---------------+
+| 294   |      F13      |
++-------+---------------+
+| 295   |      F14      |
++-------+---------------+
+| 296   |      F15      |
++-------+---------------+
+| 300   |   Num lock    |
++-------+---------------+
+| 301   |   Caps lock   |
++-------+---------------+
+| 302   |  Scroll lock  |
++-------+---------------+
+| 303   |  Right shift  |
++-------+---------------+
+| 304   |  Left shift   |
++-------+---------------+
+| 305   | Right control |
++-------+---------------+
+| 306   | Left control  |
++-------+---------------+
+| 307   |   Right Alt   |
++-------+---------------+
+| 308   |   Left Alt    |
++-------+---------------+
+| 309   |  Right Meta   |
++-------+---------------+
+| 310   |   Left Meta   |
++-------+---------------+
+| 311   | Left Windows  |
++-------+---------------+
+| 312   | Right Windows |
++-------+---------------+
+| 313   | Mode / Alt Gr |
++-------+---------------+
+| 315   |     Help      |
++-------+---------------+
+| 316   | Print screen  |
++-------+---------------+
+| 317   |     SysRq     |
++-------+---------------+
+| 318   |     Break     |
++-------+---------------+
+| 319   |     Menu      |
++-------+---------------+
+| 320   |     Power     |
++-------+---------------+
+| 321   |     Euro      |
++-------+---------------+
+
+
+  Acknowledgements
+
+This version of ANNE could not have been written without:
+
+  Ian Collier, who wrote the “xz80" emulator. The Z80 emulator in 
+  ANNE is based on the one in xz80.
+
+  Richard Clayton, who supplied vital information on the 
+  interactions between the XBIOS and the hardware.
+
+  Cliff Lawson, who made the PcW hardware specification public.
+
+  Richard Fairhurst and Jacob Nevins, who provided hardware 
+  information.
+
+  The many authors of Linux, GNU, gcc, SDL, libpng and libxml.
+
+  The MICO authors who created the mini-STL.
+
+  Frank D. Cringle, who wrote the Z80 emulator test suite in 
+  YAZE.
+
+  David Cantrell, for his posting on comp.sys.amstrad.8bit 
+  describing the use of PostScript in printer emulation.
+
+  Matthew Gomez, who suggested some of the colour names in the 
+  custom colour menu.
+
+  Kevin Thacker, who wrote the PCW16 driver for MESS. I haven't 
+  used any MESS code, but it helped a lot knowing what hardware 
+  was being used.
+
+  “foz”, for helpful bug reports.
+
+  Digital Research, the original authors of CP/M, GSX and GEM.
+
+  Caldera (as it then was; later Lineo), for releasing GEM source 
+  under the GPL.
+
+  Previous versions of JOYCE also owed much to:
+
+  Marat Fayzullin, who wrote the original Z80 emulation code. 
+  However, none of this code now remains in ANNE, because it is 
+  not compatible with the GPL.
+
+  Ian Macdonald, who tested JOYCE for DOS.
+
+  The authors of DJGPP, GRX20 and DRDOS.
+
+  Samuel Vincent, the author of the SVAsync library.
+
+  Martynas Kunigelis, on whose DJGPP keyboard driver I based that 
+  of JOYCE for DOS.
+

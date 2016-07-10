@@ -1,0 +1,142 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;   JOYCE/ANNE v2.1.0: PCW emulator                                           ;
+;                                                                             ;
+;   Copyright (C) 1998-1999, John Elliott <jce@seasip.demon.co.uk>            ;
+;                                                                             ;
+;    This program is free software; you can redistribute it and/or modify     ;
+;    it under the terms of the GNU Library General Public License as          ;
+;    published by the Free Software Foundation; either version 2 of the       ;
+;    License, or(at your option) any later version.                           ;
+;                                                                             ;
+;    This program is distributed in the hope that it will be useful,          ;
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of           ;
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            ;
+;    GNU Library General Public License for more details.                     ;
+;                                                                             ;
+;    You should have received a copy of the GNU Library General Public        ;
+;    License along with this program; if not, write to the Free Software      ;
+;    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.                ;
+;                                                                             ;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+; Numeric parsing
+;
+
+pnum:	ld	a,(hl)
+	cp	'&'
+	jp	nz,parsenum
+	inc	hl
+
+parsehex:
+;
+;Inputs: HL points to the start of the number.
+;Outputs:
+;        DE holds the number.
+;        Carry set if the first character was not a digit.
+
+	LD	B,H
+	LD	C,L
+	LD	HL,0
+	LD	A,(BC)
+	CALL	IFHEX
+	RET	C
+PNH1:	CALL	ASCHEX
+	CALL	HLX16
+	LD	E,A
+	LD	D,0
+	ADD	HL,DE
+	INC	BC
+	LD	A,(BC)
+	CALL	IFHEX
+	JR	NC,PNH1
+	EX	DE,HL
+	OR	A
+	RET
+;
+IFHEX:
+;CHECK FOR HEX DATA IN A
+;IF OK, CARRY CLEAR.
+	CP	'0'
+	RET	C	;NOT OK
+	CP	':'
+	CCF
+	RET	NC
+	CP	'A'
+	RET	C
+	CP	'G'
+	CCF
+	RET	NC
+	SUB	20H
+	CP	'A'
+	RET	C
+	CP	'G'
+	CCF
+	RET
+;
+HLX16:
+;MULTIPLY HL BY 10.
+;RETURN ANSWER IN HL
+	ADD	HL,HL	;HL=HL*2
+	ADD	HL,HL	;HL=HL*4
+	ADD	HL,HL	;HL=HL*8
+	ADD	HL,HL	;HL=HL*16
+	RET
+;
+ASCHEX:	SUB	'0'
+	CP	10
+	RET	C
+	SUB	7
+	RET
+;
+
+PARSENUM:
+;
+;Inputs: HL points to the start of the number.
+;Outputs:
+;        DE holds the number.
+;        Carry set if the first character was not a digit.
+
+	LD	B,H
+	LD	C,L
+	LD	HL,0
+	LD	A,(BC)
+	CALL	NUMERIC
+	RET	C
+PN1:	SUB	'0'
+	CALL	HLX10
+	LD	E,A
+	LD	D,0
+	ADD	HL,DE
+	INC	BC
+	LD	A,(BC)
+	CALL	NUMERIC
+	JR	NC,PN1
+	EX	DE,HL
+	OR	A
+	RET
+;
+NUMERIC:
+;CHECK FOR NUMERIC DATA IN A
+;IF OK, CARRY CLEAR.
+	CP	'0'
+	RET	C	;NOT OK
+	CP	':'
+	JR	NC,NUM1
+	OR	A	;NUMBER OK
+	RET
+NUM1:	SCF		;NOT OK
+	RET
+;
+HLX10:
+;MULTIPLY HL BY 10.
+;RETURN ANSWER IN HL
+	PUSH	DE
+	ADD	HL,HL	;HL=HL*2
+	LD	E,L
+	LD	D,H	;DE=HL*2
+	ADD	HL,HL	;HL=HL*4
+	ADD	HL,HL	;HL=HL*8
+	ADD	HL,DE	;HL=HL*10
+	POP	DE
+	RET
+;

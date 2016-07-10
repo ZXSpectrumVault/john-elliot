@@ -1,0 +1,242 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;   JOYCE/ANNE v2.1.0: PCW emulator                                           ;
+;                                                                             ;
+;   Copyright (C) 1998-1999, John Elliott <jce@seasip.demon.co.uk>            ;
+;                                                                             ;
+;    This program is free software; you can redistribute it and/or modify     ;
+;    it under the terms of the GNU Library General Public License as          ;
+;    published by the Free Software Foundation; either version 2 of the       ;
+;    License, or(at your option) any later version.                           ;
+;                                                                             ;
+;    This program is distributed in the hope that it will be useful,          ;
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of           ;
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            ;
+;    GNU Library General Public License for more details.                     ;
+;                                                                             ;
+;    You should have received a copy of the GNU Library General Public        ;
+;    License along with this program; if not, write to the Free Software      ;
+;    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.                ;
+;                                                                             ;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	include	org.inc
+	include	ver.inc
+;
+; Logo Input/Output System for JOYCE (using 800x600 display). 
+;
+X31X31	EQU	1F1Fh
+X32X32	EQU	2020h
+X90X31	EQU	591Fh
+RRAM	EQU	0B600h
+FONT	EQU	0B800h
+
+ESC	EQU	1Bh
+CR	EQU	0Dh
+LF	EQU	0Ah
+
+TE_ASK	EQU	00BFh
+CD_VERS	EQU	00E3h
+SCR_RUN	EQU	00E9h
+
+;
+; Standard RSX header:
+;
+	DEFS	6		;Space for serial number
+
+	JP	ENTRY		;Jump to main entry point
+BDOS:	JP	6		;Jump to next RSX in chain
+
+	DEFW	7		;Address of previous RSX in chain
+	DEFB	0FFh		;Do not stay resident
+	DEFB	0		;Can be used in a banked system
+	DEFB	'EMULIOS '	;RSX name
+	DEFB	0,0,0		;Reserved
+
+ENTRY:	LD	A,C
+	CP	3Ch
+	JR	NZ,BDOS ;$-15
+	LD	A,(DE)	;Must be RSX function 0.
+	OR	A
+	JR	NZ,BDOS
+;
+;Initialise LIOS. Returns with a JP 100h.
+;
+;DE->RSXPB:	DW	0
+;		DW	data-dest	;receives data
+;		DW	jumpblock	;receives jumpblock
+;
+;data-dest:	DW	0	;+0	Text screen height
+;		DW	0	;+2	Text screen width
+;		DW	0	;+4	Text screen height
+;		DW	0	;+6	Text screen width
+;		DW	0	;+8	Standard split line
+;		DW	0	;+A
+;		DW	0	;+C
+;		DW	0	;+E
+;		DW	0	;+10
+;		DW	0	;+12
+;		DW	0	;+14
+;		DW	0	;+16
+;		DW	0	;+18	Graphics screen width, pixels
+;		DW	0	;+1A	Graphics screen height, pixels
+;		DW	0	;+1C
+;		DW	0	;+1E
+;		DW	0	;+20
+;		DW	0	;+22
+;		DW	0	;+24	Text screen height
+;
+;Graphics are set to full screen.
+;
+;
+	EX	DE,HL	;RSXPB:	DW 0
+	INC	HL	;	DW receives data about driver
+	INC	HL	;	DW jumpblock
+	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)
+	INC	HL
+	PUSH	DE	;IY := (RSXPB+2)
+	POP	IY
+	LD	E,(HL)
+	INC	HL	;DE = address of jumpblock to load
+	LD	D,(HL)
+	LD	(BLOCK),DE
+	LD	HL,JBLOCK
+	LD	BC,JBLKEND - JBLOCK	;must equal 4Eh
+	LDIR
+	JP	INIT	;INIT returns by JP 0100h
+;
+;LIOS calling convention: On entry, the stack is formed:
+;
+;SP->	DW	retaddr
+;	D{W B}	param1
+;	D{W B}	param2 etc.
+;
+;BC should be preserved. Within LIOS, IX points to this stack frame.
+;
+JBLOCK:	CALL	LIOS_00	;00 no-op in JOYLIOS
+	JP	LIOS_01	;01 exit program. Tidy screen and leave. Doesn't return.
+	CALL	LIOS_00	;02 Turn text on. Sets split line to -1.
+	CALL	LIOS_00	;03 Set split (byte line) ;split line, 0 for all gfx.
+	JP	CONIN	;04 CONIN
+	JP	CONST	;05 CONST
+	CALL	LIOS_00	;06 CONOUT (byte c) print char if text mode is on
+	CALL	LIOS_00	;07 Clear text window(word X, word Y) top LH corner
+	CALL	LIOS_00	;08 Move text cursor(word X, word Y)
+	CALL	LIOS_00	;09 Scroll text window(word X, word Y) top LH corner
+	CALL	LIOS_00	;0A Plot point (word X, word Y, byte pen, byte colour)
+	CALL	LIOS_00	;0B Draw line(word X, word Y, word X1, word Y1, byte pen, byte colour)
+	CALL	LIOS_00	;0C no-op in JOYLIOS
+	CALL	LIOS_00	;0D Clear graphic screen (word colour, word pixelsY)
+	CALL	LIOS_00	;0E BEL
+	JP	LIOS_0F	;0F Get top of memory? Returns HL=(6), A=H|L
+	CALL	LIOS_00	;10 Read pixel (word X, word Y)
+	JP	LISTST	;11 LISTST
+	JP	LIST	;12 LIST (byte c)
+	CALL	LIOS_00	;13 no-op in JOYLIOS
+	CALL	LIOS_00	;14 no-op in JOYLIOS
+	CALL	LIOS_00	;15 no-op in JOYLIOS
+	CALL	LIOS_00	;16 no-op in JOYLIOS
+	CALL	LIOS_00	;17 no-op in JOYLIOS
+	CALL	LIOS_00	;18 Save picfile record (word BUF, word RECNO)
+	CALL	LIOS_00	;19 Load picfile record (word BUF, word RECNO)
+
+JBLKEND:
+
+INIT:	PUSH	IY
+	XOR	A
+	DEFB	0EDh,0FEh
+	INC	A
+	POP	IY
+	JR	NZ,BADENV
+	PUSH	IY
+	LD	HL,0
+	LD	C,6
+	LD	A,11
+	DEFB	0EDh,0FEh
+	BIT	2,L		;LIOS available?
+	POP	IY
+	JR	Z,BADENV
+	PUSH	IY		;Parameter	
+	LD	E,0FFh
+	LD	HL,BENV$
+	CALL	JOYCE
+	POP	IY
+	JP	NZ,100h		;Start the program	
+BADENV:	LD	DE,BENV$
+	LD	C,9
+	CALL	BDOS
+	RST	0
+;
+
+LIOS_00:
+	POP	HL	;HL = 3 + calling address
+	LD	DE,(BLOCK)
+	AND	A
+	SBC	HL,DE	;HL = 3 + 3*callnumber, fairly small
+;
+;Assert H=0
+;
+	LD	A,H
+	OR	A
+	JR	NZ,NOCALL
+	LD	A,L
+DIV3:	INC	H
+	SUB	3
+	JR	NC,DIV3
+	DEC	H	;H = L/3   = callnum + 1
+	DEC	H	;H = L/3-1 = callnum
+	LD	E,H
+JOYCE:	LD	A,15
+	DEFB	0EDh,0FEh
+	LD	A,H
+	OR	L
+	RET
+;
+NOCALL:	LD	HL,0
+	RET
+;
+;Some not handled by JOYCE
+;
+LIOS_01:
+	LD	E,1
+	CALL	JOYCE
+	RST	0
+;
+LIOS_0F:
+	LD	HL,(6)	;Return top of memory
+	LD	A,H
+	OR	L
+	RET
+;
+LISTST:	LD	DE,2Ah
+	JR	BIOS
+
+LIST:	LD	IX,0
+	ADD	IX,SP
+	LD	A,(IX+2)	;Parameter
+	LD	DE,12
+	JR	BIOS
+
+CONIN:	LD	DE,6
+	JR	BIOS
+
+CONST:	LD	DE,3
+BIOS:	LD	HL,(1)
+	ADD	HL,DE
+	PUSH	BC
+	LD	C,A
+	CALL	PCHL
+	POP	BC
+	LD	L,A
+	LD	H,0
+	OR	H
+	RET
+;	
+PCHL:	JP	(HL)
+;
+BLOCK:	DEFW	0	;Address within LOGO of the jump block to be used
+BENV$:	DEFB	'This program requires the JOYCE emulator with LIOS support.',cr,lf,'$'
+	DEFS	BENV$+93-$
+
+	END

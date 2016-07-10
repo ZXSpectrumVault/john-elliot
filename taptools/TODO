@@ -1,0 +1,9 @@
+* Last regression test
+* Update ChangeLog
+
+
+
+Creating test IBM tape:
+
+./mkibmtap -ftap ibm_all.tap -b romsna.zsm -p dskwrite.zsm -a README -d COPYING -mb800:0000 imc.rom
+

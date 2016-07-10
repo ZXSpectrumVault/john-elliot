@@ -1,0 +1,19 @@
+* LocoLink scenarios:
+
+
+
+At some level, we want the ability to say "LocoLink send 0-3" and "LocoLink 
+receive 0-3". Probably functions in liblink.
+
+1. LocoLink over a LapLink cable. The master expects to send data on D0,D1
+  and receive on BUSY, ACK. The cable routes:
+
+	D0   -> LL_CTL_ERROR
+	D1   -> LL_CTL_ISELECT
+	ACK  <- D3
+	BUSY <- D4
+
+2. LocoLink over a socket connection. The master expects to send data on 
+  D0,D1 and receive on BUSY, ACK. The socket connection shows these up
+  on the incoming side as D0,D1,BUSY,ACK.
+

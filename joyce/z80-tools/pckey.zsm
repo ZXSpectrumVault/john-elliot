@@ -1,0 +1,786 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;   JOYCE/ANNE v2.1.0: PCW emulator                                           ;
+;                                                                             ;
+;   Copyright (C) 1998-1999, John Elliott <jce@seasip.demon.co.uk>            ;
+;                                                                             ;
+;    This program is free software; you can redistribute it and/or modify     ;
+;    it under the terms of the GNU Library General Public License as          ;
+;    published by the Free Software Foundation; either version 2 of the       ;
+;    License, or(at your option) any later version.                           ;
+;                                                                             ;
+;    This program is distributed in the hope that it will be useful,          ;
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of           ;
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            ;
+;    GNU Library General Public License for more details.                     ;
+;                                                                             ;
+;    You should have received a copy of the GNU Library General Public        ;
+;    License along with this program; if not, write to the Free Software      ;
+;    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.                ;
+;                                                                             ;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	org	0100h
+
+FCB	EQU	005Ch
+FDOS	EQU	5
+CR	EQU	0Dh
+LF	EQU	0Ah
+EOF	EQU	1Ah
+;
+;We start with protection against being run from DOS.
+;
+BASE:	DEFB	0EBh,04h	;DOS protection... JMPS LABE
+	EX	DE,HL
+	JP	BEGIN
+	DEFB	0B4h,09h	;DOS protection... MOV AH,9
+	DEFB	0BAh
+	DEFW	BVMES		;DOS protection... MOV DX,OFFSET BVMES
+	DEFB	0CDh,021h	;DOS protection... INT 21h.
+	DEFB	0CDh,020h	;DOS protection... INT 20h.
+
+	DEFB	cr,'JOYCE v'
+	include version.inc
+	DEFB	' PCKEY (c) John Elliott',cr,lf
+	DEFB	'Date: '
+	include built.inc 
+	DEFB	cr,lf,eof
+;
+
+BEGIN:	SUB	A		;Filter out the 8080s
+	JP	PE,BADVER
+	LD	C,0Ch		;Filter out CP/M <3
+	CALL	FDOS
+	CP	30h
+	JR	C,BADVER
+	XOR	A
+	DEFB	0EDh, 0FEh	;Get JOYCE version
+	INC	A		;Must return A=0FFh for Joyce v1.00
+	JR	Z,JRTSO
+BADVER:	LD	DE,BVMES	;Failed.
+	LD	C,9
+	JP	FDOS
+;
+JRTSO:	LD	DE,0112h
+	XOR	A
+	SBC	HL,DE
+	JR	C,BADVER
+			;A = 0 : called from CP/M
+	CALL	MAIN
+	RST	0
+		
+	DEFS	BASE + 078h - $
+	DEFB	'JOYCE',1,0,0	;File signature at end of first record.
+				;DB 'JOYCE',1;  2 expansion bytes.
+;
+MAIN:	LD	A,80h
+	LD	(RDBUF),A
+	LD	C,02Dh
+	LD	E,0FEh
+	CALL	FDOS
+	LD	HL,80h
+	CALL	UDPCMD
+	LD	HL,81h
+OPTLP:	LD	A,(HL)
+	INC	HL
+	CP	'['
+	JR	Z,CKOPT
+	CP	'-'
+	JR	Z,CKOPT
+	CP	'/'
+	JR	Z,CKOPT
+	CP	'?'
+	JR	Z,HELP
+	OR	A
+	JR	NZ,OPTLP
+
+CKFCB:	LD	A,(UFCB+1)
+	CP	20h
+	JR	NZ,OKFCB
+	LD	A,(UFCB+37)
+	CP	20h
+	JR	NC,OKFCB
+	LD	DE,NOCMD
+ERRPR:	CALL	PRINT
+	LD	C,6Ch
+	LD	DE,0FF00h
+	JP	FDOS
+;
+CKOPT:	LD	A,(HL)
+	INC	HL
+	CP	'H'
+	JR	Z,HELP
+	CP	'?'
+	JR	Z,HELP
+	CP	'/'
+	JR	Z,HELP
+	OR	A
+	JR	Z,CKFCB
+	JR	OPTLP
+;
+HELP:	LD	DE,HELP$
+	include	print.lib
+;
+OKFCB:	LD	DE,UFCB
+	CALL	ZFCB
+	LD	C,0Fh
+	CALL	UDFDOS
+	INC	A
+	JR	NZ,START0
+	LD	DE,OPNMSG
+	LD	HL,UFCB
+ERRFCB:	CALL	CRLF
+	LD	C,1
+	PUSH	DE
+	CALL	UOPFCB
+	POP	DE
+	JP	ERRPR
+;
+START0:	LD	A,(UFCB2+1)
+	CP	20h
+	JR	Z,NOFC2
+TRYMAK:	LD	DE,UFCB2
+	CALL	ZFCB
+	CALL	UCREATE
+	OR	A
+	JR	Z,CROK
+	LD	HL,UFCB2
+	LD	DE,CNCRE
+	DEC	A
+	JP	NZ,ERRFCB
+	LD	C,1
+	CALL	UOPFCB
+	LD	DE,DEL$
+	CALL	PRINT
+TRYDEL:	CALL	INKEY
+	CALL	UPCASEA
+	LD	E,A
+	CP	'N'
+	CALL	Z,OPCHAR
+	CALL	Z,CRLF
+	RET	Z	;End of story
+	CP	'Y'
+	JR	NZ,TRYDEL	
+	CALL	OPCHAR
+	CALL	CRLF
+	LD	DE,UFCB2
+	LD	C,13h
+	CALL	ZFCB
+	CALL	UDFDOS
+	INC	A
+	JR	NZ,TRYMAK
+	LD	HL,UFCB2
+	LD	DE,CNDEL
+	JP	ERRFCB
+;
+CROK:	LD	HL,FIDHDR
+	LD	DE,ENDPRG
+	LD	BC,TABLE-FIDBASE
+	LDIR				;Move the FID image to ENDPRG.
+NOFC2:	CALL	READLN
+	JR	C,NOFC2
+
+	LD	DE,UFCB
+	LD	C,10h
+	CALL	UDFDOS
+	LD	A,(UFCB2+1)
+	CP	20h
+	RET	Z
+	LD	HL,UFCB2+1
+	LD	DE,ENDPRG+BVM1-FIDBASE
+	LD	B,8
+XNLP:	LD	A,(HL)
+	AND	7Fh
+	LD	(DE),A
+	INC	HL
+	INC	DE
+	DJNZ	XNLP
+	LD	HL,(TABLEN + ENDPRG - FIDBASE)
+	ADD	HL,HL
+	ADD	HL,HL
+	LD	DE,TABLE - FIDBASE
+	ADD	HL,DE	;HL = length of FID file
+	LD	(FIDLEN),HL
+	LD	DE,ENDPRG
+	ADD	HL,DE	;HL = address of PRL map
+	LD	(FIDEND),HL
+	LD	HL,(FIDLEN)
+	LD	BC,7
+	ADD	HL,BC
+	LD	B,3
+RRLP:	SRL	H	;Divide by 8, rounding up
+	RR	L
+	DJNZ	RRLP
+	LD	(PRLLEN),HL
+	LD	HL,PRLMAP
+	LD	DE,(FIDEND)
+	LD	BC,FIDHDR - PRLMAP	;Length
+	LDIR
+	EX	DE,HL
+	LD	BC,(PRLLEN)
+ZAPMAP:	LD	(HL),0		;Pack the remainder of the PRL map with zeroes.
+	INC	HL		;We are adding FIDHDR-PRLMAP bytes too many, but better 
+	DEC	BC		;to have too many than too few.
+	LD	A,B
+	OR	C
+	JR	NZ,ZAPMAP
+;
+;Checksum the FID image.
+;
+	LD	HL,0
+	LD	(ENDPRG + 0110h),HL	;Checksum
+	LD	DE,(PRLLEN)
+	LD	HL,(FIDLEN)
+	DEC	H			;Recorded length doesn't include header
+	LD	(ENDPRG+1),HL
+	INC	H
+	ADD	HL,DE			;HL = no. of bytes to sum.
+	LD	(WRLEN),HL
+	LD	BC,ENDPRG
+	LD	IY,0			;Running total
+	LD	D,0
+CKSLP:	LD	A,(BC)
+	LD	E,A
+	ADD	IY,DE
+	INC	BC
+	DEC	HL
+	LD	A,H
+	OR	L
+	JR	NZ,CKSLP
+	LD	(ENDPRG + 0110h),IY
+;
+;Write the FID out to disc.
+;
+	LD	DE,ENDPRG
+WRLP:	CALL	WRREC
+	INC	A
+	JR	Z,WRERR
+	LD	HL,(WRLEN)
+	LD	BC,80h
+	AND	A
+	SBC	HL,BC
+	LD	(WRLEN),HL
+	JR	NC,WRLP
+	LD	C,10h
+	LD	DE,UFCB2
+	JP	UDFDOS	;FID file written
+;
+WRERR:	LD	HL,UFCB2
+	LD	DE,WRER$
+	JP	ERRFCB
+;
+WRREC:	PUSH	HL
+	PUSH	BC
+	CALL	SETDMA
+	LD	HL,80h
+	ADD	HL,DE
+	EX	DE,HL
+	PUSH	DE
+	LD	C,15h
+	LD	DE,UFCB2
+	CALL	UDFDOS
+	POP	DE
+	POP	HL
+	POP	BC
+	RET
+;
+READLN:	LD	HL,LINEBUF
+	PUSH	HL
+	LD	DE,LINEBUF+1
+	LD	BC,0FEh
+	LD	(HL),B
+	LDIR
+	POP	HL
+	LD	B,0FEh
+	LD	DE,UFCB
+	LD	IX,RDBUF
+RDLLP:	PUSH	HL
+	PUSH	BC
+	PUSH	DE
+	PUSH	IX
+	CALL	UBYTIN
+	POP	IX
+	POP	DE
+	POP	BC
+	POP	HL
+	JR	NC,RLEND
+	CP	0Dh
+	JR	Z,EOLN
+	CP	0Ah
+	JR	Z,EOLN
+	CP	1Ah
+	JR	Z,ISEOF
+	LD	(HL),A
+	INC	HL
+	DJNZ	RDLLP	
+	LD	(HL),0
+	SCF
+	JR	RLEND
+;
+EOLN:	LD	(HL),0
+	SCF
+	JR	RLEND
+;
+ISEOF:	XOR	A	;Reset carry
+	LD	(HL),A
+RLEND:	PUSH	AF
+	LD	HL,LINEBUF
+RLEN1:	CALL	SKIPSP
+	JP	Z,PLEND
+	PUSH	HL
+	CALL	PNUM
+	LD	(PCKNO),DE
+	POP	HL
+	PUSH	AF
+	CALL	C,PARERR
+	POP	AF
+	LD	DE,PNUM$
+	CALL	C,PRINT
+	JP	C,PLEND	;Can't parse number
+	XOR	A
+	LD	(SFLAGS),A
+	CALL	FINDSP	;Move to modifiers
+	JP	Z,UEOL
+	CALL	SKIPSP
+	JP	Z,UEOL
+	LD	IY,SFLAGS
+GKLP:	LD	A,(HL)
+	INC	HL
+	CALL	UPCASEA
+	OR	A
+	JR	Z,UEOL
+	CP	20h
+	JR	Z,GOTSF
+	CP	9
+	JR	Z,GOTSF
+	CP	'E'
+	JR	Z,SET_E
+	CP	'N'
+	JR	Z,SET_N
+	CP	'L'
+	JR	Z,SET_L
+	CP	'B'
+	JR	Z,SET_B
+	CALL	PARERR
+	LD	DE,PMOD$
+	CALL	PRINT
+	JR	PLEND
+;
+SET_E:	SET	1,(IY+0)
+	JR	GKLP
+;
+SET_N:	SET	0,(IY+0)
+	JR	GKLP
+;
+SET_L:	SET	2,(IY+0)
+	JR	GKLP
+;
+SET_B:	SET	3,(IY+0)
+	JR	GKLP
+;
+GOTSF:	CALL	SKIPSP
+	JR	Z,UEOL
+	PUSH	HL
+	CALL	PNUM
+	POP	HL
+	JR	NC,GOTLN
+	INC	HL
+	CALL	PARERR
+	LD	DE,WNUM$
+	CALL	PRINT
+	JR	PLEND
+;
+GOTLN:	LD	(PCWNO),DE
+	LD	HL,(PCKNO)
+	EX	DE,HL		;DE = PC key no. & mods. HL = PCW key no.
+	LD	A,(SFLAGS)
+	BIT	0,A
+	LD	D,0
+	CALL	NZ,SETKEY
+	BIT	1,A
+	LD	D,1
+	CALL	NZ,SETKEY
+	BIT	2,A
+	LD	D,2
+	CALL	NZ,SETKEY
+	BIT	3,A
+	LD	D,3
+	CALL	NZ,SETKEY
+	JR	PLEND
+;
+UEOL:	CALL	PARERR
+	LD	DE,EOL$
+	CALL	PRINT
+PLEND:	POP	AF
+	RET
+;
+;
+SKIPSP:	LD	A,(HL)
+	INC	HL
+	OR	A
+	RET	Z
+	CP	20h
+	JR	Z,SKIPSP
+	CP	9
+	JR	Z,SKIPSP	;NZ
+	DEC	HL	
+	RET
+;
+FINDSP:	LD	A,(HL)
+	INC	HL
+	OR	A
+	RET	Z
+	CP	20h
+	JR	Z,GOTSP
+	CP	9
+	JR	NZ,FINDSP
+GOTSP:	DEC	HL
+	OR	A	;NZ
+	RET
+;
+PARERR:	PUSH	HL
+	LD	BC,LINEBUF
+	AND	A
+	SBC	HL,BC	;no. of bytes into the line
+	LD	B,H
+	LD	C,L
+	PUSH	BC
+	LD	HL,LINEBUF
+OPLN:	LD	E,(HL)
+	LD	A,E
+	OR	A
+	INC	HL
+	CALL	NZ,OPCHAR
+	JR	NZ,OPLN
+	CALL	CRLF
+	POP	BC
+OPSP:	LD	A,B
+	OR	C
+	JR	Z,OPSP1
+	DEC	BC
+	LD	A,B
+	OR	C
+	JR	Z,OPSP1
+	LD	E,' '
+	CALL	OPCHAR
+	JR	OPSP
+;
+OPSP1:	POP	HL
+	LD	DE,ERRDSC
+	JP	PRINT
+;
+
+BVMES:	DEFB	'This program will only run in the JOYCE emulator v1.12 or later',cr,lf,'$'
+WRER$:	DEFB	' : Write error',cr,lf,'$'
+WRLEN:	DEFW	0	;Bytes to write to disc
+PRLLEN:	DEFW	0	;Length of the FID relocation map
+FIDLEN:	DEFW	0	;Length of FID headers & code 
+FIDEND:	DEFW	0	;Final address of relocation map
+PCWNO:	DEFW	0
+PCKNO:	DEFW	0
+SFLAGS:	DEFB	0
+WNUM$:	DEFB	'There should be a PCW key number here.',cr,lf,'$'
+PNUM$:	DEFB	'There should be a PC key number here.',cr,lf,'$'
+PMOD$:	DEFB	'Unrecognised modifier - use E, N, L or B.',cr,lf,'$'
+EOL$:	DEFB	'Unexpected end of line.',cr,lf,'$'
+ERRDSC:	DEFB	'^',cr,lf,'Error at the "^": $'
+CNDEL:	DEFB	' : Cannot delete existing file.',cr,lf,'$'
+OPNMSG:	DEFB	' : failed to open file.',cr,lf,'$'
+CNCRE:	DEFB	' : failed to create file.',cr,lf,'$'
+DEL$:	DEFB	' : file exists, delete (Y/N) ?$'
+HELP$:	DEFB	27,'rJOYCE PCKEY - John Elliott, 9 August 1997.',27,'u',cr,lf,lf
+	DEFB	'Syntax: PCKEY <keyfile> { <fidfile> }',cr,lf,lf
+	DEFB	'The keyfile is a text file, listing the PC keys and PCW keys.',cr,lf
+	DEFB	'Each line is formed:',cr,lf
+	DEFB	'        <pckey> <mod> <pcwkey>  { <comment> }',cr,lf
+	DEFB	'where:',cr,lf
+	DEFB	'        <pckey> is a number from 0-127',cr,lf
+	DEFB	'        <mod>   is a sequence of letters describing which internal table',cr,lf
+	DEFB	'                should be altered:',cr,lf
+	DEFB	'		   N: Normal   (XT type keys)',cr,lf
+	DEFB	'                  E: Extended (AT keypad etc)',cr,lf
+	DEFB	'		 L,B: Not used, reserved',cr,lf
+	DEFB	'        <pcwkey> is the PCW key number. 256 => JOYCE menu.  257 => Exit JOYCE.',cr,lf
+	DEFB	'$'
+UFCB:	DEFS	38
+UFCB2:	DEFS	38
+INTFCB:	DEFS	38
+NOCMD:	DEFB	'PCKEY: No filename supplied. Type PCKEY [HELP] for more info.',cr,lf,'$'
+RDBUF:	DEFS	81h
+LINEBUF:
+	DEFS	255
+;
+;Set a key - either immediately, or write its data to the FID image.
+;
+SETKEY:	PUSH	AF
+	PUSH	BC
+	PUSH	DE
+	PUSH	HL
+	PUSH	IX
+	LD	A,H	;HL = PCW keynumber. E = PC keynumber. D = PC shift states.
+	OR	A
+	JR	NZ,JOYCESPL
+	LD	A,L
+	AND	7Fh
+	CP	72
+	JR	C,SETK1
+	ADD	A,7	;Keys 72+ set bits 79+ of the keyboard map.
+SETK1:	LD	L,A
+	SRL	L
+	SRL	L
+	SRL	L	;L = offset in keymap
+	CALL	N_BIT
+	LD	H,A	;H = bitmask
+	JR	PUTMAP
+
+JOYCESPL:
+	LD	A,L
+	CALL	N_BIT
+	LD	H,A
+	LD	L,16
+PUTMAP:	LD	A,(UFCB2+1)
+	CP	' '
+	JR	Z,SETNOW
+	LD	IX,(ENDPRG + TABLEN - FIDBASE)	;Keytable length in dwords
+	ADD	IX,IX
+	ADD	IX,IX		;Length in bytes
+	LD	BC,ENDPRG + TABLE - FIDBASE
+	ADD	IX,BC
+	LD	(IX+0),E
+	LD	(IX+1),D
+	LD	(IX+2),L
+	LD	(IX+3),H
+	LD	IX,(ENDPRG + TABLEN - FIDBASE)
+	INC	IX
+	LD	(ENDPRG + TABLEN - FIDBASE), IX
+	POP	IX
+	JP	POPA
+;
+SETNOW:	LD	A,12
+	LD	C,1
+	DEFB	0EDh,0FEh
+	POP	IX
+	JP	POPA
+;
+N_BIT:	PUSH	BC
+	AND	7
+	LD	B,A
+	INC	B
+	LD	A,80h
+N_BIT1:	RLCA
+	DJNZ	N_BIT1
+	POP	BC
+	RET
+;
+INKEY:	LD	C,6
+	LD	E,0FDh
+	JP	FDOS
+;
+CRLF:	PUSH	DE
+	LD	E,0Dh
+	CALL	OPCHAR
+	LD	E,0Ah
+	CALL	OPCHAR
+	POP	DE
+	RET
+;
+OPCHAR:	PUSH	AF
+	PUSH	BC
+	PUSH	DE
+	PUSH	HL
+	LD	C,2
+	JP	FDPOPA
+;
+SETUSR: PUSH    AF
+        PUSH    BC      ;Set current user area number
+        PUSH    DE
+        PUSH    HL
+        LD      E,A
+        LD      C,20h
+        CALL    FDOS
+        JP      POPA
+
+GETUSR: PUSH    BC      ;Get current user area number
+        PUSH    DE
+        PUSH    HL
+        LD      E,0FFh
+        LD      C,20h
+FDPOP3: CALL    FDOS
+POP3:   POP     HL
+        POP     DE
+        POP     BC
+        RET
+;
+SETDMA: PUSH    AF      ;Set CP/M DMA address
+        PUSH    BC
+        PUSH    DE
+        PUSH    HL
+        LD      C,1Ah
+        JP      FDPOPA
+;
+UPCASEA:
+        CP      'a'     ;Convert a letter to uppercase
+        RET     C
+        CP      'z'+1
+        RET     NC
+        SUB     20h
+        RET
+;
+ZFCB:   PUSH    BC
+        PUSH    DE
+        PUSH    HL
+        LD      HL,12
+        ADD     HL,DE
+        LD      E,L
+        LD      D,H
+        INC     DE
+        LD      BC,23
+        LD      (HL),B
+        LDIR
+        JP      POP3
+;
+UDFDOS: PUSH    BC
+        PUSH    DE
+        CALL    GETUSR
+        LD      B,A     ;Original user
+        LD      HL,37
+        ADD     HL,DE   ;HL->user number in FCB
+        LD      A,(HL)
+        OR      A       ;0:default
+        JR      Z,UDF1
+        DEC     A
+        CALL    SETUSR  ;FCB specified user
+UDF1:   PUSH    BC
+        CALL    FDOS
+        POP     BC
+	PUSH	AF
+	PUSH	HL
+        LD      A,B
+        CALL    SETUSR
+	POP	HL
+	POP	AF
+        POP     DE
+        POP     BC
+        RET
+;
+PUTC:	PUSH	DE
+	LD	E,A
+	CALL	OPCHAR
+	POP	DE
+	RET
+;
+UDPCMD:
+;
+;Entered with HL=address of command line, length at (HL), line at (HL+1)...
+;
+	PUSH	AF
+	PUSH	BC
+	PUSH	DE
+	PUSH	HL
+	EX	DE,HL
+	LD	A,(DE)
+	LD	L,A
+	LD	H,0
+	INC	DE
+	ADD	HL,DE
+	LD	(HL),' '
+	INC	HL
+	LD	(HL),0
+	EX	DE,HL
+	JR	UDPC1
+
+UDPCM0:
+;
+;Entered with HL=address of 0-terminated command line. All registers preserved.
+;
+	PUSH	AF
+	PUSH	BC
+	PUSH	DE
+	PUSH	HL
+UDPC1:	PUSH	HL
+	LD	HL,UFCB
+	CALL	ZZFCB
+	LD	HL,UFCB2
+	CALL	ZZFCB
+	POP	HL
+	CALL	SKIPSP
+	OR	A
+	JP	Z,POPA		;EOLN?
+	LD	(PFCB),HL
+	LD	HL,UFCB
+	LD	(PFCB+2),HL
+	LD	DE,PFCB
+	CALL	UDPARSE		;Attempt to parse 1st filename.
+	LD	A,H
+	AND	L
+	INC	A
+	JP	Z,POPA		;1st argument isn't a filename.
+	LD	A,H
+	OR	L
+	JP	Z,POPA		;EOL.
+	CALL	SKIPSP
+	LD	(PFCB),HL
+	LD	HL,UFCB2
+	LD	(PFCB+2),HL
+	LD	DE,PFCB
+	CALL	UDPARSE
+	JP	POPA
+;
+ZZFCB:	LD	(HL),0
+	INC	HL
+	LD	B,11
+ZFCB1:	LD	(HL),' '
+	INC	HL
+	DJNZ	ZFCB1
+	LD	B,26
+ZFCB2:	LD	(HL),0
+	INC	HL
+	DJNZ	ZFCB2
+	RET
+;
+OPDEC2:	LD	A,L
+	CP	0Ah
+	JR	C,OPDEC1
+	LD	E,'0'
+OPD2A:	INC	E
+	CP	0Ah
+	JR	C,OPD2B
+	SUB	0Ah
+	JR	OPD2A
+
+OPD2B:	CALL	OPCHAR
+OPDEC1:	ADD	A,'0'
+	JP	PUTC	
+;
+PFCB:	DEFS	4
+
+	include	pnum.lib
+	include uopfcb.lib
+	include	ucreate.lib
+	include ubytin.lib
+	include udparse.lib
+;
+;Generating a FID on the fly isn't the nicest thing to do anyway. But this time 
+;the thing is of variable length, so the PRL relocation map gets to move around 
+;as well.
+;
+PRLMAP:	DEFB	20h				;00-07 The bytes marked below correspond
+	DEFB	0,0,0,0,0,0			;08-37 to set bits in this map
+	DEFB	80h				;38-3F
+	DEFB	08h				;40-47
+	DEFB	80h				;48-4F
+;
+FIDHDR:
+	include	pckeyfid.inc
+ENDPRG:
+;
+; These symbols are from pckeyfid.lis. If they change re-enter them.
+;	
+FIDBASE	EQU	0
+FIDCSM	EQU	110h
+BVM1	EQU	14Bh
+GVM1	EQU	17Ch
+TABLEN	EQU	198h
+TABLE	EQU	19Ah
+
+
+	END

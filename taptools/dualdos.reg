@@ -1,0 +1,6 @@
+REGEDIT4
+
+[HKEY_LOCAL_MACHINE\System\CurrentControlSet\control\FileSystem\NoVolTrack]
+"CPM_CF2"=hex:00,00,00,00,28,09,02,01,03,02
+"CPM_CF2DD"=hex:00,00,03,81,50,09,02,01,04,04
+"DualDOS"=hex:00,00,03,81,50,09,02,02,04,04

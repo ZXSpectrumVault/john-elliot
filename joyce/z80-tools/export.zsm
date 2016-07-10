@@ -1,0 +1,623 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;   JOYCE/ANNE v2.1.0: PCW emulator                                           ;
+;                                                                             ;
+;   Copyright (C) 1998-1999, John Elliott <jce@seasip.demon.co.uk>            ;
+;                                                                             ;
+;    This program is free software; you can redistribute it and/or modify     ;
+;    it under the terms of the GNU Library General Public License as          ;
+;    published by the Free Software Foundation; either version 2 of the       ;
+;    License, or(at your option) any later version.                           ;
+;                                                                             ;
+;    This program is distributed in the hope that it will be useful,          ;
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of           ;
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            ;
+;    GNU Library General Public License for more details.                     ;
+;                                                                             ;
+;    You should have received a copy of the GNU Library General Public        ;
+;    License along with this program; if not, write to the Free Software      ;
+;    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.                ;
+;                                                                             ;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	org	0100h
+
+FCB	EQU	005Ch
+FDOS	EQU	5
+CR	EQU	0Dh
+LF	EQU	0Ah
+EOF	EQU	1Ah
+;
+;We start with protection against being run from DOS.
+;
+BASE:	DEFB	0EBh,04h	;DOS protection... JMPS LABE
+	EX	DE,HL
+	JP	BEGIN
+	DEFB	0B4h,09h	;DOS protection... MOV AH,9
+	DEFB	0BAh
+	DEFW	BVMES		;DOS protection... MOV DX,OFFSET BVMES
+	DEFB	0CDh,021h	;DOS protection... INT 21h.
+	DEFB	0CDh,020h	;DOS protection... INT 20h.
+
+	DEFB	cr,'Joyce EXPORT v'
+	include	version.inc
+	DEFB	' (c) John Elliott',cr,lf
+	DEFB	'Date: '
+	include	built.inc
+	DEFB	cr,lf,eof
+;
+
+BEGIN:	SUB	A		;Filter out the 8080s
+	JP	PE,BADVER
+	LD	C,0Ch		;Filter out CP/M <3
+	CALL	FDOS
+	CP	30h
+	JR	C,BADVER
+	XOR	A
+	DEFB	0EDh, 0FEh	;Get JOYCE version
+	INC	A		;Must return A=0FFh for Joyce v1.00
+	JR	Z,JRTSO
+BADVER:	LD	DE,BVMES	;Failed.
+	LD	C,9
+	JP	FDOS
+;
+JRTSO:	XOR	A	;A = 0 : called from CP/M
+	CALL	MAIN
+	RST	0
+		
+	DEFS	BASE + 078h - $
+	DEFB	'JOYCE',1,0,0	;File signature at end of first record.
+				;DB 'JOYCE',1;  2 expansion bytes.
+;
+MAIN:
+;
+;Export. Syntax is:
+;
+;	EXPORT <dospath>
+;or
+;	EXPORT <dospath>=<cpmpath>
+;
+	XOR	A
+	LD	(BSLASH),A
+	LD	C,2Dh
+	LD	E,0FEh
+	CALL	5
+	LD	DE,80h
+	LD	A,(DE)
+	LD	L,A
+	LD	H,D
+	INC	DE
+	ADD	HL,DE
+	LD	(HL),0	;Zero-terminate command line
+	EX	DE,HL
+	PUSH	HL
+BSLP:	LD	A,(HL)
+	INC	HL
+	OR	A
+	JR	Z,CKIPSP
+	CP	'\'		;Found a backslash. Is it at the end?
+	JR	NZ,BSLP
+	LD	A,(HL)
+	OR	A
+	JR	NZ,BSLP
+	DEC	HL
+	LD	(HL),0		;Remove the backslash
+	LD	A,1
+	LD	(BSLASH),A
+CKIPSP:	POP	HL	
+	PUSH	HL
+OPTLP:	LD	A,(HL)	;Check for options
+	INC	HL
+	OR	A
+	JR	Z,ENDOPT
+	CP	'['
+	JR	Z,YOPT
+	CP	'-'
+	JR	NZ,OPTLP
+;
+YOPT:	LD	A,(HL)
+	CP	'H'
+	JP	Z,HELP
+	CP	'?'
+	JP	Z,HELP
+	CP	'O'
+	JR	NZ,OPTLP
+	LD	(OVERW),A
+	JR	OPTLP
+
+ENDOPT:	POP	HL
+	LD	DE,DOSPTH
+CPYLP:	LD	A,(HL)
+	CP	'='
+	JR	Z,TWOPTH
+	CP	'['
+	JR	Z,ONEPTH
+	CP	'-'
+	JR	Z,ONEPTH
+	OR	A
+	JR	Z,ONEPTH
+	LD	(DE),A
+	INC	HL
+	INC	DE
+	JR	CPYLP
+;
+ONEPTH:	XOR	A
+	LD	(DE),A	;DE->end of DOS path
+ONEPT0:	DEC	DE
+	LD	A,(DE)
+	OR	A
+	JR	Z,ONEPT1
+	CP	'/'
+	JR	Z,ONEPT1
+	CP	'\'
+	JR	Z,ONEPT1
+	CP	':'
+	JR	NZ,ONEPT0
+ONEPT1:	EX	DE,HL	;HL+1 = start of CP/M filespec
+TWOPTH:	INC	HL
+	LD	DE,81h
+	LD	BC,7Fh	;Copy to 80h. It's already 0-terminated, so just
+	LDIR		;set it as 7Fh bytes.
+	CALL	DOSPPAR	;Parse the DOSpath.
+	RET	NC	;Error
+
+	LD	HL,80h
+	LD	(HL),7Fh	;Length to 7Fh.
+	LD	DE,EXPRTN	;Callback function for wildcard expansion
+	LD	BC,PRMPT
+	LD	A,8
+	CALL	UWILDEX		;Expand wildcard command line
+	PUSH	AF
+	LD	A,(BSLASH)
+	OR	A
+	JR	Z,NOMORE
+	LD	DE,EXP$
+	CALL	PRINT
+	LD	HL,7Fh		;Read next command line
+	LD	(HL),L
+	INC	HL
+	LD	(HL),H
+	DEC	HL
+	EX	DE,HL
+	LD	C,0Ah
+	CALL	FDOS
+	LD	DE,CRLF
+	CALL	PRINT
+	POP	AF
+	JP	MAIN
+;
+NOMORE:	POP	AF
+	CALL	OPDEC5		;Print no. of files processed.
+	LD	DE,FDN$
+	CALL	PRINT
+	LD	A,H	;If no files were processed, RET out of the 
+	OR	L	;program.
+	RET	NZ
+	LD	DE,HELPAD
+	JP	PRINT
+;
+EXPRTN:
+;
+;Called once for each file
+;
+	LD	H,D	;DE->CP/M UFCB of file (FCB+37 = uid)
+	LD	L,E
+	PUSH	DE
+	CALL	UOPFCB	;Print filename minus drive
+	POP	DE
+	LD	C,0Fh
+	CALL	UDFDOS	;Open the file
+	INC	A
+	JP	Z,EXPRER
+	PUSH	DE
+	LD	HL,BIBUF
+	CALL	USIZE
+	LD	(LEN),HL
+	LD	(LEN+2),DE
+	POP	DE
+	JP	NC,EXPRER
+	PUSH	DE
+	CALL	EXTGEN	;Generate DOS filename
+	CALL	EXTOPN	;Open DOS output stream
+	POP	DE
+	OR	A
+	SCF		;0 : error opening DOS file
+	RET	Z
+EXLP:	LD	HL,(LEN)
+	LD	BC,(LEN+2)
+	LD	A,H
+	OR	L
+	OR	B
+	OR	C
+	JR	Z,EXPEND
+	DEC	HL
+	LD	(LEN),HL
+	LD	A,H
+	AND	L	;HL = 0FFFFh?
+	INC	A
+	JR	NZ,EXLP1
+	DEC	BC
+	LD	(LEN+2),BC
+EXLP1:	PUSH	DE
+	CALL	UBYTIN	;Read a byte
+	LD	B,A
+	POP	DE
+	JR	NC,EXPEND
+	PUSH	DE
+	CALL	EXTWR	;Write byte to DOS output stream
+	POP	DE
+	OR	A
+	SCF		;0 : error opening DOS file
+	RET	Z
+	JR	EXLP
+;
+EXPEND:	PUSH	DE
+	CALL	EXTCLS	;Close DOS output stream
+	POP	DE
+	LD	C,10h	;Close file
+	CALL	UDFDOS
+	LD	DE,XOK	;Report success.
+	CALL	PRINT
+	LD	A,1	;Success.
+	SCF		;Continue wildcard expansion.
+	RET
+;
+EXPRER:	LD	DE,OPNF	;Error opening file
+	CALL	PRINT
+	XOR	A	;Operation failed.
+	SCF		;but don't abort.
+	RET
+;
+
+EXTOPN:	LD	DE,ENDPRG
+	LD	C,0Fh
+	CALL	JDOS
+	LD	A,H
+	OR	L
+	JR	Z,EXTOPN1
+	LD	D,H
+	LD	E,L
+	LD	C,10h
+	CALL	JDOS
+	LD	A,(OVERW)
+	OR	A
+	JR	NZ,EXTOPN1
+	LD	DE,OVWQ
+	CALL	PRINT
+EXTOPN9:
+	CALL	INKEY
+	CALL	UPCASEA
+	CP	'Y'
+	JR	Z,EXTOPN0
+	CP	'N'
+	JR	NZ,EXTOPN9
+	LD	A,'N'
+	CALL	PUTC
+	LD	DE,CRLF
+	CALL	PRINT
+	XOR	A
+	RET
+
+EXTOPN0:
+	LD	DE,OVWX
+	CALL	PRINT
+EXTOPN1:
+	LD	DE,ENDPRG
+	LD	C,16h
+	CALL	JDOS
+	LD	(HANDLE),HL
+	LD	A,H
+	OR	L
+	RET	NZ	;OK
+	LD	DE,OFAIL$
+;
+; Fall through to...
+;
+	include	print.lib
+;	
+EXTCLS:	LD	DE,(HANDLE)
+	LD	C,10h
+	CALL	JDOS
+	LD	A,L
+	OR	A
+	RET	NZ
+	LD	DE,CFAIL$
+	JP	PRINT
+
+EXTWR:	LD	DE,(HANDLE)
+	LD	C,15h
+	CALL	JDOS
+	LD	A,L
+	OR	A
+	RET	NZ
+	LD	DE,WFAIL$
+	JP	PRINT
+;
+JDOS:	LD	A,10
+	DEFB	0EDh,0FEh
+	RET
+;
+EXTGEN:	PUSH	DE		;Substitute the CP/M filename in over any
+	INC	DE		;wildcards in the DOS spec. 
+	LD	HL,DOSFCB+1
+	LD	BC,DFCB		;Also removes characters illegal under DOS
+	LD	A,11		;from the CP/M filename.
+EXTGN1:	PUSH	AF
+	LD	A,(HL)
+	CP	'?'		;Not a wildcard, keep it
+	JR	NZ,EXTGN2
+	LD	A,(DE)		;Candidate replacement character
+	AND	7Fh
+	CP	'+'
+	JR	Z,EXTGN3
+	CP	'/'		;Ban / \ and +
+	JR	Z,EXTGN3
+	CP	'\'
+	JR	NZ,EXTGN2
+EXTGN3:	LD	A,'#'
+EXTGN2:	LD	(BC),A
+	INC	HL
+	INC	DE
+	INC	BC
+	POP	AF
+	DEC	A
+	JR	NZ,EXTGN1
+;
+;DFCB holds destination filename, in FCB form.
+;
+	CALL	STRCPY	;Generate a copy of the DOS path
+	LD	HL,DFCB	;FCB
+	LD	E,8
+	CALL	LCPY
+	LD	A,'.'
+	LD	(BC),A
+	INC	BC
+	LD	E,3
+	CALL	LCPY
+	XOR	A
+	LD	(BC),A
+	LD	DE,XF$
+	CALL	PRINT
+	LD	HL,ENDPRG
+ECP1:	LD	A,(HL)
+	OR	A
+	JR	Z,ECPEND
+	CALL	PUTC
+	INC	HL
+	JR	ECP1
+;
+ECPEND:	POP	DE
+	RET
+;
+LCPY:	LD	A,(HL)
+	AND	7Fh
+	CP	' '
+	JR	Z,LCP1
+	LD	(BC),A
+	INC	BC
+LCP1:	INC	HL
+	DEC	E
+	JR	NZ,LCPY
+	RET
+;
+STRCPY:	LD	HL,DOSPTH
+STRCP9:	LD	A,(HL)
+	CP	' '
+	JR	NZ,STRCP0
+	INC	HL
+	JR	STRCP9
+
+STRCP0:	LD	BC,ENDPRG
+STRCP1:	LD	A,(HL)
+	LD	(BC),A
+	OR	A
+	RET	Z
+	INC	HL
+	INC	BC
+	JR	STRCP1
+;
+DOSPPAR:
+;
+;Parse a DOS path, to extract its wildcard pattern and its directory.
+;
+	LD	HL,DOSPTH
+DOSP1:	LD	A,(HL)
+	INC	HL
+	OR	A
+	JR	NZ,DOSP1
+	DEC	HL
+DOSP2:	DEC	HL
+	LD	A,(HL)
+	CP	':'
+	JR	Z,GOTWCS
+	CP	'/'
+	JR	Z,GOTWCS
+	CP	'\'
+	JR	Z,GOTWCS
+	OR	A
+	JR	NZ,DOSP2
+GOTWCS:	INC	HL
+	LD	A,(HL)
+	OR	A
+	JR	NZ,GOTWC1
+	LD	HL,STARDST
+GOTWC1:	LD	(PFCB),HL
+	LD	DE,PFCB
+	LD	C,152
+	CALL	FDOS
+	LD	A,H
+	AND	L
+	INC	A
+	JR	NZ,OKWCS
+	LD	DE,DWERR
+	CALL	PRINT
+	XOR	A
+	RET
+;
+OKWCS:	LD	HL,(PFCB)
+	XOR	A
+	LD	(HL),A
+	SCF
+	RET
+;
+HELP:	POP	HL	;Tidy the stack
+	LD	DE,HELP$
+	JP	PRINT
+;
+OPDEC5:	PUSH	HL
+	LD	DE,10000
+	CALL	DECS
+	LD	DE,1000
+	CALL	DECS
+	LD	DE,100
+	CALL	DECS
+	DEFB	1Eh	;ld e,
+OPDEC2:	PUSH	HL
+	LD	E,10
+	CALL	DECS
+	LD	A,L
+	ADD	A,'0'
+	CALL	PUTC
+	POP	HL
+	RET
+;
+DECS:	LD	B,0	
+DECSL:	AND	A
+	SBC	HL,DE
+	JR	C,DECSE
+	INC	B
+	JR	DECSL
+;
+DECSE:	ADD	HL,DE	;Undo the last subtraction which went too far
+	LD	A,B
+	OR	A
+	RET	Z
+	ADD	A,'0'
+	JP	PUTC
+;
+;Compute a file size. Enter with DE=UFCB addr, HL->128 byte data area.
+;
+;Returns Carry set if OK, DEHL=size in bytes.
+;        Carry clear if not OK, A=reason...
+;		>1Fh: Cannot do this with a DEV:
+;		  1 : File not found.
+;		 
+USIZE:	PUSH	HL
+	EX	DE,HL
+	CALL	SETDMA
+	EX	DE,HL
+	PUSH	DE
+	LD	C,11h	;Find file
+	CALL	UDFDOS
+	POP	DE
+	INC	A
+	JR	NZ,USZ1
+USZ0:	POP	HL
+USZ00:	LD	A,1
+	AND	A	;Reset Carry
+	RET
+;
+USZ1:	DEC	A
+	RRCA
+	RRCA	;*32
+	RRCA	
+	LD	L,A
+	LD	H,0
+	POP	BC
+	ADD	HL,BC	;HL->dir entry
+	LD	BC,13
+	ADD	HL,BC
+	LD	A,(HL)
+	OR	A
+	JR	Z,RZERO
+	LD	C,A
+	LD	A,80h
+	SUB	C
+RZERO:	LD	C,A	;C=bytes unused at end.
+	PUSH	BC	;BC=bytelen adjust
+	LD	C,23h	;Compute file size, records - DE-> UFCB
+	PUSH	DE
+	CALL	UDFDOS
+	POP	DE
+	POP	BC
+	INC	A
+	JR	Z,USZ00
+USZ2:	LD	HL,21h	;HL->file size
+	ADD	HL,DE
+	LD	A,(HL)
+	INC	HL
+	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)
+	LD	H,A
+	LD	L,0	;DEHL=size * 2
+	SRL	D
+	RR	E
+	RR	H
+	RR	L	;DEHL=size
+	AND	A
+	SBC	HL,BC
+	CCF
+	RET	C
+	DEC	DE	;DEHL=exact size
+	SCF
+	RET
+;
+
+NUMERIC:
+        CP      '0'
+        RET     C
+        CP      '9'+1
+        CCF
+        RET
+;
+
+	include ubytin.lib
+	include	uwildex.lib
+	include uopfcb.lib
+	include	udparse.lib
+	include	impexp.lib
+;
+BVMES:	DEFB	'This program will only run in the JOYCE emulator',cr,lf,'$'
+HANDLE:	DEFW	0
+OFAIL$:	DEFB	' - Create failed.',cr,lf,'$'
+CFAIL$:	DEFB	' - Close failed.',cr,lf,'$'
+WFAIL$:	DEFB	' - Write failed.',cr,lf,'$'
+BSLASH:	DEFB	0
+OVERW:	DEFB	0		;Set to 1 to overwrite existing files.
+PFCB:	DEFW	0,DOSFCB
+DOSFCB:	DEFS	36
+DFCB:	DEFS	11
+EXP$:	DEFB	'EXPORT>$'
+XF$:	DEFB	' -> $'
+XOK:	DEFB	' - OK',cr,lf,'$'
+OPNF:	DEFB	' - Open failed.',cr,lf,'$'
+FDN$:	DEFB	' file(s) processed.',cr,lf,'$'
+DWERR:	DEFB	'Syntax error. Syntax is EXPORT x:/path/file '
+	DEFB	'or EXPORT x:/path/file=cpmfile',cr,lf,lf
+HELPAD:	DEFB	'For help, type EXPORT [HELP]',cr,lf,'$' 
+OVWQ:	DEFB	' - Overwrite? $'
+OVWX:	DEFB	 8,8,8,8,8,8,8,8,8,8,8,8,8,8
+	DEFB	'              '
+	DEFB	 8,8,8,8,8,8,8,8,8,8,8,8,8,8,'$'
+LEN:	DEFS	4
+STARDST:
+	DEFB	'*.*',0
+PRMPT:	DEFB	'EXPORT>$'
+	DEFB	0	;Beginning of string
+DOSPTH:	DEFS	161
+CCB:	DEFW	0
+	DEFW	0
+HELP$:	DEFB	'EXPORT v'
+	include	version.inc
+	DEFB	' for JOYCE',cr,lf,lf
+	DEFB	'Syntax:   EXPORT {x:/path/}cpmfile',cr,lf
+	DEFB	'    or:   EXPORT x:/path/=cpmfile',cr,lf
+	DEFB	'    or:   EXPORT x:/path/dosfile=cpmfile',cr,lf,lf
+	DEFB	'The CP/M filename or the DOS filename ma'
+	DEFB	'y contain wildcards.',cr,lf,lf
+	DEFB	'Add the [O] option to overwrite existing'
+	DEFB	' DOS files automatically.',cr,lf,'$'
+
+	
+ENDPRG:
+	END

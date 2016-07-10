@@ -1,0 +1,369 @@
+JOYCE utilities
+===============
+
+  The following utility programs are supplied with JOYCE. They are designed
+to access features of the emulator which have no equivalent on a real PCW.
+You will find them on the disc image UTILS.DSK.
+
+  NOTE: In JOYCE v1.30, there is a set of utilities allowing you to use a DOS 
+directory as a CP/M drive. These utilities can be found on UTILS.DSK, user 1,
+along with their own documentation.
+
+CENPORT
+-------
+  CENPORT allows JOYCE to use the printer, even if your version of CP/M has not 
+detected a Centronics add-on. Just type 
+
+  CENPORT
+
+and printer output will be sent to the current printer port. Any DEVICE setting 
+for the printer will be ignored.
+
+DDJOYCE.PRL
+-----------
+  DDJOYCE is new in v1.20. It is a GSX driver for the host PC's graphics
+screen, allowing high-resolution colour graphics to be used from CP/M.
+  To use it, edit your ASSIGN.SYS file. Remove the entry which reads
+
+     01 @:DDSCREEN
+
+and replace it by
+
+     01 @:DDJOYCE
+
+  It has not been possible to test DDJOYCE against the three GSX applications
+I know of (DRAWMON, DR Draw or DR Graph) and I would be interested to hear of
+any issues with these programs.
+  DDJOYCE will not work in JOYCE for UNIX.
+
+DOSDIR
+------
+
+  DOSDIR displays the contents of a DOS directory. Syntax is:
+
+     DOSDIR
+  or DOSDIR {x:/path/}filespec
+
+  Note that if you include a path you must include a filename. The command
+
+     DOSDIR C:/IMAGES/       is invalid, but
+     DOSDIR C:/IMAGES/*.*    is valid.
+
+  If you're using JOYCE on a UNIX system, you'll probably want to type 
+  lower-case filenames. To stop CP/M converting them to upper case, 
+  do it like this:
+
+      A>DOSDIR \
+      DOSDIR>/proc/*      
+
+  rather than
+
+      A>DOSDIR /proc/*
+
+EMULIOS.RSX
+-----------
+  EMULIOS allows Digital Research Logo to use the 800x600 screen.
+
+To set it up, use the following commands (under CP/M):
+
+PIP EMULOGO.COM=LOGO.COM
+GENCOM EMULOGO
+GENCOM EMULOGO EMULIOS
+
+- Then EMULOGO.COM will behave as LOGO.COM, but using the 800x600 screen.
+  The following commands will behave differently:
+
+setpc    Allows a number from 0 to 255
+setbg    Allows a number from 0 to 255
+savepic  The .PIC file saved is in Windows BMP format, and can be exported,
+         renamed to .BMP, and loaded by paint programs.
+loadpic  The .PIC file loaded must be in Windows BMP format and have 256
+         colours, but its size does not have to be 800x600.
+
+EXPORT
+------
+
+  EXPORT will write CP/M files out as DOS files. It respects exact file
+sizes.
+
+  The syntax is:
+
+     EXPORT {x:/dospath/}cpmfile          { [O] }
+     EXPORT x:/dospath/=du:cpmfile        { [O] }
+     EXPORT x:/dospath/dosfile=du:cpmfile { [O] }
+
+  The first two forms of the command produce a DOS file with the same name
+as the CP/M file. If no path is supplied, the file appears in the current
+DOS directory.
+
+  The third form creates a DOS file with a name that may be different from
+the CP/M name.
+
+  If the [O] option is present, existing DOS files with the same name as an
+exported file will be overwritten without asking. Otherwise you are asked for
+confirmation.
+
+  Both filenames may include wildcards, and the second and third forms can
+include CP/M driveletters and user numbers:
+
+     EXPORT D:/TEXT/*.TXT=M2:*.ASC
+
+  will export all the .ASC files on drive M, group 2 to the directory D:/TEXT.
+
+  If you're using JOYCE on a UNIX system, you'll probably want to type 
+  lower-case filenames. To stop CP/M converting them to upper case, 
+  do it like this:
+
+      A>EXPORT \
+      EXPORT>/home/fred/PROFILE.SUB=A:PROFILE.SUB   
+
+  rather than
+
+      A>EXPORT /home/fred/PROFILE.SUB=A:PROFILE.SUB
+
+IMPORT
+------
+
+  IMPORT will read DOS files into the CP/M filesystem. It sets exact file
+sizes.
+
+  The syntax is:
+
+     IMPORT {x:/dospath/}dosfile          { [O] }
+     IMPORT du:=x:/dospath/dosfile        { [O] }
+     IMPORT du:cpmfile=x:/dospath/dosfile { [O] }
+
+  The first form imports the DOS file (or files) to the current drive and
+user area.
+  The second form imports the file (or files) to the specified drive and
+user area, keeping the DOS names.
+  The third form imports the files, changing their names to match the
+provided CP/M filenames.
+
+  If the [O] option is present, existing CP/M files with the same name as an
+imported file will be overwritten without asking. Otherwise you are asked for
+confirmation.
+
+  Both filenames may include wildcards, and the second and third forms can
+include CP/M driveletters and user numbers:
+
+     IMPORT 2F:*.ASC=D:/TEXT/*.TXT
+
+  will import all the .TXT files in D:/TEXT to drive F, group 2.
+
+  If you're using JOYCE on a UNIX system, you'll probably want to type 
+  lower-case filenames. To stop CP/M converting them to upper case, 
+  do it like this:;
+
+      A>IMPORT \
+      IMPORT>B:PASSWORD=/etc/passwd
+
+  rather than
+
+      A>IMPORT B:PASSWORD=/etc/passwd
+
+
+JOYCEDRV
+--------
+
+  JOYCEDRV.FID is a file which is used to add one or more virtual hard drives
+to the JOYCE environment. The hard drive image files are the same format as
+those used by the MYZ80 emulator.
+
+  To set the names of the disc images, use the same system as in MYZ80; from
+DOS, set their names in the environment:
+
+SET C.DSK=C:/MYZ80/DISKS/C.DSK
+
+ - note that the first such drive will usually be drive C. If a drive's
+name is not set like this, it defaults to DISKS/x.DSK where `x' is the drive
+letter.
+
+How many drives you get depends on your environment, but on my system I get
+five under CP/M (C:,D:,E:,F:,and G:), and thirteen under LocoScript
+(C: to L: and N: to P:).
+
+  To enable JOYCEDRV, copy the file JOYCEDRV.FID to your start-of-day disc
+image. When you start up, you will be told which drive letters it has
+managed to obtain.
+
+  If you try to use a disc image that is not in MYZ80 format, JOYCE will not
+be able to access it. Under CP/M, you will get an "invalid drive" error;
+under LocoScript, you will get a "FID error".
+
+  JOYCEDRV disc images cannot be ejected from the JOYCE menu; they behave as
+hard drives.
+
+  Starting with JOYCE v1.22, you can also use JOYCEDRV to access the PC's
+floppy drives. Use the SET command:
+
+  SET C.DSK=DISC:0
+
+where DISC:0 is the first floppy, DISC:1 is the second, and so on. This
+allows limited use of real PCW discs. Note that if you have upgraded from
+an earlier version of JOYCE, you must copy the new JOYCEDRV.FID to your
+start-of-day disc.
+
+PCKEY
+-----
+
+Syntax: PCKEY keyfile
+    or: PCKEY keyfile fidfile
+
+  PCKEY is used to alter the mapping of PC keys to PCW keys. You may need to use 
+this utility if your keyboard does not have a UK layout, or you are using a        
+laptop where some keys are difficult to get at.
+
+  When PCKEY is given one parameter, it will read the keyfile and make the 
+changes immediately. When it is given two, it will compile the keyfile into a 
+.FID file, which can then be put on a start-of-day disc and which will make
+the necessary assignments every time JOYCE is started.
+
+  The format of the keyfile is a series of lines; each line reads:
+
+      pc-number  modifier  pcw-number  {comment}
+
+In the DOS version, pc-number is the number of the PC's key (1=ESC 2='1' etc).
+         For a full listing of PC keynumbers, see Ralf Brown's Interrupt List.
+
+modifier  is either N or E, or both. N means normal, while E means extended. 
+         An extended keycode is one where the keyboard sends a 0E0h byte before 
+         the key number - see the Interrupt List for details.
+
+In the UNIX version, pc-number is the SDL keycode (see <SDL/SDL_keysym.h> )
+and modifier should always be N.
+
+pcw-number is the PCW key number. These are listed in the PCW manual.
+
+  So, a typical line might read:
+
+      1 N 8   ESC goes to EXIT   [DOS]
+or    27 N 8  ESC goes to EXIT   [UNIX]
+  Notes:
+
+1. The key mapping you have set remains until you exit JOYCE.  
+2. The option in the Settings menu to swap CTRL and ALT uses the same method as 
+PCKEY. It is probably best not to map CTRL or ALT. Similarly, in the UNIX 
+version, don't map Backspace or Delete.
+3. Key 256 brings up the JOYCE menu. Key 257 brings up the Exit Confirmation 
+screen.
+
+
+QUIT
+----
+
+Syntax:  QUIT { number } { [O] }
+
+  QUIT will exit JOYCE. With no parameters, it will check whether there
+are files on drive M: which may need saving, and if there are it will ask
+for confirmation.
+
+  The number parameter is the error level which JOYCE should return. If there
+is no number parameter, JOYCE returns 98.
+
+  The [O] option disables the M: drive check and quits immediately.
+
+RTC
+---
+
+Syntax:  RTC
+    or:  RTC [C]
+
+  RTC reads the PC's built-in clock. It can be used in two ways.
+
+RTC     by itself will set the PCW's clock from the PC's clock. The timing
+       of the PCW's clock will then depend on the speed of emulation, which
+       is another way of saying that it will gradually diverge from the
+       PC's clock.
+RTC [C] links the PCW's clock to the PC's clock; it will be set to the
+       correct time whenever CP/M reads it.
+
+TIMINGS
+-------
+
+Syntax:  TIMINGS
+    or:  TIMINGS nn
+
+  TIMINGS sets the emulation speed. It does this by changing the screen
+refresh frequency.
+
+  If you run TIMINGS with no parameters, it will set the PCW's emulation
+to 100% speed. If you want a different speed, you can add a numeric parameter,
+for example TIMINGS 120 for 120% speed.
+
+  TIMINGS prints various statistics while it is calculating the correct
+refresh rate. See the source file TIMINGS.C for a full explanation, but
+briefly:
+
+  t1 and t2 are two times in seconds, used to work out how fast the emulation
+is.
+  r is the screen refresh setting. It ranges from 18 (50Hz, like a real PCW)
+to 144 (6.25Hz, which is perfectly usable for text).
+  ZC is a factor related to host processor speed. The smaller it is, the
+faster the host processor.
+
+VGA and VGACOM
+--------------
+
+  VGA.FID is new in JOYCE v1.10. It is designed to allow the PCW to take
+advantage of the PC's graphics screen.
+
+  Once VGA.FID has loaded, type VGACOM ON to activate it, and VGACOM OFF
+to deactivate it.
+
+  Your PCW screen will now be 100 columns x 36 lines. Nearly all the normal
+PCW escape codes are supported, which should enable character-based programs
+to be run (don't run graphical programs like Stop Press!). Since screen output
+is now being done by the host PC's processor, you should notice an improvement
+in speed.
+  The following escape codes work differently in the 800x600 VGA mode:
+
+  ESC b  /  ESC c  set colours (so PALETTE works like XPALETTE).
+  ESC y            sets 32x90 mode.
+  ESC z            sets 36x100 mode.
+  ESC 4 (n)        does nothing.
+
+XPALETTE
+--------
+
+Syntax:  XPALETTE b f
+    or:  XPALETTE br bg bb fr fg fb
+
+  XPALETTE works like PALETTE, but in glorious 6-bit or 18-bit colour. Here's
+how:
+
+  The version with two parameters works the same way as on a CPC or a
+Spectrum +3 (though neither of these has as many colours as JOYCE has). For
+example, on a CPC you might type:
+
+     PALETTE 2 63
+
+to get white text on a blue background. So, in JOYCE, type
+
+     XPALETTE 2 63
+
+and the screen colours obediently change.
+
+  The version with six parameters allows all 262144 different colours to be
+selected, rather than just 64. Instead of a colour being represented by one
+number, it is represented by three:
+
+     XPALETTE 0 0 32  255 255 251
+
+will give you a very dark blue background and a foreground with the slightest
+tinge of yellow.
+
+  To get that PCW8000 green-screen look, you can use:
+
+     XPALETTE 0 9
+
+  or, if you're a stickler for accuracy:
+
+     XPALETTE 0,0,0 0,128,56
+
+XPALETTE does not mind how the numbers are separated (with commas, spaces,
+*s or whatever) and accepts Hex numbers preceded with & (128=&80 etc.).
+
+Note! Unlike PALETTE 0 0, XPALETTE 0 0 really does select black on black.
+This is not recommended.
+

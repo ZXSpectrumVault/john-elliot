@@ -1,0 +1,246 @@
+;
+;   XLOGIN: Allow automatic login of extra disc formats under PCW CP/M 
+;           RSX version: helper .COM file
+;   Copyright (C) 1998,2000 John Elliott <jce@seasip.demon.co.uk>
+;
+;    This program is free software; you can redistribute it and/or modify 
+;    it under the terms of the GNU General Public License as published by
+;    the Free Software Foundation; either version 2 of the License, or
+;    (at your option) any later version.
+;
+;    This program is distributed in the hope that it will be useful,
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;    GNU General Public License for more details.
+;
+;    You should have received a copy of the GNU General Public License
+;    along with this program; if not, write to the Free Software
+;    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+	org	0100h
+
+FCB	EQU	005Ch
+FDOS	EQU	5
+CR	EQU	0Dh
+LF	EQU	0Ah
+EOF	EQU	1Ah
+
+	DEFB	0EBh,04h	;DOS protection... JMPS LABE
+	EX	DE,HL
+	JP	BEGIN
+	DEFB	0B4h,09h	;DOS protection... MOV AH,9
+	DEFB	0BAh
+	DEFW	BVMES		;DOS protection... MOV DX,OFFSET BVMES
+	DEFB	0CDh,021h	;DOS protection... INT 21h.
+	DEFB	0CDh,020h	;DOS protection... INT 20h.
+
+	DEFB	cr,'XLOGIN v'
+	include version.inc
+	DEFB	' copyright John Elliott',cr,lf
+	DEFB	'Date: '
+	include built.inc
+	DEFB	cr,lf
+	DEFB	'Copying policy: GNU GPL v2 or later',cr,lf
+	DEFB	eof
+;
+
+BEGIN:	SUB	A
+	JP	PE,BADVER
+	LD	C,0Ch
+	CALL	FDOS	;If the RSX is present, this call will initialise it.
+	CP	30h
+	JR	C,BADVER
+	CALL	USERF
+	DEFW	00E3h
+	CP	1	;Works on old-style PCWs.
+	JR	Z,MAIN
+	CP	3	;Works on Spectrum+3
+	JR	Z,MAIN
+;
+;Does not work on CPCs   (they have no format auto-detection).
+;Does not work on PCW16s (their XBIOS is laid out differently).
+;
+BADVER:	LD	DE,BVMES
+	LD	C,9
+	JP	FDOS
+;
+MAIN:	ld	hl,80h	;0-terminate the command line passed in.
+	ld	e,(hl)
+	ld	d,h
+	inc	hl
+	ex	de,hl	;DE=81h
+	add	hl,de
+	ld	(hl),0
+	ex	de,hl	;HL=81h
+	ld	de,opts
+	ld	iy,optr	;Check for the [H] and [U] options.
+	call	CPMOPT
+	ld	de,insck	;Do an installation check.
+	ld	c,3Ch
+	call	FDOS
+	ld	a,h		;HL=0 if RSX loaded.
+	or	l	
+	ld	de,lded$	;Print "loaded."
+	jr	z,prend
+	ld	c,6Ch		;Set program return code to "error"
+	ld	de,0FF00h
+	call	FDOS
+	ld	de,lderr$	;Report failure
+	jr	prend
+
+help:	ld	de,help$
+	call	print
+exit:	ld	de,delrsx
+	ld	c,3Ch
+	call	FDOS
+	rst	0
+;
+unload:	ld	de,delall
+	ld	c,3Ch
+	call	FDOS
+	ld	de,deled$
+prend:	call	print
+	rst	0
+
+BVMES:	DEFB	'This program requires CP/M 3 on a "Joyce" PCW.',cr,lf,'$'
+deled$:	defb	'XLOGIN.RSX v'
+	include	version.inc
+	defb	' has been unloaded.',cr,lf,'$'
+lded$:	defb	'XLOGIN.RSX v'
+	include	version.inc
+	defb	' loaded and active.',cr,lf,'$'
+lderr$:	defb	'XLOGIN has not loaded.',cr,lf,'$'
+
+help$:	defb	27,'rXLOGIN v'
+	include	version.inc
+	defb	': RSX version',27,'u',cr,lf,lf
+	defb	'Syntax:  XLOGIN     to enable recognition of PCW16 special formats.',cr,lf
+	defb	'         XLOGIN [U] to remove XLOGIN and recover the memory it used.',cr,lf,lf
+
+	defb	'Copyright (C) 1998,2000  John Elliott <jce@seasip.demon.co.uk>',cr,lf,lf
+
+	defb	'This program is free software',3Bh,' you can redistribute it and/or modify',cr,lf
+	defb	'it under the terms of the GNU General Public License as published by',cr,lf
+	defb	'the Free Software Foundation',3Bh,' either version 2 of the License, or',cr,lf
+	defb	'(at your option) any later version.',cr,lf,lf
+
+	defb	'This program is distributed in the hope that it will be useful,',cr,lf
+	defb	'but WITHOUT ANY WARRANTY',3Bh,' without even the implied warranty of',cr,lf
+	defb	'MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the',cr,lf
+	defb	'GNU General Public License for more details.',cr,lf,lf
+
+	defb	'You should have received a copy of the GNU General Public License',cr,lf
+	defb	'along with this program',3Bh,' if not, write to the Free Software',cr,lf
+	defb	'Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.',cr,lf,'$'
+
+opts:	defb	4,'HELP', 1,'H', 1,'?'
+	defb	1,'U',0
+optr:	defw	help,help,help
+	defw	unload
+
+insck:	defb	76h,1	;RSX installation check
+	defw	magic
+
+delall:	defb	7Fh,1	;Delete all copies of the RSX
+	defw	magic
+
+delrsx:	defb	7Eh,1	;Delete local copy of the RSX
+	defw	magic
+
+magic:	defb	'XLOGIN  '
+MYDE:	DEFW	0
+
+;
+;CPMOPT (Z80)
+;
+;Parameters:   DE points to a list of option strings, of the form:
+;              DEFB l1,str1,l2,str2,...,0
+;eg:           DEFB 4,'HELP',5,'DRIVE',0
+;
+;              HL points to the command line (0-terminated)
+;              IY gives the address of a table of addresses, for the service
+;                routine for each option.
+;                The service routine has HL=first character after end of option
+;                text, and should return HL=next character to parse. All other
+;                registers may be corrupted.
+
+CPMOPT:
+	LD	(MYDE),DE
+CPMOPT0:
+	LD	A,(HL)
+	INC	HL	;Search for [OPTION.... syntax.
+	OR	A
+	RET	Z
+	CP	'['
+	JR	NZ,CPMOPT0
+CPMOPT1:
+	LD	DE,(MYDE)
+	LD	C,0
+CPMCMP:	PUSH	HL	;HL=first byte of input option.
+	LD	A,(DE)
+	INC	DE
+	OR	A
+	JR	Z,CPMP	;End
+	LD	B,A
+	CALL	CP$
+	JR	Z,CPMO	;Matched
+	LD	A,B
+	OR	A
+	JR	Z,CPMCMR
+CPMCMQ:	INC	DE
+	DJNZ	CPMCMQ
+CPMCMR:	POP	HL
+	INC	C
+	JR	CPMCMP
+;
+CPMO:	INC	SP	;Option decoded successfully - lose old HL.
+	INC	SP
+	LD	B,0	;BC=0 for first option, 1 for second....
+	PUSH	IY
+	ADD	IY,BC
+	ADD	IY,BC	;IY=address of address of routine.
+	LD	E,(IY+0)
+	LD	D,(IY+1) ;DE=address of routine.
+	CALL	PCDE
+	POP	IY
+	JR	CPMQ
+;
+PCDE:	PUSH	DE
+	RET
+;
+CPMP:	POP	HL	;Option unrecognised.
+CPMQ:	LD	A,(HL)
+	INC	HL
+	OR	A
+	RET	Z
+	CP	','
+	JR	Z,CPMOPT1
+	CP	']'
+	JR	Z,CPMOPT0
+	JR	CPMQ
+;
+
+CP$:	PUSH	BC	;Compare 2 memory areas.
+	PUSH	DE
+	PUSH	HL
+CPLP:	LD	A,(DE)
+	CP	(HL)
+	JR	NZ,CPLE
+	INC	HL
+	INC	DE
+	DJNZ	CPLP
+	XOR	A
+CPLE:	POP	HL
+	POP	DE
+	POP	BC
+	RET
+;
+PRINT:	LD	C,9
+	JP	FDOS
+;
+USERF:	LD	HL,(1)
+	LD	BC,57h
+	ADD	HL,BC
+	JP	(HL)
+
+	END

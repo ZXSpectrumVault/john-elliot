@@ -1,0 +1,359 @@
+;
+; ROM+Snapshot loader for the Spectrum +3
+; Copyright 2005 John Elliott <jce@seasip.demon.co.uk>
+;
+;   This software is provided 'as-is', without any express or implied
+;  warranty.  In no event will the authors be held liable for any damages
+;  arising from the use of this software.
+;
+;  Permission is granted to anyone to use this software for any purpose,
+;  including commercial applications, and to alter it and redistribute it
+;  freely, subject to the following restrictions:
+;
+;  1. The origin of this software must not be misrepresented; you must not
+;     claim that you wrote the original software. If you use this software
+;     in a product, an acknowledgment in the product documentation would be
+;     appreciated but is not required.
+;  2. Altered source versions must be plainly marked as such, and must not be
+;     misrepresented as being the original software.
+;  3. This notice may not be removed or altered from any source distribution
+;
+CR      equ     0Dh
+LF      equ     0Ah
+BANKM   equ     5B5Ch   ;+3 system variable holding memory banking state
+PORTM   equ     7FFDh   ;+3 port controlling memory banking
+DOS_INIT equ    0100h   ;Reset everything
+DOS_OPEN equ    0106h   ;Open file
+DOS_CLOSE equ   0109h   ;Close file
+DOS_READ  equ   0112h   ;Read file
+DOS_WRITE equ   0115h   ;Write to file
+DOS_FSEEK equ   0136h   ;Set file pointer
+DOS_S1346 equ	013fh	;Set banks 1/3/4/6 usage.
+DOS_XREF  equ   0151h   ;Find XDPB
+DD_S_RETR equ   0160h   ;Set retry
+DD_LOGIN  equ   0175h   ;Detect format
+DD_SEL_F  equ   0178h   ;Force format
+DD_L_OFF  equ   019Ch   ;Turn drive motor off
+
+	org	8000h
+
+HEADER	equ	0B000h	;Where the SNA header is loaded
+REG_I   equ     0B000h
+REG_HL1 equ     0B001h
+REG_DE1 equ     0B003h
+REG_BC1 equ     0B005h
+REG_AF1 equ     0B007h
+REG_HL  equ     0B009h
+REG_DE  equ     0B00Bh
+REG_BC  equ     0B00Dh
+REG_IY  equ     0B00Fh
+REG_IX  equ     0B011h
+REG_IFF equ     0B013h
+REG_R   equ     0B014h
+REG_AF  equ     0B015h
+REG_SP  equ     0B017h
+REG_IM  equ     0B019h
+REG_BDR equ     0B01Ah 
+;
+;Object: To load a .SNA file into +3DOS banks 5,6,3
+;        To load a ROM file into +3DOS bank 4
+;        To page to 4,5,6,3 and start the program.
+;        Our "last-stage loader" is at 4000h; can be put anywhere in bank 5.
+;
+;Loading scheme:
+;
+;1. Load our machine code at 8000h.
+;2. Insert the .SNA filename at 8004h.
+;3. Insert the .ROM filename at 8014h.
+;4. Execute the M/C.
+;
+;M/C:
+;   1. Restrict +3DOS to bank 1.
+;   2. Load ROM into bank 4.
+;   3. Load the .SNA:
+;
+;   27 bytes into bank 2 at 0B000h
+;16384 bytes into bank 0 at 0C000h
+;16384 bytes into bank 6 at 0C000h
+;16384 bytes into bank 3 at 0C000h
+;
+;Then close the .SNA, and go.
+;
+base:	jr	start
+
+ldaddr:	defw    0		;8002h: Address to use for the 12-byte final 
+				;loader. 0 means "use SNA stack".
+
+fname:	defb	'00P:FILENAME.SNA',0FFh	;8004h: SNA file to load.
+rname:	defb	'00P:FILENAME.ROM',0FFh	;8014h: ROM file to load.
+pause:	defb	0
+;
+; The first thing we have to handle is the ROM image. The BASIC loader 
+; put it at 8000h in bank 2; we need to move it to 0C000h in bank 4. That 
+; then frees up bank 2 for our code.
+;
+start:	ld	(oldsp),sp
+	call	bank7
+;
+;Restrict +3DOS to memory bank 1.
+;
+	ld	de,1Ch		;Space for cache:   3800h bytes
+	ld	hl,1C04h	;Space for RAMdisc:  800h bytes
+	call	DOS_S1346	;Set memory usage
+;
+; Load the ROM.
+;
+	ld	bc,5		;File 0, shared read
+	ld	de,1		;If file is present, open it; if not, error
+				;Skip over +3DOS header, if any
+	ld	hl,rname
+	call	DOS_OPEN	;Open file
+	jp	nc,dos_err
+
+	ld	bc,4		;Load the ROM into bank 0.
+	ld	de,04000h
+	ld	hl,0C000h
+	call	DOS_READ
+	jp	nc,dos_err
+
+	ld	b,0		;Close the ROM.
+	call	DOS_CLOSE
+	jp	nc,dos_err
+;
+;Open the SNA; its name is at 8004h
+;
+	ld	bc,5		;File 0, shared read
+	ld	de,2		;If file is present, open it; if not, error
+				;Ignore +3DOS header, if any.
+	ld	hl,fname
+	call	DOS_OPEN	;Open file
+	jp	nc,dos_err
+;
+; Load the SNA header
+;
+	ld	bc,0
+	ld	de,27
+	ld	hl,HEADER
+	call	DOS_READ
+	jp	nc,dos_err
+;
+; Load bank 5, at 0C000h in bank 0.
+;
+	ld	bc,0
+	ld	de,04000h
+	ld	hl,0c000h
+	call	DOS_READ
+	jp	nc,dos_err
+;
+; If we aren't going to pause after loading, display the screen from the 
+; SNA file.
+;
+	ld	a,(pause)
+	and	2
+	jr	nz,noscr
+	call	bank0
+	ld	hl,0C000h
+	ld	de,04000h
+	ld	bc,1B00h
+	ldir
+	ld	a,(HEADER+26)
+	out	(254),a
+	call	bank7
+noscr:
+;
+; Load bank 2, at 0C000h in bank 6.
+;
+	ld	bc,6
+	ld	de,04000h
+	ld	hl,0C000h
+	call	DOS_READ
+	jp	nc,dos_err
+;
+; Load bank 0, at 0C000h in bank 3.
+;
+	ld	bc,3
+	ld	de,04000h
+	ld	hl,0c000h
+	call	DOS_READ
+	jp	nc,dos_err
+;
+; File loaded. Close it.
+;
+	ld	b,0
+	call	DOS_CLOSE
+;
+; Switch off the drive motor.
+;
+	call	DD_L_OFF
+;
+; We're now committed to executing the snap. 
+;
+	call	bank0
+	ld	a,(pause)
+	and	1
+	jp	z,runsna
+	ld	bc,0
+pause1:	ld	a,7
+pause2:	out	(254),a
+	dec	a
+	jr	nz,pause2
+	dec	bc
+	or	b	;We know A is 0 already
+	or	c
+	jr	nz,pause1
+	jp	runsna
+;
+; Handle a +3DOS error.
+; 
+dos_err:
+	push	af
+	call	bank0
+	pop	af
+	cp      20	      ;Map the +3DOS error
+	jr      nc,doser1
+	add     a,37	    ;to a +3BASIC error
+doser1: add     a,24
+	ld      (error),a
+	ld      sp,(oldsp)      ;Restore SP
+	rst     8	       ;and return to BASIC
+error:  defb    0
+;
+; Memory paging subroutines
+;
+bank7:  ld	bc, PORTM
+	di	
+	ld      a,(BANKM)
+	res     4,a	     ;ROM 2
+	or      7	       ;RAM 7
+	ld      (BANKM),a
+	out     (c),a
+	ei
+	ret
+;
+bank0:  ld	bc, PORTM
+	di	
+	ld      a,(BANKM)
+	set     4,a	     ;ROM 3
+	and     0F8h	    ;RAM 0
+	ld      (BANKM),a
+	out     (c),a
+	ei
+	ret
+;
+; Caller stack pointer
+;
+oldsp:  defw    0
+;
+; The SNA is loaded. Execute it.
+;
+runsna:	
+;
+; RAM arrangement is R3-5-2-0, with bank 0 containing the data for bank 5.
+; Copy this bank.
+; 
+	di
+	ld	hl,0C000h
+	ld	de,04000h
+	ld	b,d
+	ld	c,e
+	ldir
+;
+; Install the final-stage loader.
+;
+	ld	hl,(ldaddr)
+	ld	a,h
+	or	l
+	jr	nz,sec1
+
+	ld	hl,4000h	;If snap stack in top 32k, we can't use it
+	ld	a,(REG_SP + 1)	;for the transfer buffer
+	cp	80h
+	jr	nc,sec1
+	ld	hl,(REG_SP)
+	ld	de,-16
+	add	hl,de
+sec1:	ex	de,hl		;DE = address of final stage loader	
+	push	de
+	pop	ix		;IX = address of final stage loader
+	ld	hl,final
+	ld	bc,top-final
+	ldir
+;
+; Load registers from the SNA file.
+;
+	ld	a,(REG_I)
+	ld	i,a
+;
+; Load the alternate registers
+;
+	ld	sp,REG_HL1
+	pop	hl
+	pop	de
+	pop	bc
+	pop	af
+	exx
+	ex	af,af'
+; Done.
+	pop	hl	;HL
+	pop	de	;DE
+	pop	bc	;BC
+	ld	(ix+3),c	
+	ld	(ix+4),b ;BC stored in final-stage loader
+	pop	iy
+	pop	bc	;This would be IX, but we're using IX.
+	pop	bc	;C = IFF2, B = R
+	ld	a,c
+	and	4
+	ld	a,0F3h	;DI
+	jr	z,putis
+	ld	a,0FBh	;EI
+putis:	ld	(ix+9),a ;Interrupt status
+	ld	a,b
+	ld	r,a	
+	pop	bc		;AF
+	ld	(ix+12),c
+	ld	(ix+13),b	;AF in final-stage loader
+	pop	bc		;SP
+	ld	(ix+7),c
+	ld	(ix+8),b	;SP in final-stage loader
+	pop	bc		;C=Interrupt mode, B=border colour
+	ld	a,b
+	out	(254),a
+	ld	a,c
+	or	a
+	jr	nz,notim0
+	im	0
+	jr	setim
+notim0:	dec	a
+	jr	nz,notim1
+	im	1
+	jr	setim
+notim1:	im	2
+setim:	ld	(fjump+1),ix	;Jump to final-stage loader
+	ld	bc,12
+	add	ix,bc
+	ld	(lspd+1),ix
+	ld	ix,(REG_IX)
+lspd:	ld	sp,0		;Point SP at stored AF.
+;
+;HL=address of final stage loader
+;
+	ld	a,15h		;4-5-6-3 configuration
+	ld	bc,1FFDh
+fjump:	jp	0
+
+;
+;Final-stage loader
+;
+final:	out	(c),a	;+0,1
+	ld	bc,0	;+2,3,4  IX+3 = BC-value
+	pop	af	;+6
+	ld	sp,0	;+6,7,8  IX+7 - SP-value
+	ei		;+9      IX+9 - EI or DI, accordingly
+	retn		;+A,B    Go.
+;
+	defw	0	;+C,D    IX+12 - AF
+;
+top:
+	end
+

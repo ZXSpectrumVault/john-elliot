@@ -1,0 +1,574 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;   JOYCE/ANNE v2.1.0: PCW emulator                                           ;
+;                                                                             ;
+;   Copyright (C) 1998-1999, John Elliott <jce@seasip.demon.co.uk>            ;
+;                                                                             ;
+;    This program is free software; you can redistribute it and/or modify     ;
+;    it under the terms of the GNU Library General Public License as          ;
+;    published by the Free Software Foundation; either version 2 of the       ;
+;    License, or(at your option) any later version.                           ;
+;                                                                             ;
+;    This program is distributed in the hope that it will be useful,          ;
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of           ;
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            ;
+;    GNU Library General Public License for more details.                     ;
+;                                                                             ;
+;    You should have received a copy of the GNU Library General Public        ;
+;    License along with this program; if not, write to the Free Software      ;
+;    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.                ;
+;                                                                             ;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	org	0100h
+
+FCB	EQU	005Ch
+FDOS	EQU	5
+CR	EQU	0Dh
+LF	EQU	0Ah
+EOF	EQU	1Ah
+;
+;We start with protection against being run from DOS.
+;
+BASE:	DEFB	0EBh,04h	;DOS protection... JMPS LABE
+	EX	DE,HL
+	JP	BEGIN
+	DEFB	0B4h,09h	;DOS protection... MOV AH,9
+	DEFB	0BAh
+	DEFW	BVMES		;DOS protection... MOV DX,OFFSET BVMES
+	DEFB	0CDh,021h	;DOS protection... INT 21h.
+	DEFB	0CDh,020h	;DOS protection... INT 20h.
+
+	DEFB	cr,'JOYCE IMPORT v'
+	include version.inc
+	DEFB	' (c) John Elliott',cr,lf
+	DEFB	'Date: '
+	include	built.inc
+	DEFB	cr,lf,eof
+;
+
+BEGIN:	SUB	A		;Filter out the 8080s
+	JP	PE,BADVER
+	LD	C,0Ch		;Filter out CP/M <3
+	CALL	FDOS
+	CP	30h
+	JR	C,BADVER
+	XOR	A
+	DEFB	0EDh, 0FEh	;Get JOYCE version
+	INC	A		;Must return A=0FFh for Joyce v1.00
+	JR	Z,JRTSO
+BADVER:	LD	DE,BVMES	;Failed.
+	LD	C,9
+	JP	FDOS
+;
+JRTSO:	XOR	A	;A = 0 : called from CP/M
+	CALL	MAIN
+	RST	0
+		
+	DEFS	BASE + 078h - $
+	DEFB	'JOYCE',1,0,0	;File signature at end of first record.
+				;DB 'JOYCE',1;  2 expansion bytes.
+;
+;
+MAIN:	LD	C,2Dh
+	LD	E,0FFh
+	CALL	5
+	LD	HL,80h
+	LD	DE,ENDPRG+629
+	PUSH	DE
+	LD	B,H
+	LD	C,L
+	LDIR
+	POP	DE
+ILOOP:	XOR	A
+	LD	(BSLASH),A
+	LD	H,A
+	LD	A,(DE)
+	LD	L,A
+	INC	DE
+	ADD	HL,DE		;0-terminate command line
+	LD	(HL),0
+	EX	DE,HL
+CKBS:	PUSH	HL
+CKBLP:	LD	A,(HL)		;Check for the sequence "\", 0 at the end of
+	INC	HL		;a command.
+	OR	A
+	JR	Z,PKIPSP
+	CP	'\'
+	JR	NZ,CKBLP
+	LD	A,(HL)
+	OR	A
+	JR	NZ,CKBLP
+	DEC	HL		;Wipe out the backslash
+	LD	(HL),A
+	INC	A
+	LD	(BSLASH),A	;and note it was there
+PKIPSP:	POP	HL
+SKIPSP:	LD	A,(HL)
+	INC	HL
+	OR	A
+	JP	Z,HELPAD	;Advertise Help.
+	CP	'-'
+	JR	Z,CKOPT1
+	CP	'['
+	JR	Z,CKOPT1
+	CP	' '
+	JR	Z,SKIPSP
+	CP	9
+	JR	Z,SKIPSP
+FINDEQ:	DEC	HL
+	LD	(DOSPTH),HL
+FINDQ1:	LD	A,(HL)
+	INC	HL
+	CP	'='
+	JR	Z,TWOCMDS
+	OR	A
+	JR	Z,NOOPTS
+	CP	'-'
+	JR	Z,CKOPT2
+	CP	'['
+	JR	Z,CKOPT2
+	JR	FINDQ1
+;
+CKOPT1:	CALL	CKOPT
+	JR	SKIPSP
+;
+CKOPT2:	CALL	CKOPT
+	JR	FINDQ1
+;
+CKOPT3:	CALL	CKOPT
+	JR	OPTLP
+;
+TWOCMDS:
+	LD	BC,(DOSPTH)
+	LD	(PFCB),BC
+	LD	(DOSPTH),HL
+OPTLP:	LD	A,(HL)
+	INC	HL
+	CP	'-'
+	JR	Z,CKOPT3
+	CP	'['
+	JR	Z,CKOPT3
+	OR	A
+	JR	NZ,OPTLP
+NOOPTS:	LD	HL,(DOSPTH)
+NULTRM:	LD	A,(HL)
+	OR	A
+	JR	Z,DO_XFER
+	CP	' '
+	JR	Z,ZAPEND
+	CP	'['
+	JR	Z,ZAPEND
+	CP	'-'
+	JR	Z,ZAPEND
+	CP	9
+	JR	Z,ZAPEND
+	INC	HL
+	JR	NULTRM
+;
+ZAPEND:	LD	(HL),0
+DO_XFER:
+;
+;Importing loop:
+;
+	LD	DE,PFCB
+	CALL	UDPARSE
+	LD	A,H
+	AND	L
+	INC	A
+	JP	Z,INVFSP
+	LD	A,(UFCB+1)
+	CP	' '		;Blank?
+	CALL	Z,SETSDS
+	OR	A
+	CALL	Z,SETSDS
+	LD	DE,(DOSPTH)
+	LD	HL,ENDPRG	;Returns 11 bytes FCB format name, then ASCIIZ pathname
+	LD	A,(CNT)
+	LD	B,A
+	LD	C,91h
+	CALL	JDOS
+	LD	A,H
+	OR	L
+	JP	Z,XFEND
+	LD	HL,CNT
+	INC	(HL)
+	LD	DE,OVER$
+	CALL	Z,PRINT
+	JP	Z,XFEND
+	CALL	PRDOSN
+	LD	DE,ENDPRG+11
+	LD	C,0Fh
+	CALL	JDOS
+	LD	(HANDLE),HL
+	LD	A,H
+	OR	L
+	JR	NZ,OKCPY
+	LD	DE,CNOPN
+	CALL	PRINT
+	JR	DO_XFER
+;
+
+OKCPY:	XOR	A
+	LD	(BYTLEN),A
+	LD	IX,ENDPRG+500
+	LD	(IX+0),0
+	LD	DE,UFCB
+	CALL	ZFCB
+	CALL	UCREATE
+	OR	A
+	JR	Z,OKCPY1
+	DEC	A
+	JR	NZ,ABCPY
+	LD	A,(OVERW)
+	AND	A
+	JR	NZ,YDEL1
+	LD	DE,DEL$
+	CALL	PRINT
+OKCP1:	CALL	INKEY
+	CALL	UPCASEA
+	CP	'Y'
+	JR	Z,YDEL
+	CP	'N'
+	JR	NZ,OKCP1
+	CALL	PUTC
+	CALL	CRLF
+	JR	FAIL1
+;
+YDEL:	LD	DE,DELDL$
+	CALL	PRINT
+YDEL1:	LD	DE,UFCB
+	LD	C,13h
+	CALL	UDFDOS
+	INC	A
+	JR	NZ,OKCPY
+	LD	DE,DELFL$
+	JR	FAIL
+;
+ABCPY:	LD	DE,ABCPY$
+FAIL:	CALL	PRINT
+FAIL1:	LD	DE,(HANDLE)
+	LD	C,10h
+	CALL	JDOS
+	JP	DO_XFER
+;
+OKCPY1:	LD	C,14h
+	LD	DE,(HANDLE)
+	CALL	JDOS
+	LD	A,H
+	OR	L
+	JR	Z,CPYEOF
+	LD	HL,BYTLEN
+	INC	(HL)
+	LD	IX,ENDPRG+500
+	LD	DE,UFCB
+	LD	C,1
+	LD	A,B
+	SCF
+	CALL	UBYTOUT
+	JR	C,OKCPY1
+	LD	DE,DKFUL$
+	JR	FAIL
+;
+CPYEOF:	LD	BC,7F01h
+CELP:	LD	IX,ENDPRG+500
+	LD	DE,UFCB
+	LD	C,1
+	LD	A,1Ah
+	PUSH	BC
+	CALL	UBYTOUT
+	POP	BC
+	DJNZ	CELP
+	LD	C,10h
+	LD	DE,UFCB
+	CALL	UDFDOS
+	LD	HL,UFCB+6
+	SET	7,(HL)
+	LD	A,(BYTLEN)
+	AND	7Fh
+	LD	(UFCB+32),A
+	LD	C,1Eh
+	LD	DE,UFCB
+	CALL	UDFDOS	;Set exact size
+	LD	DE,OK$
+	JP	FAIL
+;
+XFEND:	CALL	CRLF
+	LD	A,(BSLASH)
+	OR	A
+	JR	Z,NOMORE
+BSLOOP:	LD	DE,IMP$
+	CALL	PRINT
+	LD	HL,ENDPRG+628
+	LD	(HL),7Fh
+	INC	HL
+	LD	(HL),0
+	DEC	HL
+	EX	DE,HL
+	LD	C,0Ah
+	CALL	FDOS
+	CALL	CRLF
+	LD	DE,ENDPRG+629
+	JP	ILOOP
+;
+NOMORE:	LD	HL,(CNT)	;There was no backslash. Say what happened, & quit.
+	LD	H,0
+	LD	B,H
+	CALL	OPDEC3
+	LD	DE,FP$
+	CALL	PRINT
+	LD	A,(CNT)
+	OR	A
+	CALL	Z,HELPAD
+	RET	
+;
+HELPAD:	LD	A,(BSLASH)
+	OR	A
+	JR	NZ,BSLOOP
+	LD	DE,HELPA$
+	JP	PRINT
+;
+;
+PRDOSN:	LD	HL,ENDPRG
+	LD	DE,UFCB+1
+	LD	B,11
+PRDN0:	LD	A,(DE)	;Generate CP/M destination name at UFCB
+	CP	'?'
+	JR	NZ,PRDN1
+	LD	A,(HL)
+	LD	(DE),A
+PRDN1:	INC	HL
+	INC	DE
+	DJNZ	PRDN0
+	LD	HL,UFCB
+	LD	C,0
+	CALL	UOPFCB
+	LD	DE,FROM$
+	CALL	PRINT
+	LD	HL,ENDPRG+11
+DXPR1:	LD	A,(HL)
+	INC	HL
+	OR	A
+	RET	Z
+	CALL	PUTC
+	JR	DXPR1
+;
+CKOPT:	LD	A,(HL)
+	CP	'H'
+	JR	Z,HELP
+	CP	'?'
+	JR	Z,HELP
+	CP	'O'
+	RET	NZ
+	LD	(OVERW),A
+	RET
+;
+HELP:	POP	HL	;Ret addr
+	LD	DE,HELP$
+	JP	PRINT
+;
+JDOS:	LD	A,10
+	DEFB	0EDh,0FEh
+	RET
+;
+INVFSP:	LD	DE,INVF$
+	CALL	PRINT
+	LD	HL,(PFCB)
+INVF0:	LD	A,(HL)
+	OR	A
+	JR	Z,INVF1
+	CP	'='
+	JR	Z,INVF1
+	CALL	PUTC
+	INC	HL
+	JR	INVF0
+;
+INVF1:	CALL	CRLF
+	LD	C,6Ch
+	LD	DE,0FF00h
+	JP	5
+;
+SETSDS:	LD	HL,UFCB+1
+	LD	DE,UFCB+2
+	LD	BC,10
+	LD	(HL),'?'
+	LDIR
+	RET
+;
+crlf:	push	af
+	ld	a,0Dh
+	call	putc
+	ld	a,0Ah
+	call	putc
+	pop	af
+	ret
+;
+OPDEC3: PUSH    HL
+        LD      DE,100
+        CALL    DECS
+        DEFB    1Eh     ;ld e,
+OPDEC2: PUSH    HL
+        LD      E,10
+        CALL    DECS
+        LD      A,L
+        ADD     A,'0'
+        CALL    PUTC
+        POP     HL
+        RET
+;
+DECS:   LD      B,0
+DECSL:  AND     A
+        SBC     HL,DE
+        JR      C,DECSE
+        INC     B
+        JR      DECSL
+;
+DECSE:  ADD     HL,DE   ;Undo the last subtraction which went too far
+        LD      A,B
+        OR      A
+        RET     Z
+        ADD     A,'0'
+        JP      PUTC
+;
+UBYTOUT:
+;
+;Write a byte sequentially to text file.
+;FCB given by DE.
+;IX -> buffer (81h bytes).
+;Byte given in A.
+;C=Mode - 0=Text, 1=Binary.
+;File must be open to write.
+;If EOF (26) sent in text mode, the file is closed.
+;Returns Carry set if OK, Carry clear if failed.
+;
+	PUSH	AF
+	PUSH	BC
+	PUSH	DE
+	PUSH	HL
+
+	PUSH	BC
+	PUSH	AF
+	LD	A,(IX+0)
+	LD	C,A
+	LD	B,0
+	PUSH	IX
+	POP	HL
+	INC	HL
+	ADD	HL,BC
+	POP	AF
+	LD	(HL),A		;Byte stored.
+	POP	HL		;L=mode
+	LD	H,A		;H=byte to write
+	LD	A,L
+	OR	A
+	LD	A,H		;A=byte to write
+	JR	NZ,NWRE
+	CP	1AH
+	JP	Z,WREOF
+NWRE:	LD	A,C		;Write pointer
+	INC	A
+	CP	80H
+	CALL	Z,WRREC		;Sets Carry if WRREC not called
+	LD	(IX+0),A
+	JP	C,POPA_C
+POPA_NC:
+	POP	HL
+	POP	DE
+	POP	BC
+	POP	AF
+	SCF
+	CCF
+	RET
+;
+WRREC:	PUSH	IX
+	PUSH	DE
+
+	PUSH	IX
+	POP	DE
+	INC	DE
+	CALL	SETDMA
+	POP	DE
+	PUSH	DE
+	LD	C,15H
+	CALL	UDFDOS
+	OR	A
+	SCF
+	JR	Z,RET_C
+	XOR	A
+RET_C:	POP	DE
+	POP	IX
+	RET
+
+WREOF:	LD	A,C
+	CP	80H
+	JP	Z,WREOF2
+	LD	(HL),1AH
+	INC	HL
+	INC	C
+	JP	WREOF
+;
+WREOF2:	CALL	WRREC
+	LD	C,10H
+	CALL	UDFDOS
+POPA_C:	POP	HL
+	POP	DE
+	POP	BC
+	POP	AF
+	SCF
+	RET
+;
+
+NUMERIC:
+        CP      '0'
+        RET     C
+        CP      '9'+1
+        CCF
+        RET
+;
+
+	include ucreate.lib
+	include uopfcb.lib
+	include udparse.lib
+	include impexp.lib
+	include print.lib
+;
+INTFCB:	DEFS	38
+BVMES:	DEFB	'This program will only run in the JOYCE emulator'
+	DEFB	cr,lf,'$'
+OK$:	DEFB	' - Ok.'
+	DEFB	cr,lf,'$'
+DKFUL$:	DEFB	' - Disk full.'
+	DEFB	cr,lf,'$'
+CNOPN:	DEFB	' - Can',27h,'t open DOS file.'
+	DEFB	cr,lf,'$'
+ABCPY$:	DEFB	' - Can',27h,'t create CP/M file.'
+	DEFB	cr,lf,'$'
+HANDLE:	DEFW	0
+DEL$:	DEFB	' - Delete (Y/N)? $'
+DELDL$:	DEFB	8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8
+	DEFB	'                 '
+	DEFB	8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,'$'
+BSLASH:	DEFB	0
+OVERW:	DEFB	0
+BYTLEN:	DEFB	0
+CNT:	DEFW	0
+CPMFSP:	DEFB	'*.*',0
+PFCB:	DEFW	CPMFSP,UFCB
+UFCB:	DEFS	38
+DOSPTH:	DEFW	0
+HELP$:	DEFB	'IMPORT v1.32 for JOYCE',cr,lf,lf
+	DEFB	'Syntax:  IMPORT {cpmfile=}{x:/path/}dosfile { [O] } { \ }',cr,lf,lf
+	DEFB	'  Both the CP/M and DOS filenames can be ambiguous. ',cr,lf
+	DEFB	'Add the [O] option to overwrite existing CP/M files automatically.',cr,lf
+	DEFB	'Add the \ at the very end of the line to get more input lines',cr,lf
+	DEFB	'(useful for UNIX systems, because you can use lower case).',cr,lf
+	DEFB	'$'
+INVF$:	DEFB	'Invalid filename: $'
+DELFL$:	DEFB	'Delete failed.',cr,lf,'$'
+IMP$:	DEFB	'IMPORT>$'
+FP$:	DEFB	' file(s) processed.',cr,lf,'$'
+HELPA$:	DEFB	'Type IMPORT [HELP] for help.',cr,lf,'$'
+OVER$:	DEFB	'More than 255 matching files present. $'
+FROM$:	DEFB	' <- $'
+
+ENDPRG:
+	END

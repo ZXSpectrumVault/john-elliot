@@ -1,0 +1,6563 @@
+#LyX 2.0 created this file. For more info see http://www.lyx.org/
+\lyxformat 413
+\begin_document
+\begin_header
+\textclass article
+\use_default_options false
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding latin1
+\fontencoding global
+\font_roman times
+\font_sans default
+\font_typewriter default
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize a4paper
+\use_geometry false
+\use_amsmath 1
+\use_esint 0
+\use_mhchem 1
+\use_mathdots 1
+\cite_engine basic
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\use_refstyle 0
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Title
+ANNE v2.2.8
+\end_layout
+
+\begin_layout Author
+John Elliott
+\end_layout
+
+\begin_layout Abstract
+ANNE is an Amstrad PcW16 emulator for UNIX and Windows.
+ It 
+\emph toggle
+only emulates the PcW16; use JOYCE for other PCW / PcW models.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Newpage newpage
+\end_inset
+
+
+\begin_inset CommandInset toc
+LatexCommand tableofcontents
+
+\end_inset
+
+
+\begin_inset Newpage newpage
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Introduction
+\end_layout
+
+\begin_layout Subsection
+Copyright
+\end_layout
+
+\begin_layout Standard
+Copyright 1997,2001-7,2010,2014,2016 John Elliott.
+ Parts copyright 1994, 1995 Ian Collier; other parts copyright 1987, 1999
+ Caldera
+\begin_inset Foot
+status collapsed
+
+\begin_layout Plain Layout
+The copyright message in the source files names Caldera.
+ Actual ownership of the copyrights has probably since passed to DRDOS Inc.
+\end_layout
+
+\end_inset
+
+.
+ ANNE can be distributed freely under the conditions of the GNU General
+ Public License (sic) - see the file COPYING.
+\end_layout
+
+\begin_layout Subsection
+What ANNE does
+\end_layout
+
+\begin_layout Standard
+ANNE emulates a PcW16 computer - an 8-bit computer intended by Amstrad as
+ a word processor, and manufactured around 1996.
+\end_layout
+
+\begin_layout Subsection
+What's new?
+\end_layout
+
+\begin_layout Subsubsection*
+Since v2.2.0:
+\end_layout
+
+\begin_layout Itemize
+JOYCE will now prompt you when a CP/M program attempts to access files outside
+ the emulator (for example, the supplied IMPORT or EXPORT utilities).
+ This warning can be controlled from f6=Settings | General | File Access...
+\end_layout
+
+\begin_layout Itemize
+The Windows version is distributed with the latest SDL.DLL.
+\end_layout
+
+\begin_layout Itemize
+Various compilation fixes on Unix platforms.
+\end_layout
+
+\begin_layout Subsubsection*
+Since v2.1.0:
+\end_layout
+
+\begin_layout Itemize
+A crash that occurs when trying to load the rescue disc has been corrected.
+\end_layout
+
+\begin_layout Itemize
+Initial support for compiling under Mac OS X has been added.
+\end_layout
+
+\begin_layout Itemize
+It is now possible to use a folder on the host computer as a CP/M disc.
+ 
+\end_layout
+
+\begin_layout Itemize
+Native GSX support is now present.
+\end_layout
+
+\begin_layout Itemize
+Can now boot CP/M.
+\end_layout
+
+\begin_layout Itemize
+Successfully detects when a disc image has been changed.
+\end_layout
+
+\begin_layout Itemize
+Does not let the mouse pointer go off the bottom of the PcW16 screen.
+\end_layout
+
+\begin_layout Itemize
+Installation from a .CFI file (rather than a physical PcW16 rescue disc)
+ now works correctly.
+\end_layout
+
+\begin_layout Itemize
+With graphics acceleration turned on, the word processor display is not
+ corrupted by scrolling.
+\end_layout
+
+\begin_layout Itemize
+Floppy acceleration is a whole lot better than it was before.
+\end_layout
+
+\begin_layout Itemize
+When you create a new disc image file, you will be asked whether it should
+ be 720k or 1.4Mb.
+ It will then be formatted, so you don't have to use the PcW16 file manager
+ to format new discs.
+ Instead, answer yes when it asks you if you want to create PcW16 folders
+ on the disc.
+\end_layout
+
+\begin_layout Subsection
+\begin_inset CommandInset label
+LatexCommand label
+name "sec: concepts"
+
+\end_inset
+
+Concepts
+\end_layout
+
+\begin_layout Standard
+When moving from a PcW to an emulator, the biggest change you have to accustom
+ yourself to is the way that ANNE handles discs.
+ Real PcW16s use real floppy discs
+\begin_inset Foot
+status collapsed
+
+\begin_layout Plain Layout
+The PCW16 design allowed a hard drive interface to be added.
+ ANNE does not emulate this.
+\end_layout
+
+\end_inset
+
+; you use the recovery disc to reload the system after a crash, a data disc
+ to save your work on, and so on.
+\end_layout
+
+\begin_layout Standard
+It is possible for ANNE to use real disc drives in the same way that a PcW
+ does.
+ However this is pretty slow and awkward; since the PC's got a hard drive,
+ you might as well use it.
+ 
+\end_layout
+
+\begin_layout Subsubsection*
+Disc image files
+\end_layout
+
+\begin_layout Standard
+Each floppy disc is read into the PC's hard drive and stored as a 
+\begin_inset Quotes eld
+\end_inset
+
+disc image file
+\begin_inset Quotes erd
+\end_inset
+
+.
+ This is a one-time process; once the disc image files are created, the
+ discs themselves are no longer needed.
+ 
+\end_layout
+
+\begin_layout Standard
+Disc image files have a number of advantages:
+\end_layout
+
+\begin_layout Enumerate
+They are much faster than real floppy discs.
+\end_layout
+
+\begin_layout Enumerate
+You don't have to be shuffling a stack of floppies every time you want to
+ use ANNE.
+\end_layout
+
+\begin_layout Enumerate
+If you want more discs, you don't have to go to the shop to buy them.
+ You just create more disc image files.
+\end_layout
+
+\begin_layout Standard
+By convention, these have names ending in 
+\begin_inset Quotes eld
+\end_inset
+
+.dsk
+\begin_inset Quotes erd
+\end_inset
+
+.
+ So instead of having a 
+\begin_inset Quotes eld
+\end_inset
+
+manuscripts
+\begin_inset Quotes erd
+\end_inset
+
+ disc, you would have a disc image file called 
+\begin_inset Quotes eld
+\end_inset
+
+manuscripts.dsk
+\begin_inset Quotes erd
+\end_inset
+
+.
+ To normal
+\size small
+ 
+\noun on
+Unix 
+\size default
+\noun toggle
+or Windows software, 
+\begin_inset Quotes eld
+\end_inset
+
+manuscripts.dsk
+\begin_inset Quotes erd
+\end_inset
+
+ is just one file, but PcW programs see it as a disc with any number of
+ PcW files on it.
+\end_layout
+
+\begin_layout Standard
+One consequence of this is that the PcW16's floppy drive has nothing to
+ do with your PC's real floppy drives.
+ You can be working with a 
+\begin_inset Quotes eld
+\end_inset
+
+disc
+\begin_inset Quotes erd
+\end_inset
+
+ in the PcW's drive even when there's nothing in your real floppy drive(s).
+ 
+\end_layout
+
+\begin_layout Standard
+Converting your PcW discs to disc image files is covered in section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec: setup"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsubsection*
+Disc image folders
+\end_layout
+
+\begin_layout Standard
+ANNE 2.1.8 and later can use folders instead of CP/M disc image files.
+ In this system, one PcW disc corresponds to one PC folder.
+ This has the advantage that each PcW file corresponds exactly to one PC
+ file.
+ For example, you could put text files in that folder, and then use the
+ PcW's 
+\begin_inset Quotes eld
+\end_inset
+
+Import
+\begin_inset Quotes erd
+\end_inset
+
+ facility to import files from them.
+\end_layout
+
+\begin_layout Subsubsection*
+Floppy Acceleration
+\end_layout
+
+\begin_layout Standard
+When you have floppy acceleration turned on, ANNE doesn't use disc images
+ any more.
+ When programs refer to the 'disc drive', they are actually looking at a
+ directory called PcW16FS on your hard drive.
+ This is more convenient if you want to share files between the PcW16 environmen
+t and the rest of the world, and you don't have to worry about disc images
+ only holding 1.4Mb.
+\end_layout
+
+\begin_layout Subsubsection*
+ROMs
+\end_layout
+
+\begin_layout Standard
+A real PcW16 has 1 megabyte of flash ROM, which holds the contents of the
+ Cabinet, the built-in software, and the user settings.
+ In the case of a program crash, the contents of the flash ROM could be
+ lost, forcing a time-consuming reload from the recovery disc and data backups.
+\end_layout
+
+\begin_layout Standard
+ANNE doesn't just use one flash ROM - it allows you to choose from several.
+ One (called 
+\begin_inset Quotes eld
+\end_inset
+
+Previous session
+\begin_inset Quotes erd
+\end_inset
+
+) is automatically saved when you leave ANNE; another (
+\begin_inset Quotes eld
+\end_inset
+
+Empty system
+\begin_inset Quotes erd
+\end_inset
+
+) is created when the recovery disc is first read in.
+ It is possible to save others at any time; for example, if you have a Cabinet
+ full of documents, you can save a copy of the ROM, and revert to that later
+ if something goes wrong.
+ 
+\end_layout
+
+\begin_layout Subsubsection*
+The MENU key
+\end_layout
+
+\begin_layout Standard
+ANNE requires a Windows-style keyboard with a Menu key.
+ On most keyboards, Menu is between AltGr and Ctrl, to the right of the
+ space bar.
+ Under Mac OS X, there is no Menu key (even if you've plugged in a PC keyboard,
+ SDL doesn't recognise the key) and you should use Command-F9 (Windows+F9
+ on a PC keyboard) instead.
+\end_layout
+
+\begin_layout Subsection
+Compiling ANNE
+\end_layout
+
+\begin_layout Standard
+If you have downloaded ANNE as a binary for your platform (eg: the full
+ Windows install, or an RPM), you can skip this section.
+\end_layout
+
+\begin_layout Standard
+To compile ANNE, you will need:
+\end_layout
+
+\begin_layout Itemize
+SDL, the Simple DirectMedia Layer: <http://www.libsdl.org>.
+ You need version 1.0.8 or later.
+\end_layout
+
+\begin_layout Itemize
+libxml, the xml parser used by GNOME <http://www.libxml.org/>.
+ ANNE was tested with version 2.2.6.
+\end_layout
+
+\begin_layout Itemize
+libpng, the image library.
+ <http://www.libpng.org/pub/png/>.
+ You need version 1.0.6 or later.
+\end_layout
+
+\begin_layout Standard
+You should be able to compile with the commands:
+\end_layout
+
+\begin_layout LyX-Code
+./configure
+\end_layout
+
+\begin_layout LyX-Code
+make
+\end_layout
+
+\begin_layout LyX-Code
+sudo make install 
+\end_layout
+
+\begin_layout Standard
+On systems with a GCC version earlier than 3.0, the first line should be
+ 
+\begin_inset Quotes eld
+\end_inset
+
+./configure --with-ministl
+\begin_inset Quotes erd
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+To cross-compile ANNE for Windows, you need the XMINGW32 cross-compiler
+ pack from <http://www.libsdl.org>, and MINGW32 versions of the above libraries.
+\end_layout
+
+\begin_layout Subsubsection
+ANNE on Mac OS X
+\end_layout
+
+\begin_layout Standard
+I have successfully compiled ANNE on a Mac OS X (10.4.2) system.
+ The process (and indeed MacOS X support in general) is pretty new and unpolishe
+d.
+\end_layout
+
+\begin_layout Standard
+Firstly, the three libraries mentioned above (SDL, libxml and libpng) had
+ to be compiled from source and installed using their 
+\begin_inset Quotes eld
+\end_inset
+
+make install
+\begin_inset Quotes erd
+\end_inset
+
+ commands; pre-packaged OS X versions didn't seem to be suitable.
+ 
+\end_layout
+
+\begin_layout Standard
+Secondly, the configure script needed to be told what the host system was:
+\end_layout
+
+\begin_layout LyX-Code
+./configure --host=powerpc-darwin-apple8.2.2
+\end_layout
+
+\begin_layout LyX-Code
+make
+\end_layout
+
+\begin_layout LyX-Code
+sudo make install
+\end_layout
+
+\begin_layout Standard
+Thirdly, this builds an ANNE that is still very much a UNIX application;
+ there's no application icon, no native OS X menu, and so on.
+ 
+\end_layout
+
+\begin_layout LyX-Code
+
+\end_layout
+
+\begin_layout Subsection
+Known bugs
+\end_layout
+
+\begin_layout Standard
+This version of ANNE contains, or is thought to contain, the following bugs:
+\end_layout
+
+\begin_layout Itemize
+Under MacOS X in full-screen mode, the mouse pointer can leave stray pixels
+ where it has been.
+\end_layout
+
+\begin_layout Itemize
+The serial port support is untested.
+ It is possible to use QTERM under CP/M, but the SIO device driver (SIO.FID)
+ has not been tested.
+\end_layout
+
+\begin_layout Itemize
+The emulated PcW hangs if, from the front screen, you click 'Help' then
+ 'Index'.
+\end_layout
+
+\begin_layout Subsection
+Internet resources
+\end_layout
+
+\begin_layout Standard
+The latest versions of ANNE- and any future updates - will be downloadable
+ as part of the JOYCE suite, from <
+\family typewriter
+http://www.seasip.info/Unix/Joyce/
+\family default
+>.
+\end_layout
+
+\begin_layout Standard
+Announcements of new ANNE releases, if any, will be made to the newsgroup
+ <
+\family typewriter
+news:comp.sys.amstrad.8bit
+\family default
+>.
+ It is also on-topic to discuss ANNE in this newsgroup.
+\end_layout
+
+\begin_layout Section
+\begin_inset CommandInset label
+LatexCommand label
+name "sec: setup"
+
+\end_inset
+
+Setting Up
+\end_layout
+
+\begin_layout Subsection
+Directory organisation
+\end_layout
+
+\begin_layout Subsubsection
+Under Windows
+\end_layout
+
+\begin_layout Standard
+ANNE uses the same directories as its sister emulator JOYCE.
+ These comprise two directories - a 
+\begin_inset Quotes eld
+\end_inset
+
+system
+\begin_inset Quotes erd
+\end_inset
+
+ directory common to all users (eg, 
+\begin_inset Quotes eld
+\end_inset
+
+
+\family typewriter
+C:/Program
+\begin_inset space ~
+\end_inset
+
+Files/Joyce/lib
+\family default
+
+\begin_inset Quotes erd
+\end_inset
+
+ and a 
+\begin_inset Quotes eld
+\end_inset
+
+user
+\begin_inset Quotes erd
+\end_inset
+
+ directory (eg: 
+\begin_inset Quotes eld
+\end_inset
+
+
+\family typewriter
+C:/My
+\begin_inset space ~
+\end_inset
+
+Documents/Joyce
+\family default
+
+\begin_inset Quotes erd
+\end_inset
+
+).
+ Each of these directories will have subdirectories called 
+\family typewriter
+Boot
+\family default
+ (boot files and boot disc images) and 
+\family typewriter
+Disks
+\family default
+ (all other disc images).
+ In the remainder of this document you will see directory names which look
+ like 
+\begin_inset Quotes eld
+\end_inset
+
+
+\family typewriter
+~/Joyce/Boot
+\family default
+
+\begin_inset Quotes erd
+\end_inset
+
+; you should take the 
+\begin_inset Quotes eld
+\end_inset
+
+~
+\begin_inset Quotes erd
+\end_inset
+
+ to stand for the 
+\begin_inset Quotes eld
+\end_inset
+
+My Documents
+\begin_inset Quotes erd
+\end_inset
+
+ directory.
+\end_layout
+
+\begin_layout Standard
+If you don't want ANNE to put its files in 
+\begin_inset Quotes eld
+\end_inset
+
+My Documents
+\begin_inset Quotes erd
+\end_inset
+
+, then you can override it.
+ In ANNE, press [f9] for the menu, [f6] for settings, and select 
+\begin_inset Quotes eld
+\end_inset
+
+General
+\begin_inset Quotes erd
+\end_inset
+
+.
+ Then enter the new directory name, and press RETURN.
+ You will need to copy the 
+\begin_inset Quotes eld
+\end_inset
+
+Joyce
+\begin_inset Quotes erd
+\end_inset
+
+ directory from 
+\begin_inset Quotes eld
+\end_inset
+
+My Documents
+\begin_inset Quotes erd
+\end_inset
+
+ to the new directory you specified.
+\end_layout
+
+\begin_layout Subsubsection
+Under 
+\noun on
+Unix
+\end_layout
+
+\begin_layout Standard
+ANNE uses two directories - a 
+\begin_inset Quotes eld
+\end_inset
+
+system
+\begin_inset Quotes erd
+\end_inset
+
+ directory common to all users (by default, 
+\family typewriter
+/usr/local/share/Joyce
+\family default
+ - see Appendix 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec: admins"
+
+\end_inset
+
+) and a 
+\begin_inset Quotes eld
+\end_inset
+
+user
+\begin_inset Quotes erd
+\end_inset
+
+ directory for each user (by default, 
+\family typewriter
+~/Joyce
+\family default
+).
+ Each of these directories will have subdirectories called 
+\family typewriter
+Boot
+\family default
+ (boot files and boot disc images) and 
+\family typewriter
+Disks
+\family default
+ (all other disc images).
+\end_layout
+
+\begin_layout Subsection
+Running ANNE for the first time
+\end_layout
+
+\begin_layout Subsubsection
+You will need:
+\end_layout
+
+\begin_layout Itemize
+A version of ANNE that installed correctly.
+ 
+\end_layout
+
+\begin_layout Itemize
+A screen capable of 800x600x256 graphics.
+ ANNE may well be faster in 256 colour mode than in (say) 16-bit mode.
+ 
+\end_layout
+
+\begin_layout Itemize
+One of the following: 
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+A PcW16 rescue disc; 
+\end_layout
+
+\begin_layout Itemize
+A disc image of the PcW16 rescue disc, that you previously generated;
+\end_layout
+
+\begin_layout Itemize
+The rescue disc in .CFI format from Cliff Lawson's web page: <http://web.ukonline.c
+o.uk/cliff.lawson/files/pcwos.zip>
+\end_layout
+
+\end_deeper
+\begin_layout Subsubsection
+The ANNE command
+\end_layout
+
+\begin_layout Standard
+Under Windows, ANNE should be run from the Start Menu.
+ Under 
+\noun on
+Unix
+\noun toggle
+, the command to use is either 
+\begin_inset Quotes eld
+\end_inset
+
+xanne
+\begin_inset Quotes erd
+\end_inset
+
+ (to run in a window) or 
+\begin_inset Quotes eld
+\end_inset
+
+xanne -f
+\begin_inset Quotes erd
+\end_inset
+
+ (to run full screen).
+ Other command line options are given in section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec: cmdline"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsubsection
+\begin_inset CommandInset label
+LatexCommand label
+name "sec: addboot"
+
+\end_inset
+
+Adding boot ROMs
+\end_layout
+
+\begin_layout Standard
+The first time ANNE is started, it will detect that no boot ROM is present.
+ You will be asked to provide it with a rescue disc.
+ 
+\end_layout
+
+\begin_layout Standard
+The next menu that appears asks you for the location of the rescue disc
+ to use.
+ 
+\end_layout
+
+\begin_layout Itemize
+If you are using real floppies, then select the correct drive (A: or B:).
+ 
+\end_layout
+
+\begin_layout Itemize
+If you are using a pre-prepared DSK file, choose the correct file.
+ 
+\end_layout
+
+\begin_layout Itemize
+If you are using a .CFI file, choose the file and then select 
+\begin_inset Quotes eld
+\end_inset
+
+Advanced
+\begin_inset Quotes erd
+\end_inset
+
+.
+ On the menu that appears, select 
+\begin_inset Quotes eld
+\end_inset
+
+.CFI - compressed raw
+\begin_inset Quotes erd
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+Next select 
+\begin_inset Quotes eld
+\end_inset
+
+Continue
+\begin_inset Quotes erd
+\end_inset
+
+.
+ If all goes well, the boot ROM will now be created and the boot menu will
+ appear.
+ The only usable option will be 
+\begin_inset Quotes eld
+\end_inset
+
+Empty system (Boot ROM only
+\begin_inset Quotes erd
+\end_inset
+
+) so select that.
+ 
+\end_layout
+
+\begin_layout Standard
+You should then see the PcW16 memory test, followed by the 
+\begin_inset Quotes eld
+\end_inset
+
+Fatal OS checksum error
+\begin_inset Quotes erd
+\end_inset
+
+ message.
+ Use the ANNE menu (see below) to insert the rescue disc again, and click
+ the 
+\begin_inset Quotes eld
+\end_inset
+
+power switch
+\begin_inset Quotes erd
+\end_inset
+
+ icon.
+ If you get a 
+\begin_inset Quotes eld
+\end_inset
+
+Disk bootstrap error
+\begin_inset Quotes erd
+\end_inset
+
+, click the power switch again.
+\end_layout
+
+\begin_layout Standard
+When the OS install is complete and you have entered your user details,
+ use the ANNE menu to save the current system as a boot ROM (f2=Disc; Disc
+ management; Save current ROM as boot ROM).
+ Call it something like 
+\begin_inset Quotes eld
+\end_inset
+
+Full system
+\begin_inset Quotes erd
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsection
+Running ANNE for the second and subsequent times
+\end_layout
+
+\begin_layout Standard
+When ANNE has been set up, it will display a boot menu when started.
+ The menu will offer the following options:
+\end_layout
+
+\begin_layout Description
+Previous
+\begin_inset space ~
+\end_inset
+
+session The ROM saved when you last used ANNE.
+ You would normally choose this option, unless the session has been corrupted
+ by a program crash or you want to load an alternative ROM.
+\end_layout
+
+\begin_layout Description
+
+\shape italic
+n.
+\begin_inset space ~
+\end_inset
+
+title
+\shape default
+ ROMs that have been saved at earlier points.
+ There will usually be one called 
+\begin_inset Quotes eld
+\end_inset
+
+Empty system
+\begin_inset Quotes erd
+\end_inset
+
+, representing the state of the system just before the recovery disc is
+ loaded.
+ 
+\end_layout
+
+\begin_layout Description
+Other...
+ Load a ROM from a disc file.
+\end_layout
+
+\begin_layout Section
+In Use
+\end_layout
+
+\begin_layout Subsection
+What is emulated
+\end_layout
+
+\begin_layout Itemize
+The Z80.
+ 
+\end_layout
+
+\begin_layout Itemize
+2MB of memory and 2MB of Flash ROM.
+\end_layout
+
+\begin_layout Itemize
+The screen.
+ 
+\end_layout
+
+\begin_layout Itemize
+The keyboard.
+ 
+\end_layout
+
+\begin_layout Itemize
+The real-time clock 
+\end_layout
+
+\begin_layout Itemize
+A Centronics-only printer interface.
+ You can print to a disc file or a UNIX command (eg, 
+\begin_inset Quotes eld
+\end_inset
+
+lpr
+\begin_inset Quotes erd
+\end_inset
+
+ for direct printer output).
+ 
+\end_layout
+
+\begin_layout Itemize
+The mouse (either attached to a COM port, or directly driven).
+ You will need a three-button mouse for the full effect.
+\end_layout
+
+\begin_layout Itemize
+The serial ports (emulation of these is rather sketchy)
+\end_layout
+
+\begin_layout Itemize
+The beeper.
+\end_layout
+
+\begin_layout Itemize
+The LocoLink interface (over the parallel port).
+\end_layout
+
+\begin_layout Subsection
+What is not emulated
+\end_layout
+
+\begin_layout Itemize
+The optional hard drive.
+\end_layout
+
+\begin_layout Subsection
+\begin_inset CommandInset label
+LatexCommand label
+name "sec: morediscs"
+
+\end_inset
+
+How the disc drive is handled
+\end_layout
+
+\begin_layout Standard
+The basic concept of disc image files was described in section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec: concepts"
+
+\end_inset
+
+.
+ There are several subtleties to be aware of:
+\end_layout
+
+\begin_layout Subsubsection
+Ejecting a disc
+\end_layout
+
+\begin_layout Standard
+To eject a disc, press the MENU key (OS X: Command+F9) for the ANNE menu,
+ then [f2] (Disc).
+ If there is a disc in the PCW16's drive, you can eject it by selecting
+ the corresponding 
+\begin_inset Quotes eld
+\end_inset
+
+eject
+\begin_inset Quotes erd
+\end_inset
+
+ option.
+ Remember that ejecting discs from ANNE's emulated drive doesn't have anything
+ to do with whatever floppy drives are actually fitted to the PC.
+\end_layout
+
+\begin_layout Subsubsection
+\begin_inset CommandInset label
+LatexCommand label
+name "sec: cmdline"
+
+\end_inset
+
+Command-line options
+\end_layout
+
+\begin_layout Standard
+If you want ANNE to start with a disc in its emulated drive, then use -A
+ with a filename:
+\end_layout
+
+\begin_layout LyX-Code
+xanne -A documents.dsk
+\end_layout
+
+\begin_layout Standard
+will start up with "documents.dsk
+\begin_inset Quotes erd
+\end_inset
+
+.
+ in the drive.
+ 
+\end_layout
+
+\begin_layout Standard
+To start up without asking which boot ROM to use, use the -E option with
+ a filename:
+\end_layout
+
+\begin_layout LyX-Code
+xanne -E bootfile.rom
+\end_layout
+
+\begin_layout Subsubsection
+Non-floppy discs
+\end_layout
+
+\begin_layout Standard
+The following JOYCE utilities have not been tested on ANNE.
+ Some may work.
+\end_layout
+
+\begin_layout Itemize
+ANNEDRV.FID gives the emulated PcW16 a hard drive (available only under CP/M).
+ It uses a similar "disc image file" system to the floppy drives, but the
+ image files can be up to 8Mb in size.
+\end_layout
+
+\begin_layout Itemize
+REDIR.COM allows you to use one or more 
+\noun on
+Unix 
+\noun toggle
+directories as CP/M drives.
+ It requires CP/M.
+ This avoids the problem that the host PC can't see "inside" image files
+ without extra software.
+\end_layout
+
+\begin_layout Itemize
+IMPORT.COM and EXPORT.COM will copy single files into or out of the ANNE environme
+nt.
+ They require CP/M.
+\end_layout
+
+\begin_layout Standard
+All these utilities are on the file ANNEUTIL.DSK.
+ You can get at them with a command something like:
+\end_layout
+
+\begin_layout LyX-Code
+xanne -A=/usr/local/lib/Joyce/Disks/anneutil.dsk
+\end_layout
+
+\begin_layout Standard
+and then start CP/M using 
+\begin_inset Quotes eld
+\end_inset
+
+Run external program
+\begin_inset Quotes erd
+\end_inset
+
+.
+ REDIR.COM and its companion programs are in Group 1; the others are in Group
+ 0.
+\end_layout
+
+\begin_layout Subsubsection
+Floppy Disc Acceleration
+\end_layout
+
+\begin_layout Standard
+As mentioned in section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec: concepts"
+
+\end_inset
+
+, floppy disc acceleration makes a directory on your hard drive appear to
+ be the PcW16 floppy drive.
+ This does not work with CP/M; for CP/M discs, use the 
+\begin_inset Quotes eld
+\end_inset
+
+Folder
+\begin_inset Quotes erd
+\end_inset
+
+ option in the 
+\begin_inset Quotes eld
+\end_inset
+
+Enter filename for disc image
+\begin_inset Quotes erd
+\end_inset
+
+ menu.
+ 
+\end_layout
+
+\begin_layout Subsection
+What if the speed is wrong? 
+\end_layout
+
+\begin_layout Subsubsection
+If ANNE is too slow
+\end_layout
+
+\begin_layout Standard
+One solution is to increase the CPU speed.
+ Press [MENU], then [f6] and select 'General'.
+ Then enter the new speed.
+\end_layout
+
+\begin_layout Standard
+It may also be possible to improve the performance of ANNE by changing the
+ video refresh frequency.
+ This is normally 12, but it can be reduced to improve performance.
+ If it is reduced to 3.75, for example, then programs may appear a little
+ jerky, but ANNE should run at its full speed.
+\end_layout
+
+\begin_layout Standard
+To change the video refresh frequency, start ANNE.
+ At the opening screen, press [MENU], then [f6] and select 'Video'.
+ Then enter the new frequency and press RETURN.
+\end_layout
+
+\begin_layout Subsubsection
+If ANNE is too fast
+\end_layout
+
+\begin_layout Standard
+The built-in speed regulation in ANNE should stop it running too fast.
+ Possibly you could reduce the overall speed: press [MENU], then [f6] and
+ select 'General'.
+ Then enter a new speed.
+\end_layout
+
+\begin_layout Section
+Peripherals in ANNE
+\end_layout
+
+\begin_layout Subsection
+The keyboard
+\end_layout
+
+\begin_layout Standard
+The keyboard is laid out to match the PcW16's own keyboard - a UK-layout
+ 102-key arrangement.
+ The following keys have different captions on the PcW16:
+\end_layout
+
+\begin_layout Standard
+[This is for a UK keyboard with XFree86.
+ Other X servers may behave differently].
+\end_layout
+
+\begin_layout Standard
+\begin_inset VSpace 0.3cm
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\align center
+\begin_inset Tabular
+<lyxtabular version="3" rows="9" columns="3">
+<features tabularvalignment="middle">
+<column alignment="center" valignment="top" width="0pt">
+<column alignment="center" valignment="top" width="0pt">
+<column alignment="center" valignment="top" width="0pt">
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+PC key
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+PCW key
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Notes
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+ESC
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+STOP
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+^C under CP/M
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family sans
+F9
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Blue
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Under Mac OS X, F9-F12 trigger
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+F10
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Yellow
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Exposé, so you may have to use
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+F11
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Green
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+(eg) CTRL+F9 instead.
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+F12
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Red
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Scroll Lock
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+UNDO
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+ESC under CP/M
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Pause
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Help
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Alt
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Task
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset VSpace 0.3cm
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+\begin_inset CommandInset label
+LatexCommand label
+name "sec: mousetypes"
+
+\end_inset
+
+The Mouse
+\end_layout
+
+\begin_layout Standard
+The PcW16 uses a Mouse Systems type mouse, connected to its second serial
+ port (referred to by ANNE as COM3:).
+ ANNE can emulate the mouse as either:
+\end_layout
+
+\begin_layout Itemize
+No emulated mouse.
+ 
+\end_layout
+
+\begin_layout Itemize
+Serial mouse on COM1 (the mouse is in the wrong socket)
+\end_layout
+
+\begin_layout Itemize
+Serial mouse on COM3 (the mouse is in the right socket)
+\end_layout
+
+\begin_layout Itemize
+Update ROSANNE directly (the ROSANNE mouse coordinates are updated directly,
+ which produces much better results than the emulated serial mouse options)
+\end_layout
+
+\begin_layout Standard
+To choose which emulation is selected, press [MENU] in ANNE; then [f6] for
+ Settings, and choose Mouse.
+ 
+\end_layout
+
+\begin_layout Standard
+It is possible to use ANNE with a real PcW16 (or compatible) mouse - any
+ serial mouse that uses the MouseSystems protocol should be suitable.
+ To do this, choose 'No emulated mouse', plug the mouse into a serial port,
+ and set the PcW16's COM3 to use that port.
+\end_layout
+
+\begin_layout Subsection
+The disc drive
+\end_layout
+
+\begin_layout Standard
+Instead of a real disc drive, ANNE works with 
+\begin_inset Quotes eld
+\end_inset
+
+disc image files
+\begin_inset Quotes erd
+\end_inset
+
+ on the computer's hard drive.
+ These are fully described in sections 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec: concepts"
+
+\end_inset
+
+ and 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec: morediscs"
+
+\end_inset
+
+.
+ If Rosanne acceleration is turned on (section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec: accel"
+
+\end_inset
+
+), then instead of disc image files, ANNE will use a directory on your hard
+ drive.
+\end_layout
+
+\begin_layout Subsection
+The LocoLink interface
+\end_layout
+
+\begin_layout Standard
+ANNE allows two forms of LocoLink communication (only one under Windows,
+ though).
+ In each case, you must have suitable software (LocoLink or PcWLink).
+ 
+\end_layout
+
+\begin_layout Subsubsection
+LocoLink to a real computer (requires Linux)
+\end_layout
+
+\begin_layout Itemize
+ANNE will act as the master.
+ Connect the parallel port of your Linux box to the other computer (if it's
+ another PC, use a LapLink cable; if it's a PcW, use the original LocoLink
+ cable).
+ Go into the settings for the printer port, and set it to 
+\begin_inset Quotes eld
+\end_inset
+
+Output to parallel port
+\begin_inset Quotes erd
+\end_inset
+
+.
+ Then select the appropriate parallel port (normally /dev/parport0 or /dev/parpo
+rt1).
+\end_layout
+
+\begin_layout Subsubsection
+LocoLink to another emulator
+\end_layout
+
+\begin_layout Itemize
+Go into the settings for the printer port and set it to 
+\begin_inset Quotes eld
+\end_inset
+
+output to Socket
+\begin_inset Quotes erd
+\end_inset
+
+.
+ On the screen that appears, select the correct socket type and name (see
+ below) and ensure the 
+\begin_inset Quotes eld
+\end_inset
+
+Client (Normal)
+\begin_inset Quotes erd
+\end_inset
+
+ option is ticked.
+\end_layout
+
+\begin_layout Subsubsection
+Socket types and names
+\end_layout
+
+\begin_layout Description
+UNIX
+\begin_inset space ~
+\end_inset
+
+domain
+\begin_inset space ~
+\end_inset
+
+sockets (not supported on Windows) can be used to communicate with other
+ emulators on the same computer.
+ They work pretty much like normal files, and their names are normal filenames;
+ so, for example, one might be called 
+\begin_inset Quotes eld
+\end_inset
+
+/tmp/locolink.socket
+\begin_inset Quotes erd
+\end_inset
+
+.
+ When you are establishing a link, it is important that both ends are using
+ the same socket name.
+\end_layout
+
+\begin_layout Description
+TCP/IP
+\begin_inset space ~
+\end_inset
+
+sockets can be used to communicate with other emulators not only on the
+ same computer, but across a network or the Internet.
+ However, ANNE does not perform any security checks on socket connections,
+ so I strongly recommend that you do not use TCP/IP sockets while connected
+ to the Internet.
+ 
+\end_layout
+
+\begin_deeper
+\begin_layout Standard
+For a LocoLink master, the name of a TCP/IP socket is formed 
+\begin_inset Quotes eld
+\end_inset
+
+host:port
+\begin_inset Quotes erd
+\end_inset
+
+ - for example, 
+\begin_inset Quotes eld
+\end_inset
+
+localhost:8256
+\begin_inset Quotes erd
+\end_inset
+
+, 
+\begin_inset Quotes eld
+\end_inset
+
+127.0.0.1:8512
+\begin_inset Quotes erd
+\end_inset
+
+ or even 
+\begin_inset Quotes eld
+\end_inset
+
+www.somewhere.com.invalid:8080
+\begin_inset Quotes erd
+\end_inset
+
+.
+ 
+\end_layout
+
+\end_deeper
+\begin_layout Section
+The ANNE Menu
+\end_layout
+
+\begin_layout Standard
+If you press the Menu key (OS X: Command+F9), a menu will appear at the
+ top of the screen.
+ It offers the following options:
+\end_layout
+
+\begin_layout Itemize
+ESC=return to ANNE
+\end_layout
+
+\begin_layout Standard
+Leaves the menu system.
+\end_layout
+
+\begin_layout Itemize
+f1 = Help
+\end_layout
+
+\begin_layout Standard
+Display the keyboard layout onscreen.
+\end_layout
+
+\begin_layout Itemize
+f2 = Discs
+\end_layout
+
+\begin_layout Standard
+Options for the floppy drive.
+ Use this to "insert" and "eject" discs, to read floppy discs into the ANNE
+ environment, and to modify boot ROM settings.
+ It brings up the Discs menu below.
+\end_layout
+
+\begin_layout Itemize
+f5 = Reboot
+\end_layout
+
+\begin_layout Standard
+Simulates turning the PcW off and then on again.
+\end_layout
+
+\begin_layout Itemize
+f6 = Settings
+\end_layout
+
+\begin_layout Standard
+Settings for all aspects of the emulator.
+ The Settings menu will appear.
+\end_layout
+
+\begin_layout Itemize
+f7 = Debug
+\end_layout
+
+\begin_layout Standard
+Display the Debug menu (
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec: dbgmenu"
+
+\end_inset
+
+).
+ 
+\end_layout
+
+\begin_layout Itemize
+f8 = Action
+\end_layout
+
+\begin_layout Standard
+Display the Action menu (
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:The-Action-Menu"
+
+\end_inset
+
+).
+\end_layout
+
+\begin_layout Itemize
+f10 = Quit
+\end_layout
+
+\begin_layout Standard
+Leave ANNE.
+ You will be asked for confirmation.
+ Under OS X, use Command+F10, because F10 by itself triggers Exposé.
+\end_layout
+
+\begin_layout Subsection
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:The-Action-Menu"
+
+\end_inset
+
+The Action Menu
+\end_layout
+
+\begin_layout Standard
+This menu has only one option: 
+\begin_inset Quotes eld
+\end_inset
+
+Select PCW screen.
+\begin_inset Quotes erd
+\end_inset
+
+ This is intended for use with GSX programs (such as DR Graph) which exit
+ without shutting GSX down properly.
+ In such cases, the program will appear to hang, but selecting the PCW screen
+ will display the A> prompt.
+\end_layout
+
+\begin_layout Subsection
+\begin_inset CommandInset label
+LatexCommand label
+name "sec: dbgmenu"
+
+\end_inset
+
+The Debug Menu
+\end_layout
+
+\begin_layout Standard
+There are four options here, intended mainly for advanced users or ANNE
+ developers.
+ 
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Quotes eld
+\end_inset
+
+Debug mode
+\begin_inset Quotes erd
+\end_inset
+
+ puts the system in debug mode.
+ This has no effect in the current release.
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Quotes eld
+\end_inset
+
+CPU state
+\begin_inset Quotes erd
+\end_inset
+
+ displays the values of the Z80 registers.
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Quotes eld
+\end_inset
+
+RAM dump
+\begin_inset Quotes erd
+\end_inset
+
+ writes out the contents of RAM to a file in the current directory called
+ 
+\begin_inset Quotes eld
+\end_inset
+
+anne.ram
+\begin_inset Quotes erd
+\end_inset
+
+.
+ This is not a full snapshot facility; memory dumps can't be reloaded, and
+ they don't contain CPU state.
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Quotes eld
+\end_inset
+
+Power switch
+\begin_inset Quotes erd
+\end_inset
+
+ simulates the power switch being pressed or released.
+\end_layout
+
+\begin_layout Subsection
+The Disks menu
+\end_layout
+
+\begin_layout Standard
+The Disks menu displays the status of the floppy drives, and allows you
+ to eject or insert discs.
+ Each drive has three lines in the menu:
+\end_layout
+
+\begin_layout Enumerate
+The first line reads either 
+\begin_inset Quotes eld
+\end_inset
+
+Drive A: (Ejected)
+\begin_inset Quotes erd
+\end_inset
+
+ or 
+\begin_inset Quotes eld
+\end_inset
+
+Drive A: 
+\emph on
+(Filename)
+\emph toggle
+
+\begin_inset Quotes erd
+\end_inset
+
+.
+ This shows whether there is a 
+\begin_inset Quotes eld
+\end_inset
+
+disc
+\begin_inset Quotes erd
+\end_inset
+
+ (.DSK file) in the drive or not.
+\end_layout
+
+\begin_layout Enumerate
+The second line reads either 
+\begin_inset Quotes eld
+\end_inset
+
+Eject
+\begin_inset Quotes erd
+\end_inset
+
+ or 
+\begin_inset Quotes eld
+\end_inset
+
+Insert...
+\begin_inset Quotes erd
+\end_inset
+
+ depending whether there's a disc in the drive.
+ 
+\begin_inset Quotes eld
+\end_inset
+
+Eject
+\begin_inset Quotes erd
+\end_inset
+
+ ejects the current disc (.DSK file); while 
+\begin_inset Quotes eld
+\end_inset
+
+Insert...
+\begin_inset Quotes erd
+\end_inset
+
+ brings up a window asking for the file to insert.
+ You can also 
+\begin_inset Quotes eld
+\end_inset
+
+insert
+\begin_inset Quotes erd
+\end_inset
+
+ a real floppy drive; this allows the emulated PcW to access a real drive
+ directly (if slowly).
+ If you change the disc in the real drive, you may need to 
+\begin_inset Quotes eld
+\end_inset
+
+eject
+\begin_inset Quotes erd
+\end_inset
+
+ and 
+\begin_inset Quotes eld
+\end_inset
+
+insert
+\begin_inset Quotes erd
+\end_inset
+
+ the real drive, so that the PcW's own software can tell that the disc has
+ changed.
+ If you ask to 
+\begin_inset Quotes eld
+\end_inset
+
+insert
+\begin_inset Quotes erd
+\end_inset
+
+ a folder, and the folder you select has not previously been used in this
+ way by JOYCE or ANNE, then you will be asked what format the folder should
+ pretend to be in.
+\end_layout
+
+\begin_layout Enumerate
+The bottom line for each drive reads 
+\begin_inset Quotes eld
+\end_inset
+
+Read only
+\begin_inset Quotes erd
+\end_inset
+
+.
+ If there is a tick beside it then the write protect holes on the disc have
+ been opened and it cannot be written to.
+\end_layout
+
+\begin_layout Enumerate
+If you select
+\begin_inset Quotes eld
+\end_inset
+
+Disc management...
+\begin_inset Quotes erd
+\end_inset
+
+ then a menu appears allowing you to read in extra floppy discs, or convert
+ .DSK files back to real discs.
+\end_layout
+
+\begin_layout Subsubsection
+The Disc Management menu
+\end_layout
+
+\begin_layout Standard
+There are six options:
+\end_layout
+
+\begin_layout Enumerate
+Add a boot ROM from a file - Reads in a boot ROM and adds it to the opening
+ menu.
+\end_layout
+
+\begin_layout Enumerate
+Save current ROM as boot ROM - Saves the current ROM file and adds it to
+ the opening menu.
+\end_layout
+
+\begin_layout Enumerate
+Rename a boot ROM - Allows you to change the caption associated with a boot
+ ROM.
+\end_layout
+
+\begin_layout Enumerate
+Delete a boot ROM - Removes a boot ROM from the opening menu.
+ Use this option with caution!
+\end_layout
+
+\begin_layout Enumerate
+Convert floppy to ANNE.DSK file - Read in a normal (data) disc, storing the
+ new disc image file in the 
+\begin_inset Quotes eld
+\end_inset
+
+user discs
+\begin_inset Quotes erd
+\end_inset
+
+ directory.
+\end_layout
+
+\begin_layout Enumerate
+Write .DSK file back out to floppy - Convert a disc image file (either normal
+ or start-of-day) back to a floppy disc.
+\end_layout
+
+\begin_layout Subsection
+The Settings menu
+\end_layout
+
+\begin_layout Standard
+Choose the item of hardware for which you want to make changes.
+ Note that if you make a change such as disconnecting or connecting an interface
+, the emulated PcW may not pick it up until the next reboot.
+ 
+\end_layout
+
+\begin_layout Subsubsection
+Disc drives
+\end_layout
+
+\begin_layout Standard
+Note: The menus in this section only allows you to create configurations
+ that could exist on a real PcW16.
+ By manually editing 
+\family typewriter
+~/Joyce/annehw.xml
+\family default
+, you can create 
+\begin_inset Quotes eld
+\end_inset
+
+impossible
+\begin_inset Quotes erd
+\end_inset
+
+ configurations, such as a system with two floppy drives (CP/M and Rosanne
+ won't detect the second one.) If the configuration is 
+\begin_inset Quotes eld
+\end_inset
+
+impossible
+\begin_inset Quotes erd
+\end_inset
+
+, the menus will look different as they attempt to accommodate the changes.
+\end_layout
+
+\begin_layout Standard
+The settings in this menu are:
+\end_layout
+
+\begin_layout Subsubsection*
+Drive A: settings: 
+\end_layout
+
+\begin_layout Standard
+This brings up its own menu, allowing you to set what type of disc drive
+ is attached to the PcW.
+ The default type (
+\begin_inset Quotes eld
+\end_inset
+
+720k 3.5
+\begin_inset Quotes erd
+\end_inset
+
+) in fact supports 1440k disc images as well.
+ If you want to emulate 5.25
+\begin_inset Quotes erd
+\end_inset
+
+ drives or anything else unusual, select 
+\begin_inset Quotes eld
+\end_inset
+
+other
+\begin_inset Quotes erd
+\end_inset
+
+ and manually enter the drive type, the number of cylinders
+\begin_inset Foot
+status collapsed
+
+\begin_layout Plain Layout
+The drive documentation may call this figure the number of tracks rather
+ than the number of cylinders.
+ Either way, it's usually 40 or 80.
+\end_layout
+
+\end_inset
+
+ it can access, and whether it's single or double-sided.
+\end_layout
+
+\begin_layout Subsubsection
+\begin_inset CommandInset label
+LatexCommand label
+name "sec: extradrv"
+
+\end_inset
+
+Extra drives
+\end_layout
+
+\begin_layout Standard
+This menu allows you to set up drives C: - L: and N: - P:.
+ Obviously these drives don't exist on real PcW16s, but they can on an ANNE
+ system, though only under CP/M.
+ You will need to have a copy of ANNEDRV.FID on your start-of-day disc for
+ these drives to become available - see section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec: joycedrv"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+For each drive, you can set it up in three ways:
+\end_layout
+
+\begin_layout Itemize
+As direct access to the PC's floppy drives.
+ 
+\end_layout
+
+\begin_layout Itemize
+As a floppy drive that accesses a standard disc image file, just like the
+ emulated A: drive.
+\end_layout
+
+\begin_layout Itemize
+As a hard drive with 8Mb of storage.
+ The hard drive will also be stored on a .DSK file, but this .DSK file will
+ not be usable in emulated floppy drives.
+\end_layout
+
+\begin_layout Standard
+To set up a drive, choose it from the list.
+ Then choose or enter the filename and drive type, as listed below:
+\end_layout
+
+\begin_layout Standard
+\begin_inset VSpace 0.3cm
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\align center
+\begin_inset Tabular
+<lyxtabular version="3" rows="4" columns="3">
+<features tabularvalignment="middle">
+<column alignment="center" valignment="top" width="0pt">
+<column alignment="center" valignment="top" width="0pt">
+<column alignment="center" valignment="top" width="0pt">
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Type of drive to use
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Choose file
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Choose option
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Floppy drive A: or B:
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+A: or B:
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+floppy drive
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Floppy drive using standard image file
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+.DSK file
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+floppy drive
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Hard drive using special image file
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+.DSK file
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+hard drive
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset VSpace 0.3cm
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Memory
+\end_layout
+
+\begin_layout Standard
+This allows you to set the memory size of your emulated PcW.
+ If your computer is running very low on memory, the 
+\begin_inset Quotes eld
+\end_inset
+
+Current memory size
+\begin_inset Quotes erd
+\end_inset
+
+ may be less than requested.
+ 
+\end_layout
+
+\begin_layout Standard
+By default, ANNE uses maximum values - 2Mb of Flash ROM and 2Mb of RAM.
+ If you want it to behave like a real PcW16, set both of these to 1Mb.
+\end_layout
+
+\begin_layout Subsubsection
+\begin_inset CommandInset label
+LatexCommand label
+name "sec: genopt"
+
+\end_inset
+
+General options
+\end_layout
+
+\begin_layout Standard
+This screen allows you to choose the speed at which ANNE should run.
+ It also allows you to control the warning that appears when a CP/M program
+ attempts to access files outside the emulator (as, for example, the supplied
+ IMPORT and EXPORT utilities do).
+ Select 
+\begin_inset Quotes eld
+\end_inset
+
+File Access...
+\begin_inset Quotes erd
+\end_inset
+
+ and select one of three options:
+\end_layout
+
+\begin_layout Description
+Allow
+\begin_inset space ~
+\end_inset
+
+full
+\begin_inset space ~
+\end_inset
+
+access Programs running under CP/M will be able to read and write any file
+ on your computer, without prompting.
+ This is how ANNE 2.2.6 and previous versions behaved.
+\end_layout
+
+\begin_layout Description
+Prompt
+\begin_inset space ~
+\end_inset
+
+for
+\begin_inset space ~
+\end_inset
+
+each
+\begin_inset space ~
+\end_inset
+
+file When a CP/M program attempts to read or write a file, ANNE will display
+ a prompt asking whether this should be allowed (see below).
+\end_layout
+
+\begin_layout Description
+No
+\begin_inset space ~
+\end_inset
+
+file
+\begin_inset space ~
+\end_inset
+
+access CP/M programs will not be able to access arbitrary files on your
+ computer.
+ The IMPORT and EXPORT utilities will not operate.
+\end_layout
+
+\begin_layout Standard
+If 'Prompt for each file' is selected, then when a CP/M program attempts
+ to open a file, the following warning will be displayed:
+\end_layout
+
+\begin_layout LyX-Code
+Confirm host file access
+\end_layout
+
+\begin_layout LyX-Code
+
+\end_layout
+
+\begin_layout LyX-Code
+A CP/M program is attempting to access the file:
+\end_layout
+
+\begin_layout LyX-Code
+bank_passwords.txt
+\end_layout
+
+\begin_layout LyX-Code
+Do you want to allow access to this file?
+\end_layout
+
+\begin_layout LyX-Code
+
+\end_layout
+
+\begin_layout LyX-Code
+No
+\end_layout
+
+\begin_layout LyX-Code
+No, and don't ask again
+\end_layout
+
+\begin_layout LyX-Code
+Yes
+\end_layout
+
+\begin_layout Standard
+The prompt will offer three options:
+\end_layout
+
+\begin_layout Description
+No Access to the file will be blocked.
+ You will be prompted again if the program attempts to read or write a different
+ file.
+\end_layout
+
+\begin_layout Description
+No,
+\begin_inset space ~
+\end_inset
+
+and
+\begin_inset space ~
+\end_inset
+
+don't
+\begin_inset space ~
+\end_inset
+
+ask
+\begin_inset space ~
+\end_inset
+
+again Access to the file will be blocked, and the File Access settings screen
+ will be switched to the 
+\begin_inset Quotes eld
+\end_inset
+
+No file access
+\begin_inset Quotes erd
+\end_inset
+
+ option, blocking all future file access.
+ If you subsequently want to grant access again, this must be done through
+ the File Access menu screen.
+\end_layout
+
+\begin_layout Description
+Yes Access to this file will be allowed.
+ You will be prompted again if the program attempts to read or write a different
+ file.
+\end_layout
+
+\begin_layout Subsubsection
+Mouse
+\end_layout
+
+\begin_layout Standard
+The mouse settings available here are:
+\end_layout
+
+\begin_layout Itemize
+Emulation mode: No mouse, Mouse on COM1:, Mouse on COM3: and Update ROSANNE
+ directly (see section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec: mousetypes"
+
+\end_inset
+
+).
+\end_layout
+
+\begin_layout Subsubsection
+Video
+\end_layout
+
+\begin_layout Standard
+The Video settings allow you to change:
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Quotes eld
+\end_inset
+
+Video refresh
+\begin_inset Quotes erd
+\end_inset
+
+ - the number of times per second that the screen is redrawn.
+ You can go up to 50Hz (ie, the screen is redrawn 50 times a second) or
+ down to 0.01Hz (the screen is drawn once every 10 seconds).
+ The default setting in ANNE is 12Hz, which is fine for nearly all programs.
+\end_layout
+
+\begin_layout Itemize
+The beeper is usually emulated using the PC's sound card.
+ You can also have it manifest as a red flash of the screen (
+\begin_inset Quotes eld
+\end_inset
+
+Visual Beeper
+\begin_inset Quotes erd
+\end_inset
+
+) or silence (
+\begin_inset Quotes eld
+\end_inset
+
+Disable beeper
+\begin_inset Quotes erd
+\end_inset
+
+).
+\end_layout
+
+\begin_layout Itemize
+Whether the PcW has a colour monitor (the default), a monochrome white monitor
+ (like the real PcW16) or a monochrome green monitor.
+\end_layout
+
+\begin_layout Subsubsection
+Printer
+\end_layout
+
+\begin_layout Standard
+The following settings are available for the parallel printer port:
+\end_layout
+
+\begin_layout Itemize
+
+\noun on
+Connected/Disconnected
+\noun toggle
+: Is the printer connected to the PcW?
+\end_layout
+
+\begin_layout Itemize
+
+\noun on
+Output to file
+\noun toggle
+: Output goes to a disc file.
+ When you select this option, you are asked for the filename to send the
+ output to.
+\end_layout
+
+\begin_layout Itemize
+
+\noun on
+Output to UNIX command
+\noun toggle
+: Output goes to a 
+\noun on
+Unix
+\noun toggle
+ pipeline.
+ You can use this to send output to the 
+\noun on
+Unix
+\noun toggle
+ printing system (enter 
+\begin_inset Quotes eld
+\end_inset
+
+lpr
+\begin_inset Quotes erd
+\end_inset
+
+ here, with any appropriate options).
+\end_layout
+
+\begin_layout Itemize
+
+\noun on
+Output to parallel port 
+\noun toggle
+: Output goes to a real live parallel port, with no processing.
+ This can be used to LocoLink to a real PcW.
+\end_layout
+
+\begin_layout Itemize
+
+\noun on
+Output to socket: 
+\noun toggle
+Output is sent to another process, over a socket.
+ This can be used to LocoLink to an emulated PcW (using JOYCE v2.1.0).
+\end_layout
+
+\begin_layout Itemize
+Under Windows, you also get the option to send data to LPT ports.
+ 
+\end_layout
+
+\begin_layout Subsubsection
+Save settings
+\end_layout
+
+\begin_layout Standard
+If you do not save the settings, they will remain in force only for the
+ duration of your current ANNE session.
+ The settings will be saved to the file 
+\family typewriter
+Joyce/annehw.xml
+\family default
+ in your home directory.
+\end_layout
+
+\begin_layout Section
+\begin_inset CommandInset label
+LatexCommand label
+name "sec: accel"
+
+\end_inset
+
+Rosanne Acceleration
+\end_layout
+
+\begin_layout Standard
+
+\noun on
+Rosanne Acceleration 
+\noun default
+allows certain functions normally performed by the PcW16's Rosanne operating
+ system to be taken over by the emulator.
+\end_layout
+
+\begin_layout Standard
+To turn acceleration on, press the Menu key, then [F6] for the Settings
+ menu, and select 
+\begin_inset Quotes eld
+\end_inset
+
+Rosanne acceleration
+\begin_inset Quotes erd
+\end_inset
+
+.
+ If there is no tick by 'Enabled', press SPACE.
+ You will then see a list of further options, each of which can be ticked
+ and unticked as required.
+ 
+\end_layout
+
+\begin_layout Standard
+In general, acceleration replaces parts of Rosanne with calls to special
+ functions in the emulator.
+ This can greatly improve performance, though possibly at the cost of compatibil
+ity for some programs.
+ Rosanne acceleration has been tested on Rosanne v1.12; it may or may not
+ work with other versions of Rosanne.
+\end_layout
+
+\begin_layout Standard
+Acceleration must be turned off during a reload from the rescue disc.
+\end_layout
+
+\begin_layout Subsection
+Memory Test
+\end_layout
+
+\begin_layout Standard
+Ticking this option will cause the 
+\begin_inset Quotes eld
+\end_inset
+
+PLEASE WAIT.
+ CHECKING MEMORY
+\begin_inset Quotes erd
+\end_inset
+
+ screen to be skipped.
+\end_layout
+
+\begin_layout Subsection
+Floppy disc
+\end_layout
+
+\begin_layout Standard
+If this option is ticked, then instead of using a disc image file for its
+ floppy drive, ANNE will use a directory on the hard drive ( 
+\family typewriter
+~/Joyce/PcW16FS)
+\family default
+.
+ This has a number of advantages:
+\end_layout
+
+\begin_layout Enumerate
+It's faster.
+\end_layout
+
+\begin_layout Enumerate
+You can get files in and out of the PcW16 environment much more easily.
+\end_layout
+
+\begin_layout Enumerate
+The resulting drive is not limited to 1.4Mb.
+ 
+\end_layout
+
+\begin_layout Standard
+The directory does not have to exist; to create it, turn on floppy disc
+ acceleration, go into the File Manager, and press Control-L.
+ 
+\end_layout
+
+\begin_layout Standard
+Note that when floppy disc acceleration is turned on, asking ANNE to insert
+ or remove disc images will have no effect.
+\end_layout
+
+\begin_layout Subsection
+Graphics
+\end_layout
+
+\begin_layout Standard
+If this option is ticked, several low-level graphics operations will be
+ implemented in native code.
+ This considerably improves the speed of drawing of menus, dialogs, and
+ those huge buttons on the front screen.
+\end_layout
+
+\begin_layout Section
+ANNE Utilites
+\end_layout
+
+\begin_layout Standard
+The following utility programs are supplied with ANNE.
+ They are designed to access features of the emulator which have no equivalent
+ on a real PcW.
+ You will find them on the disc image 
+\begin_inset Quotes eld
+\end_inset
+
+utils16.dsk
+\begin_inset Quotes erd
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsection
+\begin_inset CommandInset label
+LatexCommand label
+name "sec: joycedrv"
+
+\end_inset
+
+ANNEDRV
+\end_layout
+
+\begin_layout Standard
+ANNEDRV.FID is a file which is used to add one or more extra disc drives
+ to CP/M running within ANNE.
+ The first of these drives will usually be drive C:.
+\end_layout
+
+\begin_layout Standard
+Unless the settings are changed (see section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec: extradrv"
+
+\end_inset
+
+) the drives will be set up as 8Mb hard drives, called 
+\family typewriter
+~/Joyce/Disks/c.dsk
+\family default
+, 
+\family typewriter
+~/Joyce/Disks/d.dsk
+\family default
+, etc.
+ This can be used to share files between an install of JOYCE and an install
+ of ANNE.
+ The drives cannot be accessed from Rosanne.
+\end_layout
+
+\begin_layout Subsection
+DDJOYCE.PRL
+\end_layout
+
+\begin_layout Standard
+DDJOYCE is new in v2.1.7.
+ It is a GSX driver for the host PC's graphics screen, allowing high-resolution
+ colour graphics to be used from CP/M.
+\end_layout
+
+\begin_layout Standard
+To use it, edit your ASSIGN.SYS file.
+ Remove the entry which reads
+\end_layout
+
+\begin_layout Standard
+
+\family typewriter
+01 @:DDSCREEN
+\end_layout
+
+\begin_layout Standard
+and replace it by
+\end_layout
+
+\begin_layout Standard
+
+\family typewriter
+01 @:DDJOYCE
+\end_layout
+
+\begin_layout Standard
+DDJOYCE has been tested with the Digital Research programs DR Draw and DR
+ Graph, with the following issues:
+\end_layout
+
+\begin_layout Itemize
+My copy of DR Graph insists on trying to access drive B: all the time, causing
+ invisible 
+\begin_inset Quotes eld
+\end_inset
+
+Please insert the disc for drive B:
+\begin_inset Quotes erd
+\end_inset
+
+ messages.
+ The program then appears to hang until you press RETURN to acknowledge
+ the message.
+\end_layout
+
+\begin_layout Itemize
+When DR Graph shuts down, the screen goes blank.
+ This is because DR Graph does not make a proper 'close workstation' call
+ when it terminates.
+ Use the Action menu to switch back to the PcW16 screen.
+\end_layout
+
+\begin_layout Itemize
+DR Draw works correctly, though text rendering is rather ugly.
+\end_layout
+
+\begin_layout Subsection
+DOSDIR
+\end_layout
+
+\begin_layout Standard
+DOSDIR displays the contents of a directory in the host filesystem (the
+ name DOSDIR is for compatibility with MYZ80).
+ Syntax is:
+\end_layout
+
+\begin_layout LyX-Code
+     DOSDIR
+\end_layout
+
+\begin_layout LyX-Code
+  or DOSDIR {x:/path/}filespec
+\end_layout
+
+\begin_layout Standard
+Note that if you include a path you must include a filename.
+ The command
+\end_layout
+
+\begin_layout LyX-Code
+     DOSDIR C:/IMAGES/       is invalid, but
+\end_layout
+
+\begin_layout LyX-Code
+     DOSDIR C:/IMAGES/*.*    is valid.
+\end_layout
+
+\begin_layout Standard
+To get lower-case commands, use:
+\end_layout
+
+\begin_layout LyX-Code
+     A>DOSDIR 
+\backslash
+
+\end_layout
+
+\begin_layout LyX-Code
+     DOSDIR>/usr/local/bin/* 
+\end_layout
+
+\begin_layout Subsection
+EMULIOS.RSX
+\end_layout
+
+\begin_layout Standard
+EMULIOS allows Digital Research Logo to use the 800x600 screen.
+\end_layout
+
+\begin_layout Standard
+To set it up, use the following commands (under CP/M):
+\end_layout
+
+\begin_layout LyX-Code
+PIP EMULOGO.COM=LOGO.COM
+\end_layout
+
+\begin_layout LyX-Code
+GENCOM EMULOGO
+\end_layout
+
+\begin_layout LyX-Code
+GENCOM EMULOGO EMULIOS
+\end_layout
+
+\begin_layout Standard
+- Then EMULOGO.COM will behave as LOGO.COM, but using the 800x600 screen.
+\end_layout
+
+\begin_layout Standard
+The following commands will behave differently:
+\end_layout
+
+\begin_layout Description
+setpc Allows a number from 0 to 255
+\end_layout
+
+\begin_layout Description
+setbg Allows a number from 0 to 255
+\end_layout
+
+\begin_layout Description
+savepic The .PIC file saved is in Windows BMP format, and can be exported,
+ renamed to .BMP, and loaded by paint programs.
+\end_layout
+
+\begin_layout Description
+loadpic The .PIC file loaded must be in Windows BMP format and have 256 colours,
+ but its size does not have to be 800x600.
+\end_layout
+
+\begin_layout Subsection
+EXPORT
+\end_layout
+
+\begin_layout Standard
+EXPORT will write CP/M files out as UNIX files.
+ It respects exact file sizes.
+\end_layout
+
+\begin_layout Standard
+The syntax is:
+\end_layout
+
+\begin_layout LyX-Code
+     EXPORT cpmfile                    { [O] }
+\end_layout
+
+\begin_layout LyX-Code
+     EXPORT unixfile=du:cpmfile        { [O] }
+\end_layout
+
+\begin_layout Standard
+The first form of the command produce a UNIX file with the same name as
+ the CP/M file.
+ 
+\end_layout
+
+\begin_layout Standard
+The second form creates a UNIX file with a name that may be different from
+ the CP/M name.
+\end_layout
+
+\begin_layout Standard
+If you're using UNIX rather than Windows, beware: because the CP/M CCP renders
+ all filenames into uppercase, it's very unlikely you'll be able to pass
+ directory names to EXPORT; if you say
+\end_layout
+
+\begin_layout LyX-Code
+     EXPORT /home/fred/cpmfile
+\end_layout
+
+\begin_layout Standard
+EXPORT.COM will see "
+\family typewriter
+/HOME/FRED/CPMFILE
+\family default
+", which probably won't exist.
+ To get
+\end_layout
+
+\begin_layout Standard
+round this, use:
+\end_layout
+
+\begin_layout LyX-Code
+     A>EXPORT 
+\backslash
+
+\end_layout
+
+\begin_layout LyX-Code
+     EXPORT>/home/fred/cpmfile
+\end_layout
+
+\begin_layout Subsection
+IMPORT
+\end_layout
+
+\begin_layout Standard
+IMPORT will read UNIX files into the CP/M filesystem.
+ It sets exact file sizes.
+\end_layout
+
+\begin_layout Standard
+The syntax is:
+\end_layout
+
+\begin_layout LyX-Code
+     IMPORT {/path/}hostfile            { [O] }
+\end_layout
+
+\begin_layout LyX-Code
+     IMPORT du:=/path/hostfile          { [O] }
+\end_layout
+
+\begin_layout LyX-Code
+     IMPORT du:cpmfile=x:/path/hostfile { [O] }
+\end_layout
+
+\begin_layout Standard
+The first form imports the named file (or files) to the current drive and
+ user area.
+\end_layout
+
+\begin_layout Standard
+The second form imports the file (or files) to the specified drive and user
+ area, keeping the original name(s).
+\end_layout
+
+\begin_layout Standard
+The third form imports the files, changing their name(s) to match the provided
+ CP/M filename(s).
+\end_layout
+
+\begin_layout Standard
+If the [O] option is present, existing CP/M files with the same name as
+ an imported file will be overwritten without asking.
+ Otherwise you are asked for confirmation.
+\end_layout
+
+\begin_layout Standard
+Both filenames may include wildcards, and the second and third forms can
+ include CP/M driveletters and user numbers:
+\end_layout
+
+\begin_layout LyX-Code
+     A:IMPORT 
+\backslash
+
+\end_layout
+
+\begin_layout LyX-Code
+     IMPORT>2F:*.ASC=/usr/doc/*.txt
+\end_layout
+
+\begin_layout Standard
+will import all the .txt files in /usr/doc to drive F, group 2.
+\end_layout
+
+\begin_layout Standard
+Filenames are expanded case-sensitively, so you will normally need to use
+ the backslash, as above, to get lower-case letters into the command line.
+\end_layout
+
+\begin_layout Subsection
+QUIT
+\end_layout
+
+\begin_layout Standard
+Syntax: 
+\end_layout
+
+\begin_layout LyX-Code
+QUIT { 
+\emph on
+number
+\emph default
+ 
+\emph toggle
+} { [O] }
+\end_layout
+
+\begin_layout Standard
+QUIT will exit ANNE.
+ With no parameters, it will check whether there are files on drive M: which
+ may need saving, and if there are it will ask for confirmation.
+\end_layout
+
+\begin_layout Standard
+The number parameter is the error level which ANNE should return.
+ If there is no number parameter, ANNE returns 98.
+\end_layout
+
+\begin_layout Standard
+The [O] option disables the M: drive check and quits immediately.
+\end_layout
+
+\begin_layout Subsection
+REDIR
+\end_layout
+
+\begin_layout Standard
+REDIR allows you to use one or more PC directories as drives under CP/M.
+ See the separate file REDIR.DOC for more information.
+\end_layout
+
+\begin_layout Subsection
+VGA and VGACOM
+\end_layout
+
+\begin_layout Standard
+VGA.FID allows CP/M programs to make direct use of the PC screen and keyboard.
+ This gives more text on the screen and faster output.
+\end_layout
+
+\begin_layout Standard
+Once VGA.FID has loaded, type VGACOM ON to activate it, and VGACOM OFF to
+ deactivate it.
+\end_layout
+
+\begin_layout Standard
+Your PcW screen will now be 100 columns x 36 lines.
+ Nearly all the normal PcW escape codes are supported, which should enable
+ character-based programs to be run.
+ Since screen output is now being done by the host PC's processor, you should
+ notice an improvement in speed.
+\end_layout
+
+\begin_layout Standard
+The following escape codes work differently in the 800x600 VGA mode:
+\end_layout
+
+\begin_layout Description
+ESC
+\begin_inset space ~
+\end_inset
+
+b
+\begin_inset space ~
+\end_inset
+
+/
+\begin_inset space ~
+\end_inset
+
+ESC
+\begin_inset space ~
+\end_inset
+
+c set colours (so the numbers in the PALETTE command actually have meaning).
+\end_layout
+
+\begin_layout Description
+ESC
+\begin_inset space ~
+\end_inset
+
+y sets 32x90 mode.
+\end_layout
+
+\begin_layout Description
+ESC
+\begin_inset space ~
+\end_inset
+
+z sets 36x100 mode.
+\end_layout
+
+\begin_layout Section
+ANNE utilities (PC hosted)
+\end_layout
+
+\begin_layout Standard
+If you don't want to use ANNE's own methods for converting between disc
+ files and image files, you can also use the 
+\noun on
+dsktrans
+\noun toggle
+ program, which is installed with ANNE.
+\end_layout
+
+\begin_layout Standard
+The command to use is either:
+\end_layout
+
+\begin_layout LyX-Code
+dsktrans /dev/fd
+\emph on
+n
+\emph default
+ 
+\emph toggle
+dskfile 
+\end_layout
+
+\begin_layout LyX-Code
+ 
+\emph toggle
+  
+\emph default
+ 
+\family roman
+\emph toggle
+- Floppy disc to image file
+\end_layout
+
+\begin_layout Standard
+or 
+\end_layout
+
+\begin_layout LyX-Code
+dsktrans dskfile /dev/fd
+\emph on
+n
+\emph default
+ 
+\emph toggle
+-otype floppy 
+\end_layout
+
+\begin_layout LyX-Code
+ 
+\emph toggle
+  
+\emph default
+ 
+\family roman
+\emph toggle
+- Image to floppy disc.
+\end_layout
+
+\begin_layout Standard
+DSKTRANS isn't as versatile as CPCTRANS (for example, it can only handle
+ discs in recognisable PcW or +3DOS formats) but it doesn't need telling
+ what sort of disc it is using, and it is a native (not DOS-hosted) program.
+\end_layout
+
+\begin_layout Section
+\begin_inset CommandInset label
+LatexCommand label
+name "sec: changes"
+
+\end_inset
+
+Recent Changes
+\end_layout
+
+\begin_layout Subsection*
+New in v2.2.7:
+\end_layout
+
+\begin_layout Itemize
+External file access by CP/M programs now prompts for each file being read
+ / written.
+\end_layout
+
+\begin_layout Subsection*
+New in v2.2.1:
+\end_layout
+
+\begin_layout Itemize
+Updated to the latest LibDsk and Lib765, to deal with a crash caused by
+ buffer overflow.
+\end_layout
+
+\begin_layout Subsection*
+New in v2.2.0:
+\end_layout
+
+\begin_layout Itemize
+Minor code cleanups only.
+\end_layout
+
+\begin_layout Subsection*
+New in v2.1.9:
+\end_layout
+
+\begin_layout Itemize
+Added Meta+F9 as an alternative for Menu, allowing ANNE to be used in Mac
+ OS X.
+\end_layout
+
+\begin_layout Itemize
+Other changes to improve performance on OS X.
+\end_layout
+
+\begin_layout Itemize
+Updated LibDsk to 1.1.9, fixing a bug in rcpmfs for files saved as User 1.
+\end_layout
+
+\begin_layout Subsection*
+New in v2.1.8:
+\end_layout
+
+\begin_layout Itemize
+Exposed the 'rcpmfs' functionality in LibDsk, allowing folders to be used
+ as disc images.
+\end_layout
+
+\begin_layout Subsection*
+New in v2.1.7:
+\end_layout
+
+\begin_layout Itemize
+Native GSX driver, using Digital Research GEM code released under the GPL.
+\end_layout
+
+\begin_layout Itemize
+Added 'Select PCW screen' command.
+\end_layout
+
+\begin_layout Subsection*
+New in v2.1.4:
+\end_layout
+
+\begin_layout Itemize
+Bug fix in mouse acceleration; the mouse pointer can't go off the bottom
+ of the screen any more.
+\end_layout
+
+\begin_layout Itemize
+Bug fix: The floppy changeline is emulated correctly.
+\end_layout
+
+\begin_layout Itemize
+Bug fix: ANNE can tell the difference between 720k and 1440k disc images.
+ This allows CP/M to boot from a 720k disc image.
+ 
+\end_layout
+
+\begin_layout Subsection*
+New in v2.1.3:
+\end_layout
+
+\begin_layout Itemize
+Bug fixes in the graphics and floppy acceleration code.
+ Compatibility with the built-in applications is now much improved.
+\end_layout
+
+\begin_layout Itemize
+Bug fix: Installing from a .CFI file now works correctly.
+\end_layout
+
+\begin_layout Itemize
+When browsing for a disc image, does not default to the /dev directory (Unix)
+ or drive A: (Windows).
+\end_layout
+
+\begin_layout Itemize
+Floppy disc image files are formatted by ANNE when they are created.
+\end_layout
+
+\begin_layout Subsection*
+New in v2.1.2:
+\end_layout
+
+\begin_layout Itemize
+Added native acceleration options.
+\end_layout
+
+\begin_layout Itemize
+Compiles without modification under gcc 3.2 (if configured with the --with-stl
+ option).
+\end_layout
+
+\begin_layout Subsection*
+New in v2.1.0:
+\end_layout
+
+\begin_layout Itemize
+First release.
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+\start_of_appendix
+\begin_inset CommandInset label
+LatexCommand label
+name "sec: admins"
+
+\end_inset
+
+For 
+\noun on
+Unix
+\noun toggle
+ system administrators
+\end_layout
+
+\begin_layout Standard
+First and foremost, 
+\emph on
+don't run ANNE as the root user!
+\emph default
+ ANNE 
+\emph toggle
+gives the PcW programs within it various methods to access the host filesystem;
+ it is entirely possible that a malicious PcW program running within ANNE
+ could damage important 
+\noun on
+Unix
+\noun toggle
+ files.
+ 
+\end_layout
+
+\begin_layout Standard
+It is possible to set up a system-wide installation of ANNE with default
+ settings, boot discs and other discs.
+ To do this, first set up the desired configuration as a normal user.
+ Then copy the following files:
+\end_layout
+
+\begin_layout Itemize
+From 
+\family typewriter
+~user/Joyce
+\family default
+ to 
+\family typewriter
+/usr/local/share/Joyce
+\family default
+: 
+\family typewriter
+annehw.xml
+\end_layout
+
+\begin_layout Itemize
+From 
+\family typewriter
+~user/Joyce/Boot
+\family default
+ to 
+\family typewriter
+/usr/local/share/Joyce/Boot
+\family default
+: 
+\family typewriter
+anne*.rom
+\family default
+ and 
+\family typewriter
+annebt.xml
+\end_layout
+
+\begin_layout Itemize
+From 
+\family typewriter
+~user/Joyce/Disks
+\family default
+ to 
+\family typewriter
+/usr/local/share/Joyce/Disks
+\family default
+: Any other .dsk files that should be common.
+\end_layout
+
+\begin_layout Standard
+This will then become the default configuration on your system.
+ Users will still be able to change settings or add additional discs; these
+ will be saved to their local configuration directories.
+\end_layout
+
+\begin_layout Section
+\begin_inset CommandInset label
+LatexCommand label
+name "keycodes"
+
+\end_inset
+
+Keyboard codes
+\end_layout
+
+\begin_layout Standard
+Note that many of these keys don't exist in a standard PC keyboard.
+ For example, the PC keyboard has no 
+\begin_inset Quotes eld
+\end_inset
+
+$
+\begin_inset Quotes erd
+\end_inset
+
+ key (it uses SHIFT + 4 instead) so assigning codes to that key will have
+ no effect.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Tabular
+<lyxtabular version="3" rows="134" columns="2">
+<features islongtable="true" longtabularalignment="center">
+<column alignment="center" valignment="top" width="0pt">
+<column alignment="center" valignment="top" width="0pt">
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Code
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Key
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+8
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Backspace
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+9
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Tab
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+12
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Clear
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+13
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Return
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+19
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Pause
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+27
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Escape
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+32
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Space
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+33
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+!
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+34
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Quotes eld
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+35
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+#
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+36
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+$
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+38
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+&
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+39
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+'
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+40
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+(
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+41
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+)
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+42
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+*
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+43
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
++
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+44
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+,
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+45
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+46
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+.
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+47
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+/
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+48
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+49
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+1
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+50
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+2
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+51
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+3
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+52
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+4
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+53
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+5
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+54
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+6
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+55
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+7
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+56
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+8
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+57
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+9
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+58
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+:
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+59
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+;
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+60
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+<
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+61
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+=
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+62
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+>
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+63
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+?
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+64
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+@
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+91
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+[
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+92
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\backslash
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+93
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+]
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+94
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+^
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+95
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+_
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+96
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+`
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+97
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+A
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+98
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+B
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+99
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+C
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+100
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+D
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+101
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+E
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+102
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+F
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+103
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+G
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+104
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+H
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+105
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+I
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+106
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+J
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+107
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+K
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+108
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+L
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+109
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+M
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+110
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+N
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+111
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+O
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+112
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+P
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+113
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Q
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+114
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+R
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+115
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+S
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+116
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+T
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+117
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+U
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+118
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+V
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+119
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+W
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+120
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+X
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+121
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Y
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+122
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Z
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+127
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Del
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+256
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Keypad 0
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+257
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Keypad 1
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+258
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Keypad 2
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+259
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Keypad 3
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+260
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Keypad 4
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+261
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Keypad 5
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+262
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Keypad 6
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+263
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Keypad 7
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+264
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Keypad 8
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+265
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Keypad 9
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+266
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Keypad .
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+267
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Keypad /
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+268
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Keypad *
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+269
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Keypad -
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+270
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Keypad +
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+271
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Keypad ENTER
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+272
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Keypad =
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+273
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Up arrow
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+274
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Down arrow
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+275
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Right arrow
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+276
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Left arrow
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+277
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Insert
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+278
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Home
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+279
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+End
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+280
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Page up
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+281
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Page down
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+282
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+F1
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+283
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+F2
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+284
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+F3
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+285
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+F4
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+286
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+F5
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+287
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+F6
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+288
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+F7
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+289
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+F8
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+290
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+F9
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+291
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+F10
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+292
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+F11
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+293
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+F12
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+294
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+F13
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+295
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+F14
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+296
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+F15
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+300
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Num lock
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+301
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Caps lock
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+302
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Scroll lock
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+303
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Right shift
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+304
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Left shift
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+305
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Right control
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+306
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Left control
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+307
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Right Alt
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+308
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Left Alt
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+309
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Right Meta
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+310
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Left Meta
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+311
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Left Windows
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+312
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Right Windows
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+313
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Mode / Alt Gr
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+315
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Help
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+316
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Print screen
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+317
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+SysRq
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+318
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Break
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+319
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Menu
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+320
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Power
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+321
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Euro
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Acknowledgements
+\end_layout
+
+\begin_layout Standard
+This version of ANNE could not have been written without:
+\end_layout
+
+\begin_layout Itemize
+Ian Collier, who wrote the 
+\begin_inset Quotes eld
+\end_inset
+
+xz80" emulator.
+ The Z80 emulator in ANNE is based on the one in xz80.
+\end_layout
+
+\begin_layout Itemize
+Richard Clayton, who supplied vital information on the interactions between
+ the XBIOS and the hardware.
+\end_layout
+
+\begin_layout Itemize
+Cliff Lawson, who made the PcW hardware specification public.
+\end_layout
+
+\begin_layout Itemize
+Richard Fairhurst and Jacob Nevins, who provided hardware information.
+\end_layout
+
+\begin_layout Itemize
+The many authors of Linux, GNU, gcc, SDL, libpng and libxml.
+\end_layout
+
+\begin_layout Itemize
+The MICO authors who created the mini-STL.
+\end_layout
+
+\begin_layout Itemize
+Frank D.
+ Cringle, who wrote the Z80 emulator test suite in YAZE.
+\end_layout
+
+\begin_layout Itemize
+David Cantrell, for his posting on comp.sys.amstrad.8bit describing the use
+ of PostScript in printer emulation.
+\end_layout
+
+\begin_layout Itemize
+Matthew Gomez, who suggested some of the colour names in the custom colour
+ menu.
+\end_layout
+
+\begin_layout Itemize
+Kevin Thacker, who wrote the PCW16 driver for MESS.
+ I haven't used any MESS code, but it helped a lot knowing what hardware
+ was being used.
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Quotes eld
+\end_inset
+
+foz
+\begin_inset Quotes erd
+\end_inset
+
+, for helpful bug reports.
+\end_layout
+
+\begin_layout Itemize
+Digital Research, the original authors of CP/M, GSX and GEM.
+\end_layout
+
+\begin_layout Itemize
+Caldera (as it then was; later Lineo), for releasing GEM source under the
+ GPL.
+\end_layout
+
+\begin_layout Subsection
+Previous versions of JOYCE also owed much to:
+\end_layout
+
+\begin_layout Itemize
+Marat Fayzullin, who wrote the original Z80 emulation code.
+ However, none of this code now remains in ANNE, because it is not compatible
+ with the GPL.
+\end_layout
+
+\begin_layout Itemize
+Ian Macdonald, who tested JOYCE for DOS.
+\end_layout
+
+\begin_layout Itemize
+The authors of DJGPP, GRX20 and DRDOS.
+\end_layout
+
+\begin_layout Itemize
+Samuel Vincent, the author of the SVAsync library.
+\end_layout
+
+\begin_layout Itemize
+Martynas Kunigelis, on whose DJGPP keyboard driver I based that of JOYCE
+ for DOS.
+\end_layout
+
+\end_body
+\end_document

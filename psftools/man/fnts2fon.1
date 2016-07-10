@@ -1,0 +1,141 @@
+.\" -*- nroff -*-
+.\"
+.\" fnts2fon.1: fnts2fon man page
+.\" Copyright (c) 2005, 2007 John Elliott
+.\"
+.\"
+.\"
+.\" psftools: Manipulate console fonts in the .PSF format
+.\" Copyright (C) 2005, 2007  John Elliott
+.\"
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2 of the License, or
+.\" (at your option) any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program; if not, write to the Free Software
+.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+.\"
+.TH fnts2fon 1 "11 April, 2008" "Version 1.0.7" "PSF Tools"
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH NAME
+fnts2fon - Construct a Windows .FON file from one or more .FNT files
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH SYNOPSIS
+.PD 0
+.B fnts2fon
+.RI [ "--fontid=IDSTRING" ]
+.RI [ "--winver=MAJOR.MINOR" ]
+.RI [ "other options..." ]
+INPUTFILE
+.RI [ "INPUTFILE ..." ]
+OUTPUTFILE
+.P
+.PD 1
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH DESCRIPTION
+.LP
+fnts2fon attempts to combine one or more Windows FNT files into a FON file. 
+This procedure is shrouded in darkness and mystery, dimly illuminated by the 
+Microsoft Knowledge Base article 
+<http://support.microsoft.com/support/kb/articles/Q76/5/35.ASP>
+and the NE file format.
+.LP 
+If you are running fnts2fon in the Cygwin environment, you will need to 
+grant execute permission to the resulting .FON file using chmod(1) before 
+Windows can use it.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH OPTIONS
+.LP
+Note that apart from --fontid and possibly --winver, the other options should 
+not be necessary unless you are trying to produce output byte-by-byte
+identical to an existing Windows font.
+.TP
+.B --fontid="string"
+Sets the font resolution / description string. This is normally formed 
+"FONTRES nn,nn,nn : Description". It must begin FONTRES for Windows 3.x and 9x
+to recognise the font. By default the string used is 
+"FONTRES 200,96,48 : 
+.I <fontname>
+".
+.TP 
+Under MS-DOS, use underlines to represent spaces - for example, 
+.B --fontid=FONTRES_83,60,72_:_Times_Roman
+.TP
+.B --winver=MAJOR.MINOR
+Sets the Windows version required in the output file. The MAJOR and MINOR 
+are treated as separate numbers, so --winver=3.1 and --winver=3.01 are the
+same, but --winver=3.1 and --winver=3.10 are different. Windows 2.x and 3.0
+still load fonts marked as for version 3.1 so this option may not have 
+much practical use.
+
+.TP
+.B "--checksum16=nnn and --checksum32=nnn"
+Set the 16-bit checksum in the DOS header, and the 32-bit checksum in the
+Windows header. Windows does not appear to check these.
+
+.TP
+.B --dosmsg
+Sets the message to display if the font is renamed to .EXE and run from DOS.
+
+.TP
+.B --idbase=nnn
+Sets the resource ID to allocate to the first font.
+
+.TP
+.B --idstep=nnn
+Sets the increment to add to the resource ID. 
+
+.TP
+.B --linkver=MAJOR.MINOR
+Set the version of the linker that supposedly created this file. The same 
+caveats apply as for --winver.
+
+.TP
+.B --modname=NAME
+Set the name of the program that was supposedly assembled to make this file.
+
+.TP
+.B --mzextra=NNN
+Sets the value in word 2 of the 'MZ' file header.
+.TP
+.B --stub=nnn
+Set the DOS stub to use. They all do exactly the same thing, but in 
+slightly different ways.
+
+.TP
+.B --sysfont=nnn
+Mark font 
+.I nnn
+as a system font.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH BUGS
+.LP
+Does not appear to work with vector .FNT files, only raster ones.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH SEE ALSO
+cpi2psf(1), cpicomp(1), cpidcomp(1)
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH AUTHOR
+John Elliott <jce@seasip.demon.co.uk>.
+.PP

@@ -1,0 +1,69 @@
+                         Running CP/M-86 under DOSEMU
+                        John Elliott, 11 January 2003
+
+   This archive contains a few files designed to help with running CP/M-86
+   in DOSEMU. All these programs are made available under the GNU General
+   Public License, version 2 (see the file COPYING).
+
+   CP/M-86 is obtainable from www.cpm.z80.de.
+
+Setting up
+
+   Unless you are very determined to have a CP/M-86 partition, I
+   recommend that you keep CP/M-86 on an hdimage file - use mkhdimage to
+   create one. As far as I can tell, you are only allowed one primary
+   partition of 8Mb per "drive", so create the hdimage(s) with this in
+   mind. The number of cylinders should be less than 256.
+
+   When the image(s) are set up, insert your CP/M-86 boot disc and start
+   DOSEMU with DOS -A. If all goes well, you should get various system
+   statistics including "Hard drives: 1" (or more) and an A> prompt.
+
+   Now, start HDMAINT, and create CP/M partitions on the hdimage(s).
+   HDMAINT will instruct you to restart, so type DOS -A again. This time,
+   the first hard drive should be visible as B: (if you have one floppy
+   drive) or C: (if you have two).
+
+   Assuming the drives are visible, use PIP to copy all the files from
+   the boot floppy to the hdimage: PIP B:=*.*. Then use HDMAINT again to
+   set the CP/M partition as bootable. CP/M-86 should now start from the
+   hdimage.
+
+The utilities
+
+   You may have noticed that CP/M-86 tends to bring DOSEMU to a halt if
+   you try to select a non-existent drive. There is also no way of
+   exiting DOSEMU politely.
+
+   The first feature is caused by the fact that CP/M-86 uses INT E6 to
+   communicate with disc device drivers. Unfortunately, DOSEMU also uses
+   INT E6, and it ends up with the disc requests.
+
+   One solution is the file MOVE-E6.CMD. When run, this will patch the
+   memory image of CP/M to use INT E7 rather than INT E6. It will only
+   work if no additional disc drivers have been loaded; if such drivers
+   were to be loaded, then they would have to be rewritten to use INT E7
+   as well.
+
+   The file EXITEMU.CMD terminates DOSEMU when run.
+
+Assembling the utilities
+
+   The utilities were developed using the DR assembler RASM86.EXE and the
+   cross-linker LINKCMD.EXE. These are also available from
+   www.cpm.z80.de.
+
+General thoughts
+
+   CP/M-86 is more comfortable under DOSEMU than running natively, at
+   least on my computer. HDMAINT has problems with hard drives of modern
+   dimensions, and CP/M itself doesn't cooperate with my floppy disc BIOS
+   / controller. It is certainly possible to put both DOS and CP/M-86 on
+   one hdimage. The boot manager PART103 (available from Simtel mirrors
+   as bootutil/part103.zip) can be used to switch between them.
+   cpmtools <http://www.moria.de/~michael/cpmtools> should be able to 
+   read CP/M-86 floppies, so you can get files in and out of the CP/M-86 
+   environment. Alternatively, if you have DOS and CP/M-86 partitions on 
+   the same hdimage, you can use FX86 (also available from www.cpm.z80.de) 
+   under DOS to copy CP/M files to/from an lredir'ed drive.
+

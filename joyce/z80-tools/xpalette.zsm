@@ -1,0 +1,220 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;   JOYCE/ANNE v2.1.0: PCW emulator                                           ;
+;                                                                             ;
+;   Copyright (C) 1998-1999, John Elliott <jce@seasip.demon.co.uk>            ;
+;                                                                             ;
+;    This program is free software; you can redistribute it and/or modify     ;
+;    it under the terms of the GNU Library General Public License as          ;
+;    published by the Free Software Foundation; either version 2 of the       ;
+;    License, or(at your option) any later version.                           ;
+;                                                                             ;
+;    This program is distributed in the hope that it will be useful,          ;
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of           ;
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            ;
+;    GNU Library General Public License for more details.                     ;
+;                                                                             ;
+;    You should have received a copy of the GNU Library General Public        ;
+;    License along with this program; if not, write to the Free Software      ;
+;    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.                ;
+;                                                                             ;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	org	0100h
+;
+;XPALETTE v1.00 - Set the emulator palette.
+;
+;Syntax is: XPALETTE b f
+;       or: XPALETTE br bg bb fr fg fb
+;
+;where b and f are 0-63 (2-bit RGB) and br/bg/bb/fr/fg/fb are 8-bit RGB.
+;
+;Entry can be in hex (&xx) or denary.
+;
+;Library routines in MODULES.IRL:
+;
+;
+FCB	EQU	005Ch
+FDOS	EQU	5
+CR	EQU	0Dh
+LF	EQU	0Ah
+EOF	EQU	1Ah
+;
+;Standard header (256 bytes) for a JOYCE utility
+;
+BASE:	DEFB	0EBh,04h	;DOS protection... JMPS LABE
+	EX	DE,HL
+	JP	BEGIN
+	DEFB	0B4h,09h	;DOS protection... MOV AH,9
+	DEFB	0BAh
+	DEFW	BVMES		;DOS protection... MOV DX,OFFSET BVMES
+	DEFB	0CDh,021h	;DOS protection... INT 21h.
+	DEFB	0CDh,020h	;DOS protection... INT 20h.
+
+	DEFB	cr,'XPALETTE 1.00 (c) John Elliott',cr,lf
+	DEFB	'Date: 00/00/00',cr,lf,eof
+;
+
+BEGIN:	SUB	A
+	JP	PE,BADVER	;Weed out 8080 CPUs
+	LD	C,0Ch
+	CALL	FDOS
+	CP	30h		;Weed out non-CP/M 3 versions
+	JR	C,BADVER
+	XOR	A
+	DEFB	0EDh, 0FEh	;Get JOYCE version
+	INC	A
+	JR	Z,JRTSO		;Returns 0FFh if in JOYCE 1.
+BADVER:	LD	DE,BVMES
+	LD	C,9
+	JP	FDOS
+;
+JRTSO:	XOR	A	;A = 0 => called from CP/M
+	CALL	MAIN
+	RST	0
+		
+	DEFS	BASE + 078h - $
+	DEFB	'JOYCE',1,0,0	;File signature
+;
+MAIN:	LD	IY,PARS	;Where the numbers should be parsed to.
+	LD	DE,80h
+	LD	A,(DE)	;0-terminate the command line.
+	LD	L,A
+	LD	H,0
+	INC	DE
+	ADD	HL,DE
+	LD	(HL),0
+	EX	DE,HL	;HL -> command tail
+	CALL	GETNUM	;Split the command tail into numbers
+	LD	A,(NPARS)
+	CP	2	;XPALETTE b f
+	JR	Z,TWOPARS
+	CP	6	;XPALETTE r g b r g b
+	JR	Z,SIXPARS
+;
+;Invalid number of parameters
+;
+	LD	DE,HELP$
+ERRPR:	CALL	PRINT
+ERROR:	LD	C,6Ch		;JOYCE programs should always return with 
+	LD	DE,0FF00h	;a RET.
+	JP	FDOS
+;
+TWOPARS:
+	LD	IY,PARS
+	LD	A,(IY+2)	;Foreground, A=00rrggbb
+	RLCA
+	RLCA			;A=rrggbb00
+	PUSH	AF
+	AND	0C0h
+	LD	B,A		;B=rr000000
+	POP	AF
+	RLCA
+	RLCA			;A=ggbb00rr
+	PUSH	AF
+	AND	0C0h
+	LD	C,A		;C=gg000000
+	POP	AF
+	RLCA
+	RLCA			;A=bb00rrgg
+	AND	0C0h
+	LD	D,A		;D=bb000000
+	LD	A,(IY+0)	;Background, A=00rrggbb
+	RLCA
+	RLCA			;A=rrggbb00
+	PUSH	AF
+	AND	0C0h
+	LD	E,A		;E=rr000000
+	POP	AF
+	RLCA
+	RLCA			;A=ggbb00rr
+	PUSH	AF
+	AND	0C0h
+	LD	H,A		;H=gg000000
+	POP	AF
+	RLCA
+	RLCA			;A=bb00rrgg
+	AND	0C0h
+	LD	L,A		;L=bb000000
+	JR	JSETCOL
+;
+SIXPARS:
+	LD	IY,PARS
+	LD	E,(IY+0)
+	LD	H,(IY+2)
+	LD	L,(IY+4)
+	LD	B,(IY+6)
+	LD	C,(IY+8)
+	LD	D,(IY+10)
+JSETCOL:
+	LD	A,2
+	DEFB	0EDh,0FEh	;Set palette
+	RET
+
+SCANN1:	INC	HL	;Scan a nul-terminated string at HL for a numeric
+SCANNUM:		;character (0-9, A-F or &). Return Z set for EOL, 
+	LD	A,(HL)	;Z not set if number found.
+	OR	A
+	RET	Z
+	CP	'&'
+	JR	Z,RNZ
+	CALL	IFHEX	;Check for Hex character
+	JR	C,SCANN1
+RNZ:	AND	A	;A cannot be 0, so return NZ 
+	RET
+
+SKIPN1:	INC	HL	;The opposite of SCANNUM - skip over numeric
+SKIPNUM:		;characters in the string.
+	LD	A,(HL)
+	CP	'&'
+	JR	Z,SKIPN1
+	CALL	IFHEX
+	JR	NC,SKIPN1
+	AND	A	;Return NZ or Z as appropriate
+	RET
+;
+;Split the command line into numeric parameters.
+;
+GETNUM:	CALL	SCANNUM		;Find a number
+	SCF
+	RET	Z		;EOL
+	PUSH	HL
+	CALL	PNUM		;Parse it
+	RET	C		;Not a number (it should be, because SCANNUM
+	LD	(IY+0),E	;has gone to some trouble to find one).
+	LD	(IY+1),D
+	INC	IY		;Store its value
+	INC	IY
+	LD	A,(NPARS)	;Accept a maximum of 7 numbers. The only
+	INC	A		;valid inputs have 2 or 6 numbers, and this
+	LD	(NPARS),A	;is enough to weed out wrong ones.
+	CP	7
+	POP	HL
+	RET	NC	
+	CALL	SKIPNUM		;Skip over the number just parsed.
+	SCF
+	RET	Z
+	JR	GETNUM
+
+
+	include	pnum.lib
+	include print.lib
+
+BVMES:	DEFB	'This program will only run in the JOYCE emulator',cr,lf,'$'
+HELP$:	DEFB	'XPALETTE v1.00',cr,lf,lf
+	DEFB	'Syntax:  XPALETTE background foreground',cr,lf
+	DEFB	'or:      XPALETTE br bg bb fr fg fb',cr,lf,lf
+	DEFB	'Changes the screen colours under JOYCE',cr,lf,lf
+	DEFB	'The first form acts like PALETTE on the '
+	DEFB	'CPC',3Bh,' "background" and "foreground" are',cr,lf
+	DEFB	'numbers from 0 to 63 (0 is black, 63 is '
+	DEFB	'white). ',cr,lf
+	DEFB	'The second form takes six numbers, which'
+	DEFB	' give exact red/green/blue values for',cr,lf
+	DEFB	' the background and foreground.',cr,lf
+	DEFB	'$'
+
+NPARS:	DEFB	0		;Count of parameters  (cf argc)
+PARS:	DEFW	0,0,0,0,0,0,0	;Numerical parameters (cf parsed argv)
+
+	end
+

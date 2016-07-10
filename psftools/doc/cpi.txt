@@ -1,0 +1,260 @@
+CPI file format
+===============
+
+  There are various descriptions of the CPI file format around the web; this
+is my attempt at one. The structure names and definitions used are from 
+Andries Brouwer's format documentation.
+
+  CPI files are used to store fonts allowing devices to display in multiple
+codepages. They can refer either to screen fonts, or printer fonts. Screen
+CPI files can hold one or more fonts per codepage - usually, at 
+8x16, 8x14 and 8x8 sizes. DRDOS screen codepage files also contain an 
+8x6 font (actually 6x6, but the file headers all say 8x6) which is used 
+by the ViewMAX screen drivers.
+
+  There are three main CPI file formats -- FONT (used by MSDOS, PCDOS and
+Windows 9x), FONT.NT (used by Windows NT and its successors) and DRFONT 
+(used by DRDOS screen fonts). 
+
+  The CPI file format allows file sizes up to 4Gb; but some utilities have
+trouble with FONT files greater than 64k. It is preferable to use FONT.NT 
+or DRFONT for bigger CPI files.
+
+  In their natural (MS-DOS) habitat, the CPI load process uses streaming.
+MODE.COM writes the CPI file into the control channel of DISPLAY.SYS, which
+parses it and extracts the font data. DISPLAY.SYS can't seek backward in
+the stream, only forward, so CPI files should have their data in the order
+that DISPLAY.SYS expects.
+
+FontFileHeader
+--------------
+
+  A CPI file begins with a fixed header. In theory its size could range from
+18 bytes to just over 320k, but in practice its length is always 23 bytes. 
+Many utilities hardcode the 23-byte form, and will break if it is not used.
+
+struct
+{
+	char  id0;
+	char  id[7];
+	char  reserved[8];
+	short pnum;
+	char  ptyp;
+	long  fih_offset;
+} FontFileHeader;
+
+  * id0 is 0xFF for FONT and FONT.NT files, and 0x7F for DRFONT files.
+  * id[] is the file format: "FONT   ", "FONT.NT" or "DRFONT ".
+  * The 8 reserved bytes are always zero.
+  * pnum is the number of pointers in this header. In all existing CPI files
+   this is 1, which gives a total header size of 23 bytes. A value of 0 here
+   would result in an 18-byte FontFileHeader and nothing else in the file.
+  * ptyp is the type of the pointer stored. In all known CPI files this is 
+   also 1.
+  * fih_offset is the offset in the file of the FontInfoHeader. In FONT 
+   and FONT.NT files, this is usually 23 (though exceptions exist), pointing 
+   to immediately after the FontFileHeader. In DRFONT files, an extra header 
+   follows immediately and fih_offset is normally 44.
+
+  If pnum were to be greater than 1, it is not clear how the extra pointers 
+would be stored. There are two possibilities:
+
+	struct					struct
+	{					{
+		char  id0;				char id0;
+		char  id[7];				char id[7];
+		char  reserved[8];			char reserved[8];
+		short pnum;				short pnum;
+		char  ptyp[N];				struct {
+		long  fih_offset[N];			  char ptyp;
+							  long fih_offset
+							} pointers[N];
+	} FontFileHeader;			} FontFileHeader;
+
+   -- that is, either all the types come first and then all the pointers, or
+     types and pointers alternate. The second has the advantage that the
+     first pointer is at the same offset as in a normal 1-pointer CPI file.
+
+DRDOSExtendedFontFileHeader
+---------------------------
+
+  In a DRFONT font, this immediately follows the FontFileHeader.
+
+	struct
+	{
+		char num_fonts_per_codepage;
+		char font_cellsize[N];
+		long dfd_offset[N];
+	} DRDOSExtendedFontFileHeader;
+
+  * num_fonts_per_codepage is 4 for the codepages distributed with DRDOS.
+    MODE.COM from DRDOS supports values as high as 10, and ViewMAX has no 
+    limit at all.
+  * font_cellsize (an array with num_fonts_per_codepage entries) lists the
+    size of a character in bytes for each font in this file. All known DRFONT
+    files have characters 8 pixels wide, and the cell size is therefore equal
+    to the character height. The four heights in DRDOS CPI files are 6, 8, 14 
+    and 16 (height 6 is only used by ViewMAX). 
+  * dfd_offset (an array with num_fonts_per_codepage entries) holds the
+    file offsets of the font bitmaps. Their lengths are not given; they
+    have to be deduced by walking the font structures.
+
+  In real DRDOS CPI files, this is sorted with the smallest size first. The
+order of ScreenFontHeader records must match the order of fonts in this 
+header - if this header describes sizes 6,8,14,16 then so must the 
+ScreenFontHeader records.
+
+FontInfoHeader
+--------------
+	struct
+	{
+		short num_codepages;
+	} FontInfoHeader;
+
+  This contains a count of codepages in the file. A value of 0 is possible 
+but very uninteresting.
+  For maximum compatibility this should immediately follow the FontFileHeader 
+or DRDOSExtendedFontHeader; some utilities ignore the pointer in the header 
+and just read straight through.
+
+CPEntryHeader
+-------------
+   The FontInfoHeader is immediately followed by the first CodePageEntryHeader.
+
+struct
+{
+	short cpeh_size;
+	long next_cpeh_offset;
+	short device_type;
+	char device_name[8];
+	short codepage;
+	char reserved[6];
+	long cpih_offset;
+} CPEntryHeader;
+
+  * cpeh_size is the size of the CPEntryHeader structure, i.e. 28 bytes. 
+   Some CPI files have other values here, most often 26. Some utilities
+   ignore this field and always load 28 bytes; others believe it.
+  * next_cpeh_offset is the offset of the next CPEntryHeader in the file.
+   In FONT and DRFONT files, this is relative to the start of the file; in
+   FONT.NT files, it is relative to the start of this CPEntryHeader. At 
+   least one pathological CPI file is known to exist (EGA.ICE from MS-DOS 6) 
+   where this is stored as a segment:offset pair rather than a real pointer. 
+    In the last CPEntryHeader, the value of this field has no meaning. Some
+   files set it to 0, some to -1, and some to point at where the next 
+   CPEntryHeader would be (usually, just after the data for this codepage).
+ * device_type is 1 for screen, 2 for printer. Some printer CPI files from 
+   early DRDOS versions have type=1; a suggested workaround is to check for
+   a device name of "4201    ", "4208    ", "5202    " or "1050    ". 
+   Printer codepages should only be present in FONT files, not FONT.NT or 
+   DRFONT.
+ * device_name is usually "EGA     " or "LCD     " for the screen, or 
+   "4201    ", "4208    ", "5202    ", "1050    ", "EPS     ", "PPDS    "
+   for printers.
+ * codepage is the number of the codepage this header describes. 
+ * The reserved bytes are always 0.
+ * cpih_offset is the offset of the data for this codepage. In FONT and
+   DRFONT files, it is relative to the start of the file; in FONT.NT files
+   it is relative to the start of this CPEntryHeader. As with next_cpeh_offset,
+   
+
+Codepage data
+-------------
+  In most CPI files, the data for each codepage immediately follow the 
+header. DRDOS MODE assumes this to be the case for DRFONT files. For best
+results, though, utilities should follow the pointers.
+
+  The data for a codepage begin with a CPInfoHeader:
+
+struct 
+{
+	short version;
+	short num_fonts;
+	short size;
+} CPInfoHeader;
+
+ * version is 1 if the following data are in FONT format, 2 if they are
+  in DRFONT format. Putting a DRFONT font in a FONT-format file will not
+  work. Doing this the other way round is more of a grey area; DRDOS's 
+  MODE.COM seems to be able to handle FONT fonts in a DRFONT file, but 
+  other programs (such as ViewMAX) don't. 
+ * num_fonts is the number of font records that follow. If this CPI file is
+  for a printer, there is always 1 font and this number is ignored; some 
+  DRDOS printer CPI files have this wrongly set to 2.
+ * size is the number of bytes that follow (not including the character
+  index table in DRFONT files).
+
+  If the CPI is for a printer, the CPInfoHeader is followed by:
+
+struct
+{
+	short printer_type;
+	short escape_length;
+} PrinterFontHeader;
+
+ * Printer type is 1 if the character set is downloaded to the printer, 2 
+  if the printer already has the character set and selects it with escape
+  codes.
+ * escape_length is the number of bytes in the escape sequences.
+  
+  and this structure is in turn followed by the printer data. If printer_type
+  is 1, there are two escape sequences; if printer_type is 2, there is one.
+  The first escape sequence selects the builtin code page; the second selects
+  the downloaded codepage. After the escape sequence, any remaining data up
+  to the size given in CPInfoHeader are the definition of the font, to be 
+  downloaded to the printer.
+
+  If the CPI is for the screen, the CPInfoHeader is followed by screen font
+definitions for each size. In a FONT or FONT.NT, each entry consists of a 
+ScreenFontHeader followed by the font bitmap; in a DRFONT, just the 
+ScreenFontHeader is provided.
+
+struct
+{
+	char height;	 /* Character height */
+	char width;	 /* Character width */
+	char yaspect;	 /* Aspect ratio, vertical */
+	char xaspect;	 /* Aspect ratio, horizontal */
+        short num_chars; /* Count of characters in the font */
+} ScreenFontHeader;
+ 
+  * height: This is the character height in pixels.
+  * width: This is the character width in pixels; in all known CPI files it
+   is 8. Values greater than 8 may cause problems with utilities that assume
+   characters are 1 byte wide. Values less than 8 may also cause problems,
+   because it isn't clear whether characters should be left- or right- aligned
+   in the 8-pixel wide character cell.
+  * yaspect and xaspect: Not used - always 0.
+  * num_chars: Number of characters in the font. Always 256 in known CPI 
+   files; some utilities may assume it is 256, and malfunction if it is not.
+
+  The bitmap follows the ScreenFontHeader; its length is 
+num_chars * height * ((width+7)/8), and it contains glyphs for each character
+in increasing order. Some loaders (including the Windows NT VDM) calculate 
+the size simply as height * num_chars, and so will miscalculate if the width
+is wider than 8. In any case, NTVDM will only load fonts with width 8; neither
+more nor less.
+  The DRDOSExtendedFontHeader does not contain font widths, only heights; 
+DRFONTs with characters wider than 8 pixels may also cause trouble.
+ 
+  In a DRFONT, after the ScreenFontHeaders, there follows a table of character
+IDs. 
+
+	short FontIndex[256];
+
+  The DRDOS utilities assume that there are always 256 entries in this table;
+so the character count in a DRFONT ScreenFontHeader should always be 256
+(or less, but this table still has to have 256 entries).
+  Each entry in FontIndex describes the number of the bitmap for the 
+corresponding character in the bitmap tables pointed to by the 
+DRDOSExtendedFontFileHeader. Thus, to find the length of the bitmap tables,
+a program has to walk all FontIndex entries in the file and take the highest
+value; then multiply it by the height of each table to get the size of that
+table.
+
+Trailing data
+-------------
+  Some CPI files don't end immediately after the last font. Usually, what
+follows is a copyright message (possibly terminated by 0x1A) and/or
+some zero bytes.
+

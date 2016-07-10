@@ -1,0 +1,32 @@
+
+To write: psfget, psfput?
+
+Unicode status						Man pages
+==============                                          =========
+
+cpi2psf.c:	OK					OK
+mda2psf.c:	OK					OK
+psf2inc.c:	OK  					OK
+psf2raw.c:	OK					OK
+psf2xbm.c:	OK					OK
+psfs2cpi.c:	OK					OK
+wof2psf.c:	OK					OK
+psf2bdf.c:	OK					OK
+psf2pbms.c:	n/a					OK
+psf2wof.c:	OK					OK
+psf2zx.c:	OK					OK
+raw2psf.c:	OK					OK
+zx2psf.c:	OK					OK
+psfsub.c:	OK					OK
+cpicomp:	n/a					OK
+cpidcomp:	n/a					OK
+psfpages:	OK					OK
+fnts2fon:	n/a					OK
+fnt2psf:	OK					OK
+fon2fnts:	n/a					OK
+psf2fnt:	Untested				OK
+psf2txt:	OK					OK
+txt2psf:	OK					OK
+psfmerge:	OK					OK
+psfjoin:	OK					OK
+psfxform:	OK					OK

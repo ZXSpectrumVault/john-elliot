@@ -1,0 +1,111 @@
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;   JOYCE/ANNE v2.1.0: PCW emulator                                           ;
+;                                                                             ;
+;   Copyright (C) 1998-1999, John Elliott <jce@seasip.demon.co.uk>            ;
+;                                                                             ;
+;    This program is free software; you can redistribute it and/or modify     ;
+;    it under the terms of the GNU Library General Public License as          ;
+;    published by the Free Software Foundation; either version 2 of the       ;
+;    License, or(at your option) any later version.                           ;
+;                                                                             ;
+;    This program is distributed in the hope that it will be useful,          ;
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of           ;
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            ;
+;    GNU Library General Public License for more details.                     ;
+;                                                                             ;
+;    You should have received a copy of the GNU Library General Public        ;
+;    License along with this program; if not, write to the Free Software      ;
+;    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.                ;
+;                                                                             ;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+PUTC:   PUSH    AF
+        PUSH    BC
+        PUSH    DE
+        PUSH    HL
+        LD      E,A
+        LD      C,2
+        JP      FDPOPA
+;
+SETUSR: PUSH    AF
+        PUSH    BC      ;Set current user area number
+        PUSH    DE
+        PUSH    HL
+        LD      E,A
+        LD      C,20h
+        CALL    FDOS
+        JP      POPA
+
+
+
+GETUSR: PUSH    BC      ;Get current user area number
+        PUSH    DE
+        PUSH    HL
+        LD      E,0FFh
+        LD      C,20h
+FDPOP3: CALL    FDOS
+POP3:   POP     HL
+        POP     DE
+        POP     BC
+        RET
+;
+INKEY:  PUSH    BC      ;Read a key without echoing it
+        PUSH    DE
+        PUSH    HL
+        LD      C,6
+        LD      E,0FDh
+        JR      FDPOP3
+
+
+SETDMA: PUSH    AF      ;Set CP/M DMA address
+        PUSH    BC
+        PUSH    DE
+        PUSH    HL
+        LD      C,1Ah
+        JP      FDPOPA
+;
+UPCASEA:
+        CP      'a'     ;Convert a letter to uppercase
+        RET     C
+        CP      'z'+1
+        RET     NC
+        SUB     20h
+        RET
+;
+ZFCB:   PUSH    BC
+        PUSH    DE
+        PUSH    HL
+        LD      HL,12
+        ADD     HL,DE
+        LD      E,L
+        LD      D,H
+        INC     DE
+        LD      BC,23
+        LD      (HL),B
+        LDIR
+        JP      POP3
+;
+UDFDOS: PUSH    BC
+        PUSH    DE
+        CALL    GETUSR
+        LD      B,A     ;Original user
+        LD      HL,37
+        ADD     HL,DE   ;HL->user number in FCB
+        LD      A,(HL)
+        OR      A       ;0:default
+        JR      Z,UDF1
+        DEC     A
+        CALL    SETUSR  ;FCB specified user
+UDF1:   PUSH    BC
+        CALL    FDOS
+        POP     BC
+	PUSH	AF
+	PUSH	HL
+        LD      A,B
+        CALL    SETUSR
+	POP	HL
+	POP	AF
+        POP     DE
+        POP     BC
+        RET
+

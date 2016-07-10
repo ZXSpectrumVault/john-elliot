@@ -1,0 +1,28 @@
+Electric Studio Lightpen: 
+> Driver loads at base address 0xD200. So D318 in memory -> 0118 in driver.
+> Looks for DDSCREEN only on M: A: and B:
+> DDESP and ART work, yay! 
+
+
+FDC: Data rate
+(use fdc_write_drr, which in libdsk version affects DPB)
+
+> Tidy up presentation:
+	* menu drawing code (should look like a 16)
+	* window title
+	* power switch graphic
+
+> Support for other joysticks than key joysticks:
+	* Kempston : Done
+	* Spectravideo : Done, untested
+	* Cascade : Done, except for up/down axis and UI
+	* DKTronics
+
+> JOYCE hangs trying to read serial port when no serial data present.
+ [Fixed and checked]
+
+> BYTELEN *.Z80 on boot floppy doesn't work; strange disc write errors.
+ [Bug in lib765; fixed. I've no idea how it's managed to avoid showing
+ up for the last year - perhaps because I rarely write to cpcemu images]
+
+> If I'm feeling really brave: UI for rcpmfs.

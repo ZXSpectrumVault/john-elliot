@@ -1,0 +1,166 @@
+UnPLAD 0.0.1                                          John Elliott, 4 May 2012
+==============================================================================
+
+  UnPLAD disassembles the following Artic adventure games:
+
+Adventure A: 'Planet of Death'   (ZX81 and original Spectrum versions)
+Adventure B: 'Inca Curse'        (ZX81 and original Spectrum versions)
+Adventure C: 'Ship of Doom'      (ZX81 and original Spectrum versions)
+Adventure D: 'Espionage Island'  (ZX81 and original Spectrum versions)
+
+These games use an engine very similar to the 'Adventure II' game engine 
+described by Ken Reed in the August 1980 edition of 'Practical Computing'
+<http://www.yeandle.plus.com/advent/kenreed.html> -- the same article which 
+inspired the creation of the Quill.
+
+  Since these games and the Quill share, as it were, a common ancestor, the 
+output format of UnPLAD has been designed to match that of UnQuill as closely
+as possible. The command-line options also are designed to match UnQuill, 
+though in a UNIX idiom rather than CP/M.
+
+  Files should be in .P format (ZX81) or .SNA format (Spectrum).
+
+Syntax is: unplad {options} filename
+
+Options are:
+
+    -o filename: Output to specified file. If no filename is specified, 
+                standard output is used.
+    -sc: Skip Conditions
+    -sl: Skip Location descriptions
+    -sm: Skip Messages
+    -sn: Skip coNNections
+    -so: Skip Objects
+    -ss: Skip System messages
+    -sv: Skip Vocabulary
+    -v:  Verbose output: Annotate condition and connection output with 
+        the text of messages, locations and objects.
+
+  Text is converted from the ZX81 character set to ASCII, for those games 
+which use the ZX81 character set. Lower-case letters represent graphic 
+shapes, and inverse video text is surrounded by [square brackets].
+
+  Spectrum games which use colour controls will display the colour control
+bytes surrounded by {curly brackets}.
+
+  The database in an Artic game (unlike that in a Quilled game) does not
+have a header giving the locations of all the tables. Consequently, UnPLAD
+has to find the tables by scanning the machine code looking for known 
+sequences. The 'system messages' such as 'I DONT UNDERSTAND' are scattered
+through the game engine rather than being held in a single table, so they
+are presented without numbers.
+
+  The various conditions and actions in the bytecode are pretty much a subset 
+of those used by the Quill. Conditions are:
+
+	AT	nn	;True if the player is in the specified room.
+
+	PRESENT nn	;True if the named object is in the current room, or
+			;is carried, or worn.
+
+	CHANCE  nn	;True if a random number from 0-127 (obtained by 
+			;reading the Z80 memory refresh register) is less
+			;than nn.
+
+	ABSENT	nn	;True if the named object isn't PRESENT.
+
+	NOTWORN nn	;True if the named object isn't worn.
+
+	NOTZERO nn	;True if the specified system flag is nonzero.
+
+	EQ	nn vv	;True if system flag nn is equal to constant value vv.
+	
+	ZERO    nn	;True if the specified system flag is zero.
+
+	CARRIED nn	;True if the named object is carried.	
+
+Actions are:
+
+	INVEN		;List the objects the player is carrying or wearing.
+
+	REMOVE  nn	;If the named object is worn and the player is
+			;carrying less than the maximum number of portable
+			;objects, transfer the object from 'worn' to 'carried'
+
+	GET	nn	;Transfer the named object to the player's possession.
+
+	DROP	nn	;If the player is carrying the named object, transfer
+			;it to the current location.
+
+	WEAR	nn	;If the player is carrying the named object, move it
+			;from 'carried' to 'worn'.
+
+	MESSAGE nn	;Display the specified message.
+
+	DESC		;Stop processing actions and display the location
+			;description.
+
+	DONE		;Stop processing actions and prompt for new input.
+
+	GOTO    nn	;Move the player to the specified location.
+
+	SET     nn	;Set the specified flag to 255.
+
+	CLEAR   nn	;Set the specified flag to 0.
+			;Flags used by the game engine are:
+			; 0: Set if it is dark.
+			; 1: Number of objects player is carrying.
+			; 2: Decremented every turn (if nonzero)
+			; 3: Decremented every time a location is described and
+			;    it is dark.
+			; 4: Decremented every time a location is described and
+			;    object 0 (a light source) is absent.
+			; 5: Decremented every turn (if nonzero).
+
+	SWAP	nn  mm	; Swap the two specified objects (mm is always 1 + nn).
+			; For example, exchanging a lamp and a lit lamp.
+
+	EXIT		; In ZX81 Adventure A, resets the computer 
+			; immediately.
+			; In later adventures, displays the "Game over" 
+			; message.
+
+	OKAY		; Display the message "OKAY" and behave as DONE
+
+	QUIT		; In ZX81 Adventure A, prints "Game over" message.
+			; In later adventures, prompts to confirm that you
+			; want to quit, and ends the game if the user says 
+			; Yes. 
+
+	LET	nn  mm	; Assigns value mm to flag nn.
+
+	CREATE	nn	; Move the specified object to the player's current
+			; location.
+		
+	DESTROY	nn	; Move the specified object to location 252 (object
+			; does not exist)
+
+	ADDSCORE ll  hh	; Add the specified value to the score (ll is low 
+			; byte, hh is high byte).
+
+	SCORE		; Displays the current score
+
+	NEWTEXT		; As DONE, but applies to the process table rather 
+			; than the response table.
+
+
+Copying
+~~~~~~~
+
+    UnPLAD: Dumps the database in Artic adventure games A-D
+    Copyright 2012, John Elliott <jce@seasip.demon.co.uk>
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+

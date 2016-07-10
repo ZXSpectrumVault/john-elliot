@@ -1,0 +1,28 @@
+* We have a psf2bsd. Can we have a bsd2psf?
+  [Probably not; the BSD headers use arithmetic. Only way would be to
+  have some horrible pass-to-C-compiler trick.]
+
+* LOADPSF: Support for IBM 3270 PC Programmed Symbols board? 
+
+[Done] * LOADPSF: ACT Apricot support (preferably in the same EXE rather than 
+  having to go to the trouble of writing another).
+
+  -- Apricot probe: The Apricot RAM BIOS at 400h should help us here. Check
+    for magic at 400:4 - should be 34 12 78 56. Then 401h gives machine 
+    type: 0 for PC/Xi, 1 for Portable, 2 for F-series
+
+
+    The Apricot PC has fonts at 00800, 02800 and 04800 hex. The active
+  font is indicated by the BIOS pointer table
+	00706 = DWORD address of active font
+	0070A = WORD  length of active font
+	0070C = DWORD address of master font (or logo)
+	00710 = WORD  length of master font (or logo)
+
+[Done] * LOADPSF: And an F1 version.
+	The F1 has the 8x8 font given by the master address, and the 8x10 font
+        given by the master address + 800h. Check the length of the master 
+	font, though; if it's 800h there is no 8x10 font. If it's 1200h there
+	is. Probably applies to the FP version as well.
+
+

@@ -1,0 +1,99 @@
+.\" -*- nroff -*-
+.\"
+.\" psfpages.1: psfpages man page
+.\" Copyright (c) 2005, 2007 John Elliott
+.\"
+.\"
+.\"
+.\" psftools: Manipulate console fonts in the .PSF format
+.\" Copyright (C) 2005, 2007  John Elliott
+.\"
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2 of the License, or
+.\" (at your option) any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program; if not, write to the Free Software
+.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+.\"
+.TH psfpages 1 "11 April, 2008" "Version 1.0.7" "PSF Tools"
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH NAME
+psfpages - list codepages known to the PSF Tools
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH SYNOPSIS
+.PD 0
+.B psfpages
+.RI [ codepages ]
+.P
+.PD 1
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH DESCRIPTION
+.LP
+If run with no arguments, psfpages lists the codepages supported by 
+the psftools utilities.
+.LP 
+If one or more codepage names is supplied, psfpages dumps the contents
+of the mapping tables for the named codepages.
+.LP
+There are currently three sorts of codepage compiled into the psftools:
+ISO 8859 codepages, referred to by encoding name (eg "8859-1"); 
+numbered codepages, referred to by their number (eg "CP437" or just "437")
+and nonstandard codepages. Currently the nonstandard codepages are:
+.IP AMSTRAD
+The codepage used by CP/M on the Amstrad PCW, CPC and Spectrum +3.
+.IP BBCMICRO
+The codepage used by the BBC Micro (covers characters 32-127 only).
+.IP PCGEM
+The codepage used by GEM on the IBM PC.
+.IP "PPC437, PPC860, PPC865, PPCGREEK"
+The codepages used by the character ROM on Amstrad PPC laptops and their
+desktop counterpart, the Sinclair PC200. These differ slightly from the
+standard codepages 437, 860 and 865 to avoid confusion between the 'epsilon'
+and 'element-of' characters.
+.LP The numbered and ISO pages are based partly on the CPnnn.TXT files 
+from Unicode.org, and partly from the *.uni files supplied with 
+the Linux kbd-1.12 utilities. In most cases they have been modified
+to replace the control code entries with the glyphs that are actually 
+observed in the fonts. For example, compare unicode.org's CP437.TXT 
+with the output of psfpages for codepage 437.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH BUGS
+.LP
+The AMSTRAD character 7Fh (zero without a slash) has been mapped to 
+U+FF10 FULLWIDTH DIGIT ZERO, rather than to U+0030 DIGIT ZERO. This is 
+not ideal, but it avoids the information loss of mapping two different 
+character shapes to the same codepoint.
+.LP
+The PCGEM character 0Ah (bell) has been mapped to U+237E BELL SYMBOL, 
+but it's not the same sort of bell at all; the GEM character is a dingbat, 
+but the Unicode bell is a symbol for a circuit diagram.
+.LP
+Six characters in the PCGEM character set (0DAh to 0DFh) appear not to be 
+used, and display as blank in all known PCGEM fonts. Their mapping entries
+reflect this status; they will be ignored when a Unicode directory is being
+created, and set to blank when a PSF is written with this codepage.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.\".SH SEE ALSO
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH AUTHOR
+John Elliott <jce@seasip.demon.co.uk>.
+.PP

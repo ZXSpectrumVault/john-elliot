@@ -1,0 +1,6 @@
+The files in this directory are:
+
+* joyce.pdf / joyce.lyx / joyce.txt: Main JOYCE documentation.
+* edops.pdf / edops.lyx / edops.txt: Description of how to call extended JOYCE
+                                    functions from Z80 code.
+* hardware.pdf / hardware.lyx / hardware.txt: Description of the PCW hardware.

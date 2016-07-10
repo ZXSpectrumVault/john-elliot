@@ -1,0 +1,451 @@
+# Makefile.in generated automatically by automake 1.4-p6 from Makefile.am
+
+# Copyright (C) 1994, 1995-8, 1999, 2001 Free Software Foundation, Inc.
+# This Makefile.in is free software; the Free Software Foundation
+# gives unlimited permission to copy and/or distribute it,
+# with or without modifications, as long as this notice is preserved.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY, to the extent permitted by law; without
+# even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+# PARTICULAR PURPOSE.
+
+
+SHELL = @SHELL@
+
+srcdir = @srcdir@
+top_srcdir = @top_srcdir@
+VPATH = @srcdir@
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+
+bindir = @bindir@
+sbindir = @sbindir@
+libexecdir = @libexecdir@
+datadir = @datadir@
+sysconfdir = @sysconfdir@
+sharedstatedir = @sharedstatedir@
+localstatedir = @localstatedir@
+libdir = @libdir@
+infodir = @infodir@
+mandir = @mandir@
+includedir = @includedir@
+oldincludedir = /usr/include
+
+DESTDIR =
+
+pkgdatadir = $(datadir)/@PACKAGE@
+pkglibdir = $(libdir)/@PACKAGE@
+pkgincludedir = $(includedir)/@PACKAGE@
+
+top_builddir = ..
+
+ACLOCAL = @ACLOCAL@
+AUTOCONF = @AUTOCONF@
+AUTOMAKE = @AUTOMAKE@
+AUTOHEADER = @AUTOHEADER@
+
+INSTALL = @INSTALL@
+INSTALL_PROGRAM = @INSTALL_PROGRAM@ $(AM_INSTALL_PROGRAM_FLAGS)
+INSTALL_DATA = @INSTALL_DATA@
+INSTALL_SCRIPT = @INSTALL_SCRIPT@
+transform = @program_transform_name@
+
+NORMAL_INSTALL = :
+PRE_INSTALL = :
+POST_INSTALL = :
+NORMAL_UNINSTALL = :
+PRE_UNINSTALL = :
+POST_UNINSTALL = :
+build_alias = @build_alias@
+build_triplet = @build@
+host_alias = @host_alias@
+host_triplet = @host@
+target_alias = @target_alias@
+target_triplet = @target@
+AS = @AS@
+CC = @CC@
+DLLTOOL = @DLLTOOL@
+ECHO = @ECHO@
+EXEEXT = @EXEEXT@
+HAVE_LIB = @HAVE_LIB@
+LIB = @LIB@
+LIBTOOL = @LIBTOOL@
+LN_S = @LN_S@
+LTLIB = @LTLIB@
+MAKEINFO = @MAKEINFO@
+OBJDUMP = @OBJDUMP@
+OBJEXT = @OBJEXT@
+PACKAGE = @PACKAGE@
+RANLIB = @RANLIB@
+STRIP = @STRIP@
+VERSION = @VERSION@
+
+INCLUDES = -I$(top_srcdir)/include
+
+lib_LTLIBRARIES = libpsf.la 
+noinst_PROGRAMS = dumpcps
+#
+# Binary compatibility. See libtool.info for full details, but:
+# If the source has changed at all, increment the middle number
+# If interfaces have been added, removed or changed, increment the
+# first number and set the middle one to 0.
+# If interfaces have been added increment the right-hand number.
+# If interfaces have been removed set the right-hand number to 0.
+# 
+#
+libpsf_la_LDFLAGS = -version-info 1:1:1
+libpsf_la_SOURCES = psflib.c psfucs.c psfio.c psfpix.c psfver.c mappings.c                     psfio.h psferror.c psfutil1.c psfutil2.c psfutil3.c 		    psfucs2.c 8859-1.c   8859-16.c  8859-6.c	CP1251.c  CP1256.c  CP775.c  CP860.c  CP865.c 8859-10.c  8859-2.c   8859-7.c	CP1252.c  CP1257.c  CP850.c  CP861.c  CP866.c 8859-13.c  8859-3.c   8859-8.c	CP1253.c  CP1258.c  CP852.c  CP862.c  CP869.c 8859-14.c  8859-4.c   8859-9.c	CP1254.c  CP437.c   CP855.c  CP863.c  CP874.c 8859-15.c  8859-5.c   CP1250.c	CP1255.c  CP737.c   CP857.c  CP864.c  PCGEM.c AMSTRAD.c  BBCMICRO.c CP858.c    CP367.c  PPC437.c  PPC860.c PPC865.c PPCGREEK.c
+
+
+dumpcps_SOURCES = dumpcps.c
+dumpcps_LDADD = libpsf.la	
+mkinstalldirs = $(SHELL) $(top_srcdir)/config/mkinstalldirs
+CONFIG_HEADER = ../config.h
+CONFIG_CLEAN_FILES = 
+LTLIBRARIES =  $(lib_LTLIBRARIES)
+
+
+DEFS = @DEFS@ -I. -I$(srcdir) -I..
+CPPFLAGS = @CPPFLAGS@
+LDFLAGS = @LDFLAGS@
+LIBS = @LIBS@
+libpsf_la_LIBADD = 
+libpsf_la_OBJECTS =  psflib.lo psfucs.lo psfio.lo psfpix.lo psfver.lo \
+mappings.lo psferror.lo psfutil1.lo psfutil2.lo psfutil3.lo psfucs2.lo \
+8859-1.lo 8859-16.lo 8859-6.lo CP1251.lo CP1256.lo CP775.lo CP860.lo \
+CP865.lo 8859-10.lo 8859-2.lo 8859-7.lo CP1252.lo CP1257.lo CP850.lo \
+CP861.lo CP866.lo 8859-13.lo 8859-3.lo 8859-8.lo CP1253.lo CP1258.lo \
+CP852.lo CP862.lo CP869.lo 8859-14.lo 8859-4.lo 8859-9.lo CP1254.lo \
+CP437.lo CP855.lo CP863.lo CP874.lo 8859-15.lo 8859-5.lo CP1250.lo \
+CP1255.lo CP737.lo CP857.lo CP864.lo PCGEM.lo AMSTRAD.lo BBCMICRO.lo \
+CP858.lo CP367.lo PPC437.lo PPC860.lo PPC865.lo PPCGREEK.lo
+noinst_PROGRAMS =  dumpcps$(EXEEXT)
+PROGRAMS =  $(noinst_PROGRAMS)
+
+dumpcps_OBJECTS =  dumpcps.$(OBJEXT)
+dumpcps_DEPENDENCIES =  libpsf.la
+dumpcps_LDFLAGS = 
+CFLAGS = @CFLAGS@
+COMPILE = $(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
+LTCOMPILE = $(LIBTOOL) --mode=compile $(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
+CCLD = $(CC)
+LINK = $(LIBTOOL) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(LDFLAGS) -o $@
+DIST_COMMON =  Makefile.am Makefile.in
+
+
+DISTFILES = $(DIST_COMMON) $(SOURCES) $(HEADERS) $(TEXINFOS) $(EXTRA_DIST)
+
+TAR = gtar
+GZIP_ENV = --best
+SOURCES = $(libpsf_la_SOURCES) $(dumpcps_SOURCES)
+OBJECTS = $(libpsf_la_OBJECTS) $(dumpcps_OBJECTS)
+
+all: all-redirect
+.SUFFIXES:
+.SUFFIXES: .S .c .lo .o .obj .s
+$(srcdir)/Makefile.in: Makefile.am $(top_srcdir)/configure.in $(ACLOCAL_M4) 
+	cd $(top_srcdir) && $(AUTOMAKE) --foreign --include-deps lib/Makefile
+
+Makefile: $(srcdir)/Makefile.in  $(top_builddir)/config.status
+	cd $(top_builddir) \
+	  && CONFIG_FILES=$(subdir)/$@ CONFIG_HEADERS= $(SHELL) ./config.status
+
+
+mostlyclean-libLTLIBRARIES:
+
+clean-libLTLIBRARIES:
+	-test -z "$(lib_LTLIBRARIES)" || rm -f $(lib_LTLIBRARIES)
+
+distclean-libLTLIBRARIES:
+
+maintainer-clean-libLTLIBRARIES:
+
+install-libLTLIBRARIES: $(lib_LTLIBRARIES)
+	@$(NORMAL_INSTALL)
+	$(mkinstalldirs) $(DESTDIR)$(libdir)
+	@list='$(lib_LTLIBRARIES)'; for p in $$list; do \
+	  if test -f $$p; then \
+	    echo "$(LIBTOOL)  --mode=install $(INSTALL) $$p $(DESTDIR)$(libdir)/$$p"; \
+	    $(LIBTOOL)  --mode=install $(INSTALL) $$p $(DESTDIR)$(libdir)/$$p; \
+	  else :; fi; \
+	done
+
+uninstall-libLTLIBRARIES:
+	@$(NORMAL_UNINSTALL)
+	list='$(lib_LTLIBRARIES)'; for p in $$list; do \
+	  $(LIBTOOL)  --mode=uninstall rm -f $(DESTDIR)$(libdir)/$$p; \
+	done
+
+.c.o:
+	$(COMPILE) -c $<
+
+# FIXME: We should only use cygpath when building on Windows,
+# and only if it is available.
+.c.obj:
+	$(COMPILE) -c `cygpath -w $<`
+
+.s.o:
+	$(COMPILE) -c $<
+
+.S.o:
+	$(COMPILE) -c $<
+
+mostlyclean-compile:
+	-rm -f *.o core *.core
+	-rm -f *.$(OBJEXT)
+
+clean-compile:
+
+distclean-compile:
+	-rm -f *.tab.c
+
+maintainer-clean-compile:
+
+.c.lo:
+	$(LIBTOOL) --mode=compile $(COMPILE) -c $<
+
+.s.lo:
+	$(LIBTOOL) --mode=compile $(COMPILE) -c $<
+
+.S.lo:
+	$(LIBTOOL) --mode=compile $(COMPILE) -c $<
+
+mostlyclean-libtool:
+	-rm -f *.lo
+
+clean-libtool:
+	-rm -rf .libs _libs
+
+distclean-libtool:
+
+maintainer-clean-libtool:
+
+libpsf.la: $(libpsf_la_OBJECTS) $(libpsf_la_DEPENDENCIES)
+	$(LINK) -rpath $(libdir) $(libpsf_la_LDFLAGS) $(libpsf_la_OBJECTS) $(libpsf_la_LIBADD) $(LIBS)
+
+mostlyclean-noinstPROGRAMS:
+
+clean-noinstPROGRAMS:
+	-test -z "$(noinst_PROGRAMS)" || rm -f $(noinst_PROGRAMS)
+
+distclean-noinstPROGRAMS:
+
+maintainer-clean-noinstPROGRAMS:
+
+dumpcps$(EXEEXT): $(dumpcps_OBJECTS) $(dumpcps_DEPENDENCIES)
+	@rm -f dumpcps$(EXEEXT)
+	$(LINK) $(dumpcps_LDFLAGS) $(dumpcps_OBJECTS) $(dumpcps_LDADD) $(LIBS)
+
+tags: TAGS
+
+ID: $(HEADERS) $(SOURCES) $(LISP)
+	list='$(SOURCES) $(HEADERS)'; \
+	unique=`for i in $$list; do echo $$i; done | \
+	  awk '    { files[$$0] = 1; } \
+	       END { for (i in files) print i; }'`; \
+	here=`pwd` && cd $(srcdir) \
+	  && mkid -f$$here/ID $$unique $(LISP)
+
+TAGS:  $(HEADERS) $(SOURCES)  $(TAGS_DEPENDENCIES) $(LISP)
+	tags=; \
+	here=`pwd`; \
+	list='$(SOURCES) $(HEADERS)'; \
+	unique=`for i in $$list; do echo $$i; done | \
+	  awk '    { files[$$0] = 1; } \
+	       END { for (i in files) print i; }'`; \
+	test -z "$(ETAGS_ARGS)$$unique$(LISP)$$tags" \
+	  || (cd $(srcdir) && etags $(ETAGS_ARGS) $$tags  $$unique $(LISP) -o $$here/TAGS)
+
+mostlyclean-tags:
+
+clean-tags:
+
+distclean-tags:
+	-rm -f TAGS ID
+
+maintainer-clean-tags:
+
+distdir = $(top_builddir)/$(PACKAGE)-$(VERSION)/$(subdir)
+
+subdir = lib
+
+distdir: $(DISTFILES)
+	@for file in $(DISTFILES); do \
+	  d=$(srcdir); \
+	  if test -d $$d/$$file; then \
+	    cp -pr $$d/$$file $(distdir)/$$file; \
+	  else \
+	    test -f $(distdir)/$$file \
+	    || ln $$d/$$file $(distdir)/$$file 2> /dev/null \
+	    || cp -p $$d/$$file $(distdir)/$$file || :; \
+	  fi; \
+	done
+8859-1.lo 8859-1.o : 8859-1.c ../include/psflib.h ../include/psfutils.h
+8859-10.lo 8859-10.o : 8859-10.c ../include/psflib.h \
+	../include/psfutils.h
+8859-13.lo 8859-13.o : 8859-13.c ../include/psflib.h \
+	../include/psfutils.h
+8859-14.lo 8859-14.o : 8859-14.c ../include/psflib.h \
+	../include/psfutils.h
+8859-15.lo 8859-15.o : 8859-15.c ../include/psflib.h \
+	../include/psfutils.h
+8859-16.lo 8859-16.o : 8859-16.c ../include/psflib.h \
+	../include/psfutils.h
+8859-2.lo 8859-2.o : 8859-2.c ../include/psflib.h ../include/psfutils.h
+8859-3.lo 8859-3.o : 8859-3.c ../include/psflib.h ../include/psfutils.h
+8859-4.lo 8859-4.o : 8859-4.c ../include/psflib.h ../include/psfutils.h
+8859-5.lo 8859-5.o : 8859-5.c ../include/psflib.h ../include/psfutils.h
+8859-6.lo 8859-6.o : 8859-6.c ../include/psflib.h ../include/psfutils.h
+8859-7.lo 8859-7.o : 8859-7.c ../include/psflib.h ../include/psfutils.h
+8859-8.lo 8859-8.o : 8859-8.c ../include/psflib.h ../include/psfutils.h
+8859-9.lo 8859-9.o : 8859-9.c ../include/psflib.h ../include/psfutils.h
+AMSTRAD.lo AMSTRAD.o : AMSTRAD.c ../include/psflib.h \
+	../include/psfutils.h
+BBCMICRO.lo BBCMICRO.o : BBCMICRO.c ../include/psflib.h \
+	../include/psfutils.h
+CP1250.lo CP1250.o : CP1250.c ../include/psflib.h ../include/psfutils.h
+CP1251.lo CP1251.o : CP1251.c ../include/psflib.h ../include/psfutils.h
+CP1252.lo CP1252.o : CP1252.c ../include/psflib.h ../include/psfutils.h
+CP1253.lo CP1253.o : CP1253.c ../include/psflib.h ../include/psfutils.h
+CP1254.lo CP1254.o : CP1254.c ../include/psflib.h ../include/psfutils.h
+CP1255.lo CP1255.o : CP1255.c ../include/psflib.h ../include/psfutils.h
+CP1256.lo CP1256.o : CP1256.c ../include/psflib.h ../include/psfutils.h
+CP1257.lo CP1257.o : CP1257.c ../include/psflib.h ../include/psfutils.h
+CP1258.lo CP1258.o : CP1258.c ../include/psflib.h ../include/psfutils.h
+CP367.lo CP367.o : CP367.c ../include/psflib.h ../include/psfutils.h
+CP437.lo CP437.o : CP437.c ../include/psflib.h ../include/psfutils.h
+CP737.lo CP737.o : CP737.c ../include/psflib.h ../include/psfutils.h
+CP775.lo CP775.o : CP775.c ../include/psflib.h ../include/psfutils.h
+CP850.lo CP850.o : CP850.c ../include/psflib.h ../include/psfutils.h
+CP852.lo CP852.o : CP852.c ../include/psflib.h ../include/psfutils.h
+CP855.lo CP855.o : CP855.c ../include/psflib.h ../include/psfutils.h
+CP857.lo CP857.o : CP857.c ../include/psflib.h ../include/psfutils.h
+CP858.lo CP858.o : CP858.c ../include/psflib.h ../include/psfutils.h
+CP860.lo CP860.o : CP860.c ../include/psflib.h ../include/psfutils.h
+CP861.lo CP861.o : CP861.c ../include/psflib.h ../include/psfutils.h
+CP862.lo CP862.o : CP862.c ../include/psflib.h ../include/psfutils.h
+CP863.lo CP863.o : CP863.c ../include/psflib.h ../include/psfutils.h
+CP864.lo CP864.o : CP864.c ../include/psflib.h ../include/psfutils.h
+CP865.lo CP865.o : CP865.c ../include/psflib.h ../include/psfutils.h
+CP866.lo CP866.o : CP866.c ../include/psflib.h ../include/psfutils.h
+CP869.lo CP869.o : CP869.c ../include/psflib.h ../include/psfutils.h
+CP874.lo CP874.o : CP874.c ../include/psflib.h ../include/psfutils.h
+dumpcps.o: dumpcps.c psfio.h ../include/psflib.h ../include/psfutils.h \
+	mappings.c
+mappings.lo mappings.o : mappings.c psfio.h ../include/psflib.h \
+	../include/psfutils.h
+PCGEM.lo PCGEM.o : PCGEM.c ../include/psflib.h ../include/psfutils.h
+PPC437.lo PPC437.o : PPC437.c ../include/psflib.h ../include/psfutils.h
+PPC860.lo PPC860.o : PPC860.c ../include/psflib.h ../include/psfutils.h
+PPC865.lo PPC865.o : PPC865.c ../include/psflib.h ../include/psfutils.h
+PPCGREEK.lo PPCGREEK.o : PPCGREEK.c ../include/psflib.h \
+	../include/psfutils.h
+psf1lib.lo psf1lib.o : psf1lib.c ../include/psf1lib.h \
+	../include/psfutils.h
+psf2lib.lo psf2lib.o : psf2lib.c ../include/psf2lib.h \
+	../include/psflib.h ../include/psfutils.h
+psferror.lo psferror.o : psferror.c ../config.h ../include/psflib.h \
+	../include/psfutils.h
+psfio.lo psfio.o : psfio.c psfio.h ../include/psflib.h \
+	../include/psfutils.h
+psflib.lo psflib.o : psflib.c psfio.h ../include/psflib.h \
+	../include/psfutils.h
+psfpix.lo psfpix.o : psfpix.c psfio.h ../include/psflib.h \
+	../include/psfutils.h
+psfucs.lo psfucs.o : psfucs.c psfio.h ../include/psflib.h \
+	../include/psfutils.h
+psfucs2.lo psfucs2.o : psfucs2.c psfio.h ../include/psflib.h \
+	../include/psfutils.h
+psfutil1.lo psfutil1.o : psfutil1.c ../include/psflib.h \
+	../include/psfutils.h
+psfutil2.lo psfutil2.o : psfutil2.c ../include/psflib.h \
+	../include/psfutils.h
+psfutil3.lo psfutil3.o : psfutil3.c ../include/psflib.h \
+	../include/psfutils.h
+psfver.lo psfver.o : psfver.c psfio.h ../include/psflib.h \
+	../include/psfutils.h
+
+info-am:
+info: info-am
+dvi-am:
+dvi: dvi-am
+check-am: all-am
+check: check-am
+installcheck-am:
+installcheck: installcheck-am
+install-exec-am: install-libLTLIBRARIES
+install-exec: install-exec-am
+
+install-data-am:
+install-data: install-data-am
+
+install-am: all-am
+	@$(MAKE) $(AM_MAKEFLAGS) install-exec-am install-data-am
+install: install-am
+uninstall-am: uninstall-libLTLIBRARIES
+uninstall: uninstall-am
+all-am: Makefile $(LTLIBRARIES) $(PROGRAMS)
+all-redirect: all-am
+install-strip:
+	$(MAKE) $(AM_MAKEFLAGS) AM_INSTALL_PROGRAM_FLAGS=-s install
+installdirs:
+	$(mkinstalldirs)  $(DESTDIR)$(libdir)
+
+
+mostlyclean-generic:
+
+clean-generic:
+
+distclean-generic:
+	-rm -f Makefile $(CONFIG_CLEAN_FILES)
+	-rm -f config.cache config.log stamp-h stamp-h[0-9]*
+
+maintainer-clean-generic:
+mostlyclean-am:  mostlyclean-libLTLIBRARIES mostlyclean-compile \
+		mostlyclean-libtool mostlyclean-noinstPROGRAMS \
+		mostlyclean-tags mostlyclean-generic
+
+mostlyclean: mostlyclean-am
+
+clean-am:  clean-libLTLIBRARIES clean-compile clean-libtool \
+		clean-noinstPROGRAMS clean-tags clean-generic \
+		mostlyclean-am
+
+clean: clean-am
+
+distclean-am:  distclean-libLTLIBRARIES distclean-compile \
+		distclean-libtool distclean-noinstPROGRAMS \
+		distclean-tags distclean-generic clean-am
+	-rm -f libtool
+
+distclean: distclean-am
+
+maintainer-clean-am:  maintainer-clean-libLTLIBRARIES \
+		maintainer-clean-compile maintainer-clean-libtool \
+		maintainer-clean-noinstPROGRAMS maintainer-clean-tags \
+		maintainer-clean-generic distclean-am
+	@echo "This command is intended for maintainers to use;"
+	@echo "it deletes files that may require special tools to rebuild."
+
+maintainer-clean: maintainer-clean-am
+
+.PHONY: mostlyclean-libLTLIBRARIES distclean-libLTLIBRARIES \
+clean-libLTLIBRARIES maintainer-clean-libLTLIBRARIES \
+uninstall-libLTLIBRARIES install-libLTLIBRARIES mostlyclean-compile \
+distclean-compile clean-compile maintainer-clean-compile \
+mostlyclean-libtool distclean-libtool clean-libtool \
+maintainer-clean-libtool mostlyclean-noinstPROGRAMS \
+distclean-noinstPROGRAMS clean-noinstPROGRAMS \
+maintainer-clean-noinstPROGRAMS tags mostlyclean-tags distclean-tags \
+clean-tags maintainer-clean-tags distdir info-am info dvi-am dvi check \
+check-am installcheck-am installcheck install-exec-am install-exec \
+install-data-am install-data install-am install uninstall-am uninstall \
+all-redirect all-am all installdirs mostlyclean-generic \
+distclean-generic clean-generic maintainer-clean-generic clean \
+mostlyclean distclean maintainer-clean
+
+
+# Tell versions [3.59,3.63) of GNU make to not export all variables.
+# Otherwise a system limit (for SysV at least) may be exceeded.
+.NOEXPORT:

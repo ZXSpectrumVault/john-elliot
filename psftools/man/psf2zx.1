@@ -1,0 +1,120 @@
+.\" -*- nroff -*-
+.\"
+.\" psf2zx.1: psf2zx man page
+.\" Copyright (c) 2005, 2007 John Elliott
+.\"
+.\"
+.\"
+.\" psftools: Manipulate console fonts in the .PSF format
+.\" Copyright (C) 2005, 2007  John Elliott
+.\"
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2 of the License, or
+.\" (at your option) any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program; if not, write to the Free Software
+.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+.\"
+.TH psf2zx 1 "11 April, 2008" "Version 1.0.7" "PSF Tools"
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH NAME
+psf2zx - convert a PSF font to Spectrum format
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH SYNOPSIS
+.PD 0
+.B psf2zx
+.RI [ "--tap" ]
+.RI [ "--naked" ]
+.RI [ "--rom=romfile" ]
+.RI [ "--sna=snapfile" ]
+.RI [ "--mode=bare" ]
+.RI [ "--mode=merge1" ]
+.RI [ INPUTFILE 
+.RI [ OUTPUTFILE ]]
+.P
+.PD 1
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH DESCRIPTION
+psf2zx converts a PSF font into a font suitable for use on a Sinclair
+Spectrum.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH OPTIONS
+.TP
+.B --p3dos
+Sets the output format to Spectrum +3DOS, with a 128-byte header followed
+by the font data. This is the default output format.
+.TP
+.B --tap
+Sets the output format to .TAP (Spectrum emulator tape image). The resulting
+TAP image will contain a single file called T:font.bin.
+.TP
+.B --naked
+Sets the output format to a simple 768-byte binary file will be
+written, with no header or trailer records.
+.TP
+.B --rom=romfile
+Sets the output to be a Spectrum ROM, based on the ROM image in 
+.I romfile.
+The file written will be a copy of 
+.I romfile
+but with the font replaced by the result of psf2zx.
+.TP
+.B --sna=snapfile
+.LP
+Sets the output to be a .SNA snapshot, based on the snapshot passed as
+.I snapfile.
+The file written will be a copy of 
+.I snapfile
+but with the font replaced by the result of psf2zx.
+.LP
+This depends on the CHARS system variable having been set up so that the 
+game outputs using the ROM routines; if the program in the snapshot uses 
+some other form of output, it may leave CHARS alone or set it to a random 
+value. For example, the font in the game 
+.I 2112
+cannot be replaced using this method.
+.TP
+.B --mode=raw
+Copies characters 32-127 from the PSF file, without attempting to translate
+the pound sign, up arrow or copyright symbol. This is the default conversion
+mode if the source file has no Unicode directory.
+.TP
+.B --mode=merge1
+Copies characters from the PSF file, converting the pound sign, up arrow and
+copyright symbol. This is the default conversion if the source file has a 
+Unicode directory. If this option is selected but the source file has no 
+Unicode directory, it will be assumed to be using a variant of the
+ISO-8859-1 codepage with the up-arrow at character position 18h (based on
+LAT1-08.PSF supplied with Linux).
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH BUGS
+The behaviour of the 'merge1' mode is ugly when applied to non-Unicode PSF 
+files.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH SEE ALSO
+zx2psf(1)
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH AUTHOR
+John Elliott <jce@seasip.demon.co.uk>.
+.PP

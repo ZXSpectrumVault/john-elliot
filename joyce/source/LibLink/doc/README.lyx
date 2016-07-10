@@ -1,0 +1,833 @@
+#LyX 1.1 created this file. For more info see http://www.lyx.org/
+\lyxformat 218
+\textclass article
+\language english
+\inputencoding auto
+\fontscheme default
+\graphics default
+\paperfontsize default
+\spacing single 
+\papersize Default
+\paperpackage a4
+\use_geometry 0
+\use_amsmath 0
+\paperorientation portrait
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\defskip medskip
+\quotes_language english
+\quotes_times 2
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+
+\layout Title
+
+LibLink v0.0.1
+\layout Author
+
+John Elliott
+\layout Abstract
+
+LibLink is a library intended to support emulation of hardware that is used
+ to communicate with peripherals or other computers.
+ This version contains support for parallel ports and LocoLink.
+\layout Standard
+\pagebreak_top \pagebreak_bottom 
+
+\begin_inset LatexCommand \tableofcontents{}
+
+\end_inset 
+
+
+\layout Section
+
+Introduction
+\layout Standard
+
+LibLink provides a general set of operations for emulating one or more parallel
+ ports (this may be expanded in future to cover other hardware, such as
+ serial ports).
+ Each emulated parallel port can be mapped to:
+\layout Itemize
+
+A disc file; 
+\layout Itemize
+
+A pipe to another process; 
+\layout Itemize
+
+The computer's parallel port (requires Linux 2.4 or later); 
+\layout Itemize
+
+A U
+\noun on 
+nix
+\noun default 
+ domain socket.
+\layout Subsection
+
+Unidirectional and bidirectional
+\layout Standard
+
+LibLink only emulates unidirectional parallel ports.
+ It has no bidirectional capability.
+ However, the socket driver (
+\begin_inset Quotes eld
+\end_inset 
+
+parsocket
+\begin_inset Quotes erd
+\end_inset 
+
+) can emulate both ends of a unidirectional connection; so it can be used
+ to write a program that emulates a printer.
+ This obviously involves sending signals in both directions, but that doesn't
+ make it bidirectional as the term is usually understood.
+\layout Subsection
+
+
+\begin_inset LatexCommand \label{locolink}
+
+\end_inset 
+
+LocoLink
+\layout Standard
+
+LocoLink is a system by which the expansion port of an Amstrad PCW computer
+ (the 
+\begin_inset Quotes eld
+\end_inset 
+
+slave
+\begin_inset Quotes erd
+\end_inset 
+
+) can be connected to the parallel port of another computer (the 
+\begin_inset Quotes eld
+\end_inset 
+
+master
+\begin_inset Quotes erd
+\end_inset 
+
+).
+ The two then exchange data using four wires of the parallel cable (two
+ in each direction).
+\layout Standard
+
+Now, if the LocoLink cable and interface are replaced with a LapLink cable,
+ then any computer with a parallel port can be either a 
+\begin_inset Quotes eld
+\end_inset 
+
+master
+\begin_inset Quotes erd
+\end_inset 
+
+ or a 
+\begin_inset Quotes eld
+\end_inset 
+
+slave
+\begin_inset Quotes erd
+\end_inset 
+
+.
+ Because of the pinout of a LapLink cable, the 
+\begin_inset Quotes eld
+\end_inset 
+
+master
+\begin_inset Quotes erd
+\end_inset 
+
+ and 
+\begin_inset Quotes eld
+\end_inset 
+
+slave
+\begin_inset Quotes erd
+\end_inset 
+
+ ends have to set different data lines, and different control lines; the
+ master uses DATA 0, DATA 1, BUSY and ACK, while the slave uses DATA 3,
+ DATA 4, SELECT and ERROR.
+ Thus the LocoLink functions have to distinguish whether they are acting
+ in a 
+\begin_inset Quotes eld
+\end_inset 
+
+master
+\begin_inset Quotes erd
+\end_inset 
+
+ or 
+\begin_inset Quotes eld
+\end_inset 
+
+slave
+\begin_inset Quotes erd
+\end_inset 
+
+ role.
+ 
+\layout Section
+
+Driver types
+\layout Subsection
+
+Output to a file or pipeline
+\layout Standard
+
+The simplest form of printer emulation is to send the output to a file,
+ or through a pipe to another program.
+ To do this, call ll_open() with the driver name of 
+\begin_inset Quotes eld
+\end_inset 
+
+parfile
+\begin_inset Quotes erd
+\end_inset 
+
+ or 
+\begin_inset Quotes eld
+\end_inset 
+
+parpipe
+\begin_inset Quotes erd
+\end_inset 
+
+.
+ The filename parameter is, respectively, the filename to append to or the
+ program name through which data should be piped.
+\layout Standard
+
+The Centronics emulation for these two devices is fairly basic.
+ When the STROBE signal goes from low to high (or is it high to low?) the
+ current data byte is appended to the file or pipe.
+\layout Subsection
+
+Direct parallel port access 
+\layout Standard
+
+Direct access to the parallel port requires Linux 2.4 with a kernel that
+ supports user-space parallel port device drivers (CONFIG_PPDEV).
+ To use direct access, call ll_open() with the driver name of 
+\begin_inset Quotes eld
+\end_inset 
+
+parport
+\begin_inset Quotes erd
+\end_inset 
+
+.
+ The filename must be for a parallel port device such as 
+\begin_inset Quotes eld
+\end_inset 
+
+/dev/parport0
+\begin_inset Quotes erd
+\end_inset 
+
+.
+ If the device is a file or otherwise unsuitable, the error LL_E_NOTDEV
+ will be returned.
+\layout Standard
+
+The direct parallel port driver supports all data and control lines.
+\layout Subsection
+
+
+\begin_inset LatexCommand \label{socketcomms}
+
+\end_inset 
+
+Communication using sockets
+\layout Standard
+
+LibLink supports communication with other instances of LibLink using UNIX
+ domain sockets or TCP/IP sockets.
+ In theory you could implement LocoLink over the Internet; but security
+ considerations make this a most unwise thing to do! 
+\layout Standard
+
+A parallel connection can be client-to-server (eg: computer to printer;
+ the printer acts as a server) or peer-to-peer (eg: one computer to another).
+ Sockets are always client/server, so you (or the ultimate user) have to
+ decide which end of a peer-to-peer connection will be the client, and which
+ the server.
+\layout Standard
+
+To open a socket connection, call ll_open() with the driver name of "parsocket".
+ The filename consists of three fields, separated by colons.
+ For example:
+\layout LyX-Code
+
+"unix:S:/tmp/mysocket" or "tcp:C:localhost:1234"
+\layout Standard
+
+The first field ("unix") specifies that this is a UNIX domain socket.
+ It could also be 
+\begin_inset Quotes eld
+\end_inset 
+
+tcp
+\begin_inset Quotes erd
+\end_inset 
+
+ for a TCP/IP socket.
+\layout Standard
+
+The second field can either be "S" for a server, or "C" for a client.
+ In server mode, a new socket is created that waits for connections; while
+ in client mode, an attempt is made to connect to an existing socket.
+\layout Standard
+
+The third field is the name of the socket to open.
+ For a UNIX domain socket this is a filename; for a TCP/IP socket, it is
+ of the form 
+\begin_inset Quotes eld
+\end_inset 
+
+hostname
+\begin_inset Quotes erd
+\end_inset 
+
+ or 
+\begin_inset Quotes eld
+\end_inset 
+
+hostname:port
+\begin_inset Quotes erd
+\end_inset 
+
+.
+ If no port number is supplied the default value of 8256 will be used.
+\layout Standard
+
+Opening a socket in server mode will create a new socket, while in client
+ mode the system will attempt to connect to the socket the server has created.
+\layout Section
+
+Function reference
+\layout Subsection
+
+ll_open
+\layout LyX-Code
+
+ll_error_t ll_open(LL_PDEV *self, const char *filename, const char *devtype);
+\layout Standard
+
+This function opens an emulated parallel port.
+ 
+\layout Description
+
+self: a pointer to an LL_PDEV variable, which will serve as a handle to
+ the requested port.
+\layout Description
+
+filename: is the name of the port to open.
+ The exact meaning of this string depends on what type of port is being
+ opened.
+ It can be one of:
+\begin_deeper 
+\layout Description
+
+
+\begin_inset Quotes eld
+\end_inset 
+
+parfile
+\begin_inset Quotes erd
+\end_inset 
+
+ - Emulate a parallel port by appending to a text file.
+ 
+\begin_inset Quotes eld
+\end_inset 
+
+filename
+\begin_inset Quotes erd
+\end_inset 
+
+ is the name of the file to which the data will be appended.
+\layout Description
+
+
+\begin_inset Quotes eld
+\end_inset 
+
+parpipe
+\begin_inset Quotes erd
+\end_inset 
+
+ - Data will be sent to a program through a U
+\noun on 
+nix
+\noun default 
+ pipeline.
+ 
+\begin_inset Quotes eld
+\end_inset 
+
+filename
+\begin_inset Quotes erd
+\end_inset 
+
+ is the name of the program that will process the output.
+ For example, if the filename is 
+\begin_inset Quotes eld
+\end_inset 
+
+/usr/bin/lpr
+\begin_inset Quotes erd
+\end_inset 
+
+, output will be sent to the default printer queue.
+\layout Description
+
+
+\begin_inset Quotes eld
+\end_inset 
+
+parport
+\begin_inset Quotes erd
+\end_inset 
+
+ - On Linux 2.4, opens the specified parallel port device for raw access.
+ 
+\begin_inset Quotes eld
+\end_inset 
+
+filename
+\begin_inset Quotes erd
+\end_inset 
+
+ must be 
+\begin_inset Quotes eld
+\end_inset 
+
+/dev/parport0
+\begin_inset Quotes erd
+\end_inset 
+
+, 
+\begin_inset Quotes eld
+\end_inset 
+
+/dev/parport1
+\begin_inset Quotes erd
+\end_inset 
+
+, etc.
+\layout Description
+
+
+\begin_inset Quotes eld
+\end_inset 
+
+parsocket
+\begin_inset Quotes erd
+\end_inset 
+
+ - Emulate a parallel port using 
+\noun on 
+Unix 
+\noun default 
+domain sockets or TCP/IP sockets.
+ For the full syntax of the filename to use, see section 
+\begin_inset LatexCommand \ref{socketcomms}
+
+\end_inset 
+
+.
+\end_deeper 
+\layout Subsection
+
+ll_close
+\layout LyX-Code
+
+ll_error_t ll_close(LL_PDEV *self);
+\layout Standard
+
+Closes and releases a parallel port.
+ 
+\layout Description
+
+self: must point to an opened LibLink handle, which will be set to NULL
+ once it has been closed.
+\layout Subsection
+
+ll_flush
+\layout LyX-Code
+
+ll_error_t ll_flush(LL_PDEV self);
+\layout Standard
+
+Some of the emulated ports store bytes in an internal buffer; for example,
+ the 
+\begin_inset Quotes eld
+\end_inset 
+
+parfile
+\begin_inset Quotes erd
+\end_inset 
+
+ driver uses the buffered file I/O functions of the standard I/O library.
+ Call this function to ensure that all bytes have been written.
+\layout Description
+
+self: an open LibLink connection.
+\layout Subsection
+
+
+\begin_inset LatexCommand \label{ll_rctl_poll}
+
+\end_inset 
+
+ll_rctl_poll, ll_rctl_wait
+\layout LyX-Code
+
+ll_error_t ll_rctl_poll(LL_PDEV self, unsigned  *value);
+\layout LyX-Code
+
+ll_error_t ll_rctl_wait(LL_PDEV self, unsigned  *value);
+\layout Standard
+
+These functions both attempt to read the parallel port's control lines,
+ and return their current values in 'value'.
+ The difference between them is that ll_rctl_poll() always returns immediately,
+ while ll_rctl_wait() waits until 
+\begin_inset Quotes eld
+\end_inset 
+
+something interesting
+\begin_inset Quotes erd
+\end_inset 
+
+ happens.
+ The obvious interesting thing is that the control lines change; but the
+ driver might find something else interesting; for example, the 
+\begin_inset Quotes eld
+\end_inset 
+
+llparsocket
+\begin_inset Quotes erd
+\end_inset 
+
+ driver finds it equally interesting if the data lines change.
+ 
+\layout Description
+
+self: an open LibLink connection.
+ 
+\layout Description
+
+value: points to an unsigned integer that will receive the state of the
+ control lines.
+\layout Standard
+
+The data signals that you can test for are:
+\layout LyX-Code
+
+#define LL_CTL_BUSY     256     /* BUSY */
+\layout LyX-Code
+
+#define LL_CTL_ACK      512     /* ACK */
+\layout LyX-Code
+
+#define LL_CTL_NOPAPER 1024     /* NO PAPER */
+\layout LyX-Code
+
+#define LL_CTL_ISELECT 2048     /* SELECT */
+\layout LyX-Code
+
+#define LL_CTL_ERROR   4096     /* ERROR */
+\layout Standard
+
+In addition, if you are implenting the 'printer' end of a connection, you
+ may receive these signals sent by the 'computer' end:
+\layout LyX-Code
+
+#define LL_CTL_STROBE     1     /* STROBE */
+\layout LyX-Code
+
+#define LL_CTL_AUFEED     2     /* AUTO FEED XT */
+\layout LyX-Code
+
+#define LL_CTL_OSELECT    4     /* SELECT */
+\layout LyX-Code
+
+#define LL_CTL_INIT       8     /* INIT */
+\layout Subsection
+
+ll_recv_poll, ll_recv_wait
+\layout LyX-Code
+
+ll_error_t ll_recv_poll(LL_PDEV self, unsigned char *value);
+\layout LyX-Code
+
+ll_error_t ll_recv_wait(LL_PDEV self, unsigned char *value);
+\layout Standard
+
+These functions attempt to read the data lines of the parallel port.
+ They are only implemented in the 
+\begin_inset Quotes eld
+\end_inset 
+
+parsocket
+\begin_inset Quotes erd
+\end_inset 
+
+ driver, for an emulated printer to read the bytes it is being sent.
+ The other three drivers return LL_E_NOTIMPL.
+\layout Description
+
+self: an open LibLink connection.
+ 
+\layout Description
+
+value: points to a byte that will receive the state of the data lines.
+ 
+\layout Subsection
+
+ll_sctl
+\layout LyX-Code
+
+ll_error_t ll_sctl(LL_PDEV self, unsigned ctl);
+\layout Standard
+
+Set the control lines.
+ The bits in the 
+\begin_inset Quotes eld
+\end_inset 
+
+ctl
+\begin_inset Quotes erd
+\end_inset 
+
+ byte are defined in section 
+\begin_inset LatexCommand \ref{ll_rctl_poll}
+
+\end_inset 
+
+.
+\layout Description
+
+self: an open LibLink connection.
+ 
+\layout Description
+
+ctl: The values to which the control lines are to be set.
+\layout Subsection
+
+ll_send
+\layout LyX-Code
+
+ll_error_t ll_send(LL_PDEV self, unsigned char data);
+\layout Standard
+
+Set the data lines.
+ 
+\layout Description
+
+self: an open LibLink connection.
+ 
+\layout Description
+
+data: The values to which the data lines are to be set.
+\layout Subsection
+
+ll_set_cable, ll_get_cable
+\layout LyX-Code
+
+ll_error_t ll_set_cable(LL_PDEV self, LL_CABLE cable);
+\layout LyX-Code
+
+ll_error_t ll_get_cable(LL_PDEV self, LL_CABLE *cable);
+\layout Standard
+
+These functions only really make sense on a 
+\begin_inset Quotes eld
+\end_inset 
+
+parsocket
+\begin_inset Quotes erd
+\end_inset 
+
+ connection, although they can be called for all connection types.
+ What they do is set the type of cable that connects the two ends.
+ On a 
+\begin_inset Quotes eld
+\end_inset 
+
+parsocket
+\begin_inset Quotes erd
+\end_inset 
+
+ connection, setting the cable type sets it for both ends.
+\layout Standard
+
+Parameters are:
+\layout Description
+
+self: an open LibLink connection.
+ It only makes sense to do this for the 
+\begin_inset Quotes eld
+\end_inset 
+
+parsocket
+\begin_inset Quotes erd
+\end_inset 
+
+ driver; the 
+\begin_inset Quotes eld
+\end_inset 
+
+parport
+\begin_inset Quotes erd
+\end_inset 
+
+ driver uses a real cable rather than an emulated one, and it isn't possible
+ to have a meaningful LapLink conversation with a file or pipeline.
+\layout Description
+
+cable: LL_CABLE_NORMAL for a normal cable, or LL_CABLE_LAPLINK for a LapLink
+ crossover cable.
+\layout Subsection
+
+ll_lrecv_poll, ll_lrecv_wait, ll_lsend
+\layout LyX-Code
+
+ll_error_t ll_lrecv_poll(LL_PDEV self, int master, unsigned char *v);
+\layout LyX-Code
+
+ll_error_t ll_lrecv_wait(LL_PDEV self, int master, unsigned char *v);
+\layout LyX-Code
+
+ll_error_t ll_lsend(LL_PDEV self, int master, unsigned char v);
+\layout Standard
+
+These functions are helper functions, which convert the two-bit numbers
+ used in LocoLink conversations to/from the combinations of data and control
+ line signals used by an actual LocoLink connection.
+ The parameters for this function are:
+\layout Description
+
+master: Pass 1 if this end of the connection is acting as the master, 0
+ if it is the slave.
+ See section 
+\begin_inset LatexCommand \ref{locolink}
+
+\end_inset 
+
+ for an explanation of LocoLink masters and slaves.
+\layout Description
+
+v: either a pointer to the byte being received, or the byte being sent.
+ 
+\layout Standard
+
+Note that these functions are only convenience functions.
+ It isn't 
+\emph on 
+necessary
+\emph default 
+ to use them to emulate either a LocoLink master or a slave.
+ 
+\layout Subsection
+
+ll_strerror
+\layout LyX-Code
+
+const char *ll_strerror(ll_error_t error);
+\layout Standard
+
+Convert the error code returned by any of the other LibLink functions into
+ a string.
+\layout Description
+
+error: a LibLink error code.
+\layout Description
+
+LL_E_OK: No error (OK)
+\layout Description
+
+LL_E_UNKNOWN: Unknown error
+\layout Description
+
+LL_E_NOMEM: Out of memory
+\layout Description
+
+LL_E_BADPTR: Bad pointer passed to LibLink (usually a null pointer)
+\layout Description
+
+LL_E_SYSERR: System call failed.
+ errno holds the error number.
+\layout Description
+
+LL_E_EXIST: File already exists (it shouldn't)
+\layout Description
+
+LL_E_NOMAGIC: File does not contain expected magic number
+\layout Description
+
+LL_E_CLOSED: The other end of a 
+\begin_inset Quotes eld
+\end_inset 
+
+parsocket
+\begin_inset Quotes erd
+\end_inset 
+
+ link has shut down unexpectedly.
+\layout Description
+
+LL_E_OPEN: Trying to open a link that's open already.
+\layout Description
+
+LL_E_INUSE: Device is in use by another program.
+\layout Description
+
+LL_E_TIMEOUT: Operation timed out.
+\layout Description
+
+LL_E_BADPKT: Received packet has incorrect length.
+\layout Description
+
+LL_E_CRC: Received packet has incorrect CRC.
+\layout Description
+
+LL_E_UNEXPECT: Unexpected packet type received.
+\layout Description
+
+LL_E_NODRIVER: Driver name passed to ll_open() not recognised.
+\layout Description
+
+LL_E_NOTIMPL: The driver does not implement this function.
+\layout Description
+
+LL_E_NOTDEV: The 
+\begin_inset Quotes eld
+\end_inset 
+
+parport
+\begin_inset Quotes erd
+\end_inset 
+
+ driver is has been asked to open something that isn't a parallel port.
+\layout Description
+
+LL_E_BADNAME: Bad filename
+\layout Description
+
+LL_E_PASSWORD: Incorrect or missing password.
+\layout Description
+
+LL_E_AGAIN: Non-blocking I/O not completed.
+\layout Description
+
+LL_E_SOCKERR: Error looking up an Internet hostname.
+\the_end

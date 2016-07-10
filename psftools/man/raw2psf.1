@@ -1,0 +1,112 @@
+.\" -*- nroff -*-
+.\"
+.\" raw2psf.1: raw2psf man page
+.\" Copyright (c) 2005, 2007 John Elliott
+.\"
+.\"
+.\"
+.\" psftools: Manipulate console fonts in the .PSF format
+.\" Copyright (C) 2005, 2007  John Elliott
+.\"
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2 of the License, or
+.\" (at your option) any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program; if not, write to the Free Software
+.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+.\"
+.TH raw2psf 1 "11 April, 2008" "Version 1.0.7" "PSF Tools"
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH NAME
+raw2psf - convert a headerless monospaced font to PSF format
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH SYNOPSIS
+.PD 0
+.B raw2psf
+.RI [ "--height=x" ]
+.RI [ "--width=x" ]
+.RI [ "--skip=x" ]
+.RI [ "--first=x" ]
+.RI [ "--last=x" ]
+.RI [ "--codepage=page" ]
+.RI [ "--flip" ]
+.RI [ "--512" ]
+.RI [ "--psf1" ]
+.RI [ "--psf2" ]
+.RI [ INPUTFILE 
+.RI [ OUTPUTFILE ]]
+.P
+.PD 1
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH DESCRIPTION
+raw2psf converts various types of raw font file (ie, one containing only
+bitmap font data with no headers) to the PSF format.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH OPTIONS
+.TP
+.B --height=n
+Specifies the height of the characters. If the raw font is being read from
+standard input, this option must be present; if not, it is guessed from the
+file size, but can be overridden if necessary.
+.TP
+.B --width=n
+Specifies the width of the characters (default is 8 bits, 1 byte).
+.TP
+.B --flip
+Mirrors all the bytes. For importing fonts from systems such as the Apricot Xi,
+where the bit-to-pixel mapping is the reverse of normal.
+.TP
+.B --skip=n
+Skip over n characters before starting to import. Use if a raw font file has
+several fonts, to extract the second and subsequent fonts.
+.TP
+.B --first=n
+Set the index of the first character to assign in the PSF (defaults to 0). 
+Use if the raw font does not start with character 0; for example, 
+Sinclair Spectrum fonts usually begin with character 32.
+.TP
+.B --last=n
+Set the index of the last character to assign in the PSF (defaults to 255). 
+.TP
+.B --512
+Equivalent to --first=0 --last=511
+.TP
+.B --psf1
+Force output in the PSF1 format.
+.TP
+.B --psf2
+Force output in the PSF2 format (default).
+.TP
+.B --codepage=page
+Add a Unicode directory for the specified codepage, which can be identified
+by number or name. See psfpages(1) for a list of valid codepage names.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.\".SH BUGS
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH SEE ALSO
+psf2raw(1), mda2psf(1), psfpages(1)
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH AUTHOR
+John Elliott <jce@seasip.demon.co.uk>.
+.PP

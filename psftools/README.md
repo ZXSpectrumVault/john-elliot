@@ -1,0 +1,226 @@
+# PSFTOOLS - Conversion tools for .PSF fonts
+
+The PSFTOOLS are designed to manipulate fixed-width bitmap fonts, such as DOS or Linux console fonts. Both the PSF1 (8 pixels wide) and PSF2 (any width) formats are supported; the default output format is PSF2.
+
+Note that these programs share no code with the Linux console utilities 
+(kbd).
+
+## New in psftools 1.0.7
+
+* Added new ```psf2bbc``` and ```bbc2psf``` utilities, to convert PSF fonts to/from soft fonts for the BBC Micro.
+
+## Usage
+
+Nearly all the programs currently supplied are file-format converters, which can be used as filters in a pipe. The generic command is:
+
+	<program> { options } { inputfile { outputfile } } 
+
+If the input/output files are not present, standard input and output are used. Options vary from program to program, but should be preceded with a double dash ("--"). A double dash by itself means "end of options".
+
+For details of the options provided by each utility, see the supplied manual pages, or type ```<program> --help```.
+
+## Unicode support
+
+Support for the Unicode table in .PSFs was last improved in version 1.0.1. 
+
+Utilities that write .PSF files automatically attach a Unicode directory if they know the encoding used; if not, the ```--codepage``` option should be used to attach one. To get a list of codepages supported, run psfpages; see *codepage.txt* in this directory for more information.
+
+The utility ```psfxform``` can extract a subset of a PSF file. This can be used with the ```--codepage``` option to produce a 256-character PSF for older systems or programs that don't understand the Unicode directory. It also has a ```--setcodepage``` option, which replaces the Unicode directory (if any) in the source file with the mappings in the specified codepage.
+
+Utilities that convert PSF files to other formats nearly all support the ```--codepage``` option in the same way as psfxform does; this should be used when converting a PSF with a Unicode directory to other formats. The exception is ```psf2zx```, where the codepage to use is always the same and so is hardcoded in the program.
+  
+### Windows fonts
+
+```psf2fnt``` converts a .PSF to a Windows font. Note that the resulting Windows font is in the .FNT format used by FONTEDIT, not the hideously complicated .FON format used by Windows itself - see fnts2fon below.
+
+```fnt2psf``` is a much simpler program - it converts a .FNT to a .PSF. A warning is displayed if the font file is not monospaced, but conversion will still go ahead. 
+
+### DOS fonts
+
+```psf2raw``` converts a .PSF font into a raw bitmap font, as used by console font editors under DOS and other platforms. 
+
+```raw2psf``` reverses the process, adding a PSF header and possibly a Unicode table to a raw bitmap font. raw2psf has a number of options enabling it to extract fonts from a file that may contain multiple fonts, or to handle files that only contain partial font data. Take, for example, the OS ROM for the BBC Micro; this has bitmaps for characters 32-127 only, located at the start of the file. The following command:
+
+	raw2psf --first=32 --last=127 --height=8 --codepage=BBCMICRO os12.rom
+
+will create a 128-character PSF file, with 32 blank slots followed by the characters.
+
+```mda2psf``` converts a dump of a Monochrome Display Adapter character ROM to a PSF with 9x14 characters.
+
+```cpi2psf``` extracts a font from a DOS codepage (.CPI) file. File formats supported are FONT (MSDOS/PCDOS), DRFONT (DRDOS), FONT.NT (Windows NT/2000) and .CP (Linux).
+ 
+Note that you cannot load .CPI files from standard input; only load them from a disk file.
+
+```psfs2cpi``` combines one or more PSF files into a CPI file. For example:
+
+	psfs2cpi +437 eg8.psf eg16.psf +850 eg8.psf eg16.psf \
+	         +860 eg8.psf eg16.psf +863 eh8.psf eh16.psf eg.cpi
+
+will generate a CPI file called eg.cpi, containing codepages 437, 850, 860 and 863 in two sizes. The first three codepages will have been based on eg8.psf and eg16.psf; the last on eh8.psf and eh16.psf.
+
+If the PSF files in question have Unicode directories, and the codepage is one of the ones known to psfs2cpi, then the appropriate glyphs will be extracted from the file; this is how three code pages can be based on a single PSF file. If the codepage number is not known, or the PSF file has no Unicode directory, then the first 256 characters of the PSF file will be used.
+
+```cpicomp``` compresses a codepage by converting it into the DRFONT format.
+
+```cpidcomp``` reverses cpicomp, expanding a DRFONT codepage to the FONT format.
+
+*cpi.txt* in this directory explains the CPI file format. There are various other descriptions around, but I found they didn't describe the format quite accurately enough to write it, only to read it. 
+
+#### DOS only
+If you're using the DOS version of PSFTOOLS, you may need to specify more filenames than will fit in the 128-character command line buffer.  In this case, you can do something like:
+
+        psfs2cpi --drfont @sources.txt eg.cpi
+  
+where *sources.txt* contains the list of codepages and files:
+
+  		+437 foo16.psf foo14.psf foo08.psf foo06.psf 
+  		+850 foo16.psf foo14.psf foo08.psf foo06.psf 
+  		...
+
+### Sinclair Spectrum fonts
+
+```psf2zx``` converts a .PSF font to a Spectrum font in +3DOS, TAP or raw format.
+
+```zx2psf``` converts a Spectrum +3 console font to .PSF format. A Spectrum +3 font only covers characters 32-127 so there are quite a lot of options for what to do with the remainder of the font.
+
+### Text files
+psf2txt and txt2psf are my excuse for not supplying a proper font editor.
+
+```psf2txt``` dumps a PSF file as text, in a somewhat arbitrary format. 
+
+```txt2psf``` transforms that text file back to PSF.
+
+The format of the text file is a header, formed:
+
+	%PSF2		
+	Version: n		// Version must always be 0
+	Flags: n		// 1 to create Unicode table, 0 not to
+	Length: n		// Number of characters to allocate
+	Width: n		// Width of a character cell
+	Height: n		// Height of a character cell
+
+and then a number of character blocks, each formed:
+
+	%
+	Bitmap:	-##---##- \		// Character bits, width*height of them.
+		----#---- \			// Only dashes and hashes matter; whitespace
+		etc.				// is ignored.
+	
+	Unicode: 	// The Unicode codepoints that this character
+				// represents. It's formed of one or more 
+				// hexadecimal numbers in square brackets
+				// followed by semicolons - eg:
+				//
+				// [0041];[00391]; 
+				//
+				// If a character represents one or more sequences of
+				// codepoints, the sequence(s) follow the single
+				// characters. They are represented similarly, 
+				// with the individual codepoints separated by + 
+				// signs within the square brackets:
+				//
+				// [00B4+0065]; 
+
+### Wyse-60 soft fonts
+```psf2wyse``` converts a .PSF font to a Wyse-60 compatible soft font. Note that for best results, the font should be 16 or 9 pixels high (depending on video mode) and 7 or 8 pixels wide.
+
+```wyse2psf``` converts a Wyse soft font to PSF.
+
+### BBC Micro soft fonts
+
+```psf2bbc``` converts a .PSF font to a BBC Micro soft font. For best results the font should be at most 8 pixels by 8.
+
+nb: On an original BBC, only a limited range of characters can be redefined at any one time, unless you first 'explode' the font with a sequence of ```*FX20``` commands ```*FX20,n``` where 1 <= n <= 6. On a Master or a system with a second processor, everything Just Works.
+ 
+	 To load the font under the native OS on a BBC, execute it: 
+        *EXEC fontfile
+	 To load it under CP/M or DOS Plus, display it:
+		TYPE fontfile
+	 To load it under Risc OS, set its filetype to FF7 and double-click it.
+
+```bbc2psf``` reverses the process, converting a BBC Micro soft font to PSF.
+
+### Converting PSFs to other things
+
+```psf2inc``` Convert a .PSF font to C source, or Digital Research RASM86 source. 
+
+```psf2bsd``` Convert a .PSF font to a NetBSD 'wsfont' kernel header.
+
+```psf2xbm``` Convert a .PSF font to an X-Window bitmap, for display purposes. This can be useful when experimenting with other programs that output .PSFs; just pipe the result into ```psf2xbm | xv -``` to see the output.
+
+```psf2bdf``` Convert a .PSF font to an X-Window bitmap font. The resulting font
+	should be fine-tuned in an editor such as xmbdfed. 
+
+### Hercules WriteOn fonts
+
+```psf2wof``` converts a .PSF font into a .wof font which should be suitable for use in the Hercules WriteOn word processor.
+
+```wof2psf``` converts a font in the Hercules WriteOn format into a PSF file.
+
+The WriteOn format isn't documented. It appears to consist of a 22-byte header followed by character data. The header is composed of little-endian words:
+
+	defw	5343h	;Magic number
+	defw	1		;File format version? Or another magic number?
+	defw	16h		;Length of header
+	defw	width	;Width of a character, pixels
+	defw	height	;Height of a character, pixels
+	defw	0Eh		;Seems to be the same in all WOF files
+	defw	firstc	;First character in file
+	defw	lastc	;Last character in file
+	defw	0		;Same in all files?
+	defw	width	;Width again?
+	defw	0		;Same in all files?
+
+### General transformations
+
+```psfxform``` can transform a PSF file in various ways. It can:
+
+* Add a Unicode directory if one is not present, or replace the existing directory if one is;
+* Remove a Unicode directory if one is present;
+* Move character bitmaps from one position to another;
+* Change the height or width of the character cell;
+* **New in 1.0.2** double the height of some or all characters;
+* **New in 1.0.3** scale some or all characters to match the new character size;
+* Make some or all characters bold, thin, inverse or mirror-imaged;
+* Extract a subset of the source file, either by codepage or by character
+ range.
+
+A range is specified as a comma-separated list of character sequences. For example, to increase a DOS codepage 437 font from 8x16 to 10x20, the following command:
+
+	psfxform --width=10 --height=20 --centre --repeat=8,10,179-223 from.psf to.psf
+
+would apply ```--centre``` to all characters, but ```--repeat``` only to those line graphics which needed it.
+
+(psfremap from psftools-0.9.9 has been superseded by psfxform). 
+
+## Miscellaneous
+
+fnts2fon and fon2fnts are not strictly PSF tools, since they don't operate on .PSF files. What they attempt to do is handle Windows's insanely complicated .FON file format - an executable containing one or more font resources.
+
+```fnts2fon``` attempts to compile one or more .FNT fonts into a .FON file.
+
+This procedure is shrouded in darkness and mystery, dimly illuminated by the Microsoft Knowledge Base article [MyFont.exe - Creating a Custom Raster Font](http://support.microsoft.com/KB/76535]) and the NE file format.
+
+The current fnts2fon has been tested with:
+
+* Building the Windows 1.x .FON files from .FNT files. The script which does this (win1fonts) has been included.
+* Building a new Windows 1.x font from a .FNT file generated by psf2fon. The resulting font could be used on Windows 1.0.
+* Building a new Windows 2.x/3.x font from a .FNT file. The resulting font worked in Windows 2.03 and 3.x.
+
+Note that fnts2fon has only been tested with raster .FON files, not vector ones. 
+
+fnts2fon has many options; these are mainly used by win1fonts to force the fonts it creates to be identical to Windows' own. They aren't necessary for building 'new' fonts.
+
+New in psftools 1.0.2: Under DOS, the ```--fontid``` option uses underlines to replace spaces:
+
+	--fontid=FONTRES_n,n,n_:_font_name   
+
+while the Unix version continues to use spaces:
+
+	--fontid="FONTRES n,n,n : font name"  
+
+fon2fnts extracts font resources from a Windows EXE, DLL or FON file, and saves them as .FNT files.
+
+Syntax: ```fon2fnts fonfile fonfile ...```
+
+Each file will be saved with a unique name. For example, using fon2fnts on ROMAN.FON will extract four files, called Roman_36.fnt, Roman_36_1.fnt, Roman_36_2.fnt and Roman_36_3.fnt.

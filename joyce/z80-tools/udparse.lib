@@ -1,0 +1,199 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;   JOYCE/ANNE v2.1.0: PCW emulator                                           ;
+;                                                                             ;
+;   Copyright (C) 1998-1999, John Elliott <jce@seasip.demon.co.uk>            ;
+;                                                                             ;
+;    This program is free software; you can redistribute it and/or modify     ;
+;    it under the terms of the GNU Library General Public License as          ;
+;    published by the Free Software Foundation; either version 2 of the       ;
+;    License, or(at your option) any later version.                           ;
+;                                                                             ;
+;    This program is distributed in the hope that it will be useful,          ;
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of           ;
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            ;
+;    GNU Library General Public License for more details.                     ;
+;                                                                             ;
+;    You should have received a copy of the GNU Library General Public        ;
+;    License along with this program; if not, write to the Free Software      ;
+;    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.                ;
+;                                                                             ;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+UDPARSE:
+;
+;Parameters passed to UDPARSE are:
+;DE=PFCB addr.
+;
+;UDPARSE returns HL=next address. FCB initialised. A=(FCB+37)=user number,
+;       1-16, 0 for default.
+;PFCB preserved.
+;
+	PUSH	BC
+	PUSH	DE
+	PUSH	IX
+	PUSH	IY
+;
+	PUSH	DE
+	POP	IX	;IX=PFCB addr.
+;
+;See if drive &/or user were given.
+;
+	LD	L,(IX+0)
+	LD	H,(IX+1)	;If there is a colon, must be one of:
+	PUSH	HL		;x: n: nx: nn: nnx: CON: AUX: LST: NUL:
+	POP	IY
+	LD	A,(IY+1)	;x: n:
+	CP	':'
+	JR	Z,ISCOLON
+	LD	A,(IY+2)
+	CP	':'
+	JR	Z,ISCOLON
+	LD	A,(IY+3)
+	CP	':'
+	JR	Z,ISCOLON
+;
+;No specifier. DE := PFCB addr.
+;
+NOUSER:	LD	C,152
+	PUSH	IX
+	POP	DE
+	PUSH	IX
+	CALL	FDOS	;Use CP/M parser. HL is now sacrosanct.
+	POP	IX
+	LD	E,(IX+2)
+	LD	D,(IX+3)
+	PUSH	DE
+	POP	IY	;IY=FCB addr.
+	XOR	A	;No user spec.
+	LD	(IY+37),A
+FINISH:	POP	IY
+	POP	IX
+	POP	DE
+	POP	BC
+	RET
+;
+ISCOLON:
+	PUSH	IY	;IY=command addr.
+	POP	HL
+	LD	DE,USERNO
+ISCOL0:	LD	A,(HL)
+	CALL	NUMERIC
+	JR	C,ISCOL1
+	LD	(DE),A
+	INC	DE
+ISCOL1:	INC	HL
+	CP	':'
+	JR	NZ,ISCOL0
+;
+;Numeric portions extracted into USERNO:
+;
+	XOR	A
+	LD	(DE),A
+	LD	HL,USERNO
+	LD	A,(HL)
+	CALL	NUMERIC
+	JP	C,NOUSER
+	SUB	'0'
+	LD	E,A		;E=Units D=Tens?
+	LD	D,0		;
+	INC	HL
+	LD	A,(HL)
+	CALL	NUMERIC
+	JR	C,USER1
+	SUB	'0'
+	LD	D,E	
+	LD	E,A		;D=Tens E=Units	
+USER1:	LD	A,D
+	ADD	A,A		;*2
+	ADD	A,A		;*4
+	ADD	A,D		;*5
+	ADD	A,A		;*10
+	ADD	A,E		;A=user number
+	CP	16
+	JP	NC,FINISH
+	INC	A
+	PUSH	AF		;User no. stacked
+;
+;Check for drive
+;
+	PUSH	IY
+	POP	HL
+ISDRV0:	LD	A,(HL)
+	CALL	UPCASEA
+	CP	'A'
+	JR	C,ISDRV1
+	CP	'Q'
+	JR	NC,ISDRV1
+	SUB	'@'	;A=drive no.
+	PUSH	AF
+ISDRV9:	LD	A,(HL)
+	INC	HL
+	CP	':'
+	JR	NZ,ISDRV9
+	POP	AF
+	JR	ISDRV2
+;
+ISDRV1:	INC	HL
+	CP	':'
+	JR	NZ,ISDRV0
+;
+;No drive. HL = address of the colon + 1
+;
+	XOR	A
+ISDRV2:	PUSH	AF	;Drive no. stacked.
+	EX	DE,HL
+	LD	HL,USERNO
+	LD	(HL),E
+	INC	HL
+	LD	(HL),D
+	INC	HL
+	LD	E,(IX+2)
+	LD	D,(IX+3)
+	LD	(HL),E
+	INC	HL
+	LD	(HL),D
+	LD	DE,USERNO
+	LD	C,152
+	PUSH	IX
+	CALL	FDOS
+	POP	IX	;HL is now sacrosanct.
+	POP	AF	;A=drive letter
+	LD	E,(IX+2)
+	LD	D,(IX+3)
+	PUSH	DE
+	POP	IY	;IY=FCB addr
+	LD	(IY+0),A
+	POP	AF
+FINIS1:	LD	(IY+37),A
+	JP	FINISH
+;
+ZHL:	LD	A,C
+	POP	DE
+	POP	DE
+	LD	HL,0
+	JR	FINIS1
+;
+MATCH$:	PUSH	BC
+	PUSH	DE
+	LD	C,A
+	LD	B,4
+MATCH1:	LD	A,(DE)
+	CALL	UPCASEA
+	CP	(HL)
+	JR	NZ,NOMTC
+	INC	HL
+	INC	DE
+	DJNZ	MATCH1
+	JR	MTC
+;
+NOMTC:	INC	HL
+	DJNZ	NOMTC
+	XOR	A
+	DEC	A	;NZ
+MTC:	LD	A,C
+	POP	DE
+	POP	BC
+	RET
+;
+USERNO:	DEFB	0,0,0,0
+;

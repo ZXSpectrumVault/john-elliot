@@ -1,0 +1,58 @@
+Source for JOYCE Utilities
+==========================
+
+    JOYCE utilities - Z80 files supporting extra functionality in the JOYCE 
+                     and ANNE emulators
+    Copyright (C) 1997, 2002 John Elliott
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+Introduction
+============
+
+  This comprises the Z80 source for all the JOYCE utilities and the "welcome to 
+JOYCE" boot ROM. The build process does rather rely on utilities I've 
+written myself, so if you try to build this you'll probably end up downloading
+and compiling one package after another.
+  You will need:
+
+  >> A C compiler, eg GNU C.
+  >> zxcc(1) from my web page:
+      <http://www.seasip.demon.co.uk/Cpm/software/linux.html>
+  >> GENCOM.COM from the CP/M Plus distribution:
+      <http://www.cpm.z80.de>
+  >> z80asm from z80pack: 
+      <ftp://ftp.mayn.de/pub/unix/software/Emulators/Computer/z80pack.tgz>
+  >> cpmtools compiled with LibDsk - see
+      <http://www.seasip.demon.co.uk/Unix/LibDsk/>
+
+Building
+========
+ 
+  Type 'make' and three files should eventually be generated:
+
+* utils.dsk:    Utilities disc for JOYCE.
+* utils16.dsk:  Utilities disc for ANNE.
+* bootfile.emj: Boot ROM for JOYCE.
+
+Parts of other packages
+=======================
+
+* utils16.dsk is based on the included pcw720s.dsk, which is in turn based on
+ pcw720.dsk, a "boot/root" floppy from my distribution of PCW16 CP/M. 
+ PCW16 CP/M can be downloaded from <http://www.seasip.demon.co.uk/Cpm/software/>
+* The files in user area 1 can be built from the source code in the "cpmredir"
+ directory of the main JOYCE distribution.
+

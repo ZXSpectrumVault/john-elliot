@@ -1,0 +1,5 @@
+#! /bin/sh
+echo There is no configure script. Assuming you have wxWidgets and LibDsk 
+echo installed, it should be sufficient to type \'make\'. If you need to 
+echo change the C++ compiler settings, library paths or install paths, 
+echo edit the Makefile.

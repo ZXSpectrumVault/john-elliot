@@ -1,0 +1,165 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;   JOYCE/ANNE v2.1.0: PCW emulator                                           ;
+;                                                                             ;
+;   Copyright (C) 1998-1999, John Elliott <jce@seasip.demon.co.uk>            ;
+;                                                                             ;
+;    This program is free software; you can redistribute it and/or modify     ;
+;    it under the terms of the GNU Library General Public License as          ;
+;    published by the Free Software Foundation; either version 2 of the       ;
+;    License, or(at your option) any later version.                           ;
+;                                                                             ;
+;    This program is distributed in the hope that it will be useful,          ;
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of           ;
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            ;
+;    GNU Library General Public License for more details.                     ;
+;                                                                             ;
+;    You should have received a copy of the GNU Library General Public        ;
+;    License along with this program; if not, write to the Free Software      ;
+;    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.                ;
+;                                                                             ;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	org	0100h
+
+FCB	EQU	005Ch
+FDOS	EQU	5
+CR	EQU	0Dh
+LF	EQU	0Ah
+EOF	EQU	1Ah
+;
+;We start with protection against being run from DOS.
+;
+BASE:	DEFB	0EBh,04h	;DOS protection... JMPS LABE
+	EX	DE,HL
+	JP	BEGIN
+	DEFB	0B4h,09h	;DOS protection... MOV AH,9
+	DEFB	0BAh
+	DEFW	BVMES		;DOS protection... MOV DX,OFFSET BVMES
+	DEFB	0CDh,021h	;DOS protection... INT 21h.
+	DEFB	0CDh,020h	;DOS protection... INT 20h.
+
+	DEFB	cr,'JOYCE v'
+	include	version.inc
+	DEFB	' VGACOM (c) John Elliott',cr,lf
+	DEFB	'Date: '
+	include	built.inc
+	DEFB	cr,lf,eof
+;
+
+BEGIN:	SUB	A		;Filter out the 8080s
+	JP	PE,BADVER
+	LD	C,0Ch		;Filter out CP/M <3
+	CALL	FDOS
+	CP	30h
+	JR	C,BADVER
+	XOR	A
+	DEFB	0EDh, 0FEh	;Get JOYCE version
+	INC	A		;Must return A=0FFh for Joyce v1.00
+	JR	Z,JRTSO
+BADVER:	LD	DE,BVMES	;Failed.
+	LD	C,9
+	JP	FDOS
+;
+JRTSO:	XOR	A	;A = 0 => called from CP/M
+	CALL	MAIN
+	RST	0
+		
+	DEFS	BASE + 078h - $
+	DEFB	'JOYCE',1,0,0	;File signature at end of first record.
+				;DB 'JOYCE',1;  2 expansion bytes.
+;
+MAIN:	LD	HL,5Dh
+	PUSH	HL
+	LD	DE,ON$
+	LD	B,3
+	CALL	CP$
+	JR	Z,VGAON
+	POP	HL
+	LD	DE,OFF$
+	LD	B,4
+	CALL	CP$
+	JR	Z,VGAOFF
+HELP:	LD	DE,HELP$
+PRINT:	LD	C,9
+	JP	FDOS
+
+VGAON:	POP	HL
+	EXX
+	LD	DE,08000h	;Device number
+	LD	B,13		;No. of devices
+	EXX
+	CALL	DEVTBL
+VGAON1:	PUSH	HL
+	LD	B,6
+	LD	DE,VGANAME
+	CALL	CP$
+	POP	HL
+	JR	Z,GOTVGA
+	LD	DE,8
+	ADD	HL,DE
+	EXX
+	SRL	D
+	RR	E
+	DEC	B
+	EXX
+	JR	NZ,VGAON1
+	LD	DE,NOVGA
+ERRPR:	CALL	PRINT
+ERROR:	LD	C,6Ch
+	LD	DE,0FF00h
+	RET
+;
+GOTVGA:	EXX
+	LD	(CNODEV),DE
+	EXX
+	LD	DE,CNOSCB
+	LD	C,31h
+	CALL	5
+	LD	A,11
+	LD	C,1
+	DEFB	0EDh,0FEh	;Switch to graphic screen
+	RET
+;
+VGAOFF:	LD	DE,08000h
+	LD	(CNODEV),DE
+	LD	DE,CNOSCB
+	LD	C,31h
+	CALL	5
+	LD	A,11
+	LD	C,0
+	DEFB	0EDh,0FEh	;Switch to PCW screen
+	RET
+;
+DEVTBL:	PUSH	BC
+	LD	BC,39h
+	LD	HL,(1)
+	ADD	HL,BC
+	POP	BC
+	JP	(HL)
+;
+CP$:	LD	A,(DE)
+	CP	(HL)
+	RET	NZ
+	INC	HL
+	INC	DE
+	DJNZ	CP$
+	XOR	A
+	RET
+;
+
+CNOSCB:	DEFW	0FE24h
+CNODEV:	DEFW	0
+
+BVMES:	DEFB	'This program will only run in the JOYCE emulator',cr,lf,'$'
+NOVGA:	DEFB	'Cannot find "VGA" device. Check VGA.FID is loaded.',cr,lf,'$'
+HELP$:	DEFB	'VGACOM - for JOYCE 1.10+',cr,lf,lf
+	DEFB	'Syntax: VGACOM ON  or  VGACOM OFF',cr,lf,lf
+	DEFB	'Switches JOYCE output between PCW screen (OFF) and 800x600 colour '
+	DEFB	'screen (ON).',cr,lf,'$'
+VGANAME:
+	DEFB	'VGA   '
+ON$:	DEFB	'ON '
+OFF$:	DEFB	'OFF '
+
+	END
+

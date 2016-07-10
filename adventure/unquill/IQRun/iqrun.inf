@@ -1,0 +1,983 @@
+!
+! IQRun: A port of the Quill-running parts of UnQuill to Inform.
+! Copyright John Elliott, 1999-2000
+!
+!    This library is free software; you can redistribute it and/or
+!    modify it under the terms of the GNU Library General Public
+!    License as published by the Free Software Foundation; either
+!    version 2 of the License, or (at your option) any later version.
+!
+!    This library is distributed in the hope that it will be useful,
+!    but WITHOUT ANY WARRANTY; without even the implied warranty of
+!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+!    Library General Public License for more details.
+!
+!    You should have received a copy of the GNU Library General Public
+!    License along with this library; if not, write to the Free
+!    Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+!
+
+Release 5;
+Constant LibRelease "0.9.0";
+Constant Story "IQRun";
+Constant Headline "^An interactive Quill interpreter^";
+
+Constant ZxSnapBase 23552; ! 0x5C00
+Constant ZxSnapTop  65535; ! 0xFFFF
+Constant CPCSnapBase 6912; ! 0x1B00
+Constant C64SnapBase 2048; ! 0x0800
+!
+! "Achad" is Yet Another Magic Word, by the way; it is used in "Heavy On 
+! the Magick" to bring a long-dead being back to life. I thought that was 
+! quite an appropriate word for a Quill runtime.
+!
+! Its significance here is that it comes immediately before the snapshot 
+! image of the Spectrum game, so that Unquill knows where to put the game. 
+! The six arrays (Dummy, , SnapshotVL, SnapshotL, SnapshotH, Options) 
+! must be contiguous.
+!
+Array Dummy string "Achad7";
+!
+! Spectrum memory from 0x5C00 up. Split into low & high to avoid possible
+! problems with numbers > 32767 being seen as negative
+!
+Array SnapshotVL -> 256;	! 0x5B00 - 0x5C00 C64 / CPC snapshots load here
+Array SnapshotL  -> 9217;	! 0x5C00 - 0x8000 Spectrum snapshots load here
+Array SnapshotH  -> 32767;	! 0x8001 - 0xFFFF
+!
+! UnQuill options. 
+! 
+!  Options->0 is set to 1 by Unquill, 0 for IQRUN.Z5 itself.
+!  Options->1 is 0 for early,    5 for C64, 10 for late.
+!  Options->2 is 0 for colour,   1 for mono.
+!  Options->3 is 0 for graphics, 1 for plaintext.
+!  Options->4 is 0 for beeps,    1 for no beeps.
+!  Options->5 is 0 for Spectrum, 1 for CPC, 2 for C64
+!
+Array Options -> 6;
+
+Constant Spectrum 0;
+Constant CPC      1;
+Constant C64      2;
+
+Global QuillBase;   ! Base of the Quill image in memory
+Global Responses;   ! Response table
+Global Processes;   ! Process table
+Global Objecttab;   ! Object table
+Global Locations;   ! Location table
+Global Messages;    ! Message table
+Global Sysmessages; ! System messages table
+Global Connections; ! Connections table
+Global Vocabulary;  ! Vocab table
+Global Obstarttab;  ! Object initial locations
+Global Objectwords; ! Names of objects
+Global QuillDict;   ! Compression dictionary
+
+Global ObjectLimit; ! No. of objects player can carry
+Global ObjectCount; ! No. of objects in the game
+Global LocCount;    ! No. of locations
+Global MessageCount;! No. of messages
+Global SysCount;    ! No. of system messages
+Global Xpos;	    ! Text cursor position
+Global AlsoSee;	    ! "You can also see" flag
+Global FileID;      ! Save file ID
+Global GameObjectLimit; ! Variable object limit
+!
+! Runtime variables
+!
+Global QuillVerb;	! Verb number
+Global QuillNoun;	! Noun number
+!
+! Quill flags
+!
+Array QuillFlags -> 36;
+Array ObjectPos -> 256;
+!
+! Saved state of the game (used in a RAM save)
+!
+Array RamSaveBuf -> 257;
+
+!
+! Current line
+!
+Array InputBuffer -> 255;
+
+
+!
+! This system does not link in the Inform library. Here's a modified
+! Banner from that library.
+!
+[ Banner i;
+   if (Story ~= 0)
+   {
+#IFV5; style bold; #ENDIF;
+   print (string) Story;
+#IFV5; style roman; #ENDIF;
+   }
+
+   if (Headline ~= 0)
+       print (string) Headline;
+
+   print "Release ", (0-->1) & $03ff, " / Serial number ";
+   for (i=18:i<24:i++) print (char) 0->i;
+   print " / Inform v"; inversion;
+   print " Unquill library ", (string) LibRelease;
+#ifdef DEBUG;
+   print " D";
+#endif;
+   new_line;
+];
+!
+! Character to upper-case (ASCII only)
+!
+[ToUpper x;
+	if (x >= 'a' && x <= 'z') return x - 32;
+	return x;
+];
+
+Global debug_flag;	! Necessary for the Inform 6.31 veneer code
+Global workflag;
+[DebugAttribute ; ];
+!
+! Setting colours
+!
+Global zxInk;
+Global zxPaper;
+Global zxBright;
+Global zxFlash;
+Global zxInverse;
+Array clrMap -> 2 6 3 7 4 8 5 9;
+
+[ Setclrs x fg bg;
+
+	x = $0->1;
+	x = x & 1;
+	
+	if ( (x ~= 0) && (Options->2 == 0) && (Options->5 == 0))
+	{	
+!
+! On the real Spectrum, colour 8 is 'transparent' -- it leaves existing colours
+! untouched. This isn't really practical in a Z-machine, so treat it like
+! colour 9, 'contrast'.
+!
+		if (zxInk < 8)
+		{
+			fg = clrmap->zxInk;
+		}
+		else if (zxPaper < 4)
+		{
+			fg = clrmap->7;
+		}
+		else
+		{
+			fg = clrmap->4;
+		}
+		if (zxPaper < 8)
+		{
+			bg = clrmap->zxPaper;
+		}
+		else if (zxInk < 4 || zxInk > 7)
+		{
+			bg = clrmap->7;
+		}
+		else
+		{
+			bg = clrmap->4;
+		}
+		if (zxInverse)
+		{
+			@set_colour bg fg;
+		}
+		else
+		{
+			@set_colour fg bg;
+		}
+		style roman;
+		if (zxFlash)
+		{
+			style underline;
+		}
+		if (zxBright)
+		{
+			style bold;
+		}
+	}
+	else if (Options->2 == 0)
+	{
+		style roman;
+		if (zxFlash)
+		{
+			style underline;
+		}
+		if (zxBright)
+		{
+			style bold;
+		}
+		if (zxInverse)
+		{
+			style reverse;
+		}
+	}
+];
+
+[ Ink x;	
+	if (x >= 0 && x <= 9) zxInk   = x; 
+!	print "[Ink   ",zxInk,   "]"; 
+	Setclrs(); 
+];
+
+[ Paper x;	
+	if (x >= 0 && x <= 9) zxPaper = x; 
+!	print "[Paper ",zxPaper, "]"; 
+	Setclrs(); 
+];
+
+[ Flash x;	
+	zxFlash = x;
+	Setclrs(); 
+];
+
+[ Bright x;
+	zxBright = x;
+	Setclrs(); 
+];
+
+[ Inverse x;	
+	zxInverse = x;
+	Setclrs(); 
+];
+
+!
+! Simple Yes/No choice
+!
+[ YesNo x;
+	
+	while(1)
+	{
+		Flush();
+		@read_char 1 x;
+		if (x == 'Y' || x == 'y') { print "Y^"; Xpos = 0; return 'Y'; }
+		if (x == 'N' || x == 'n') { print "N^"; Xpos = 0; return 'N'; }
+	}
+];
+!
+! Line input and tokenising
+!
+[IsEndChar c;
+	if (c == 0)  rtrue;
+	if (c == 10) rtrue;
+	if (c == 13) rtrue;
+	if (c == ' ') rtrue;
+	rfalse;
+];
+
+[CplsCmp s1 s2 ch n;
+
+	for (n = 0: n < 4: n++)
+	{
+		ch = 255 - Zmem(s1 + n);
+		if (ch >= 128) ch = ch - 128;
+		if ( ch ~= s2->n) rfalse;
+	}
+	rtrue;
+];
+
+
+Array wordbuf->5;
+
+Object LineInput
+  with lbpos 0,
+       wordno 0,
+       MatchWord [ matchp i;
+		wordbuf->4 = 0;
+		matchp = Vocabulary;
+		while (1)
+		{
+!
+! Take the first 4 characters of the word, or the whole word if
+! it is shorter.
+!
+			for (i = 0: i < 4: i++)
+			{
+				wordbuf->i = ToUpper(InputBuffer->self.lbpos);
+		
+				if (IsEndChar(wordbuf->i)) wordbuf->i = ' ';
+				else                       ++self.lbpos;
+			}
+!
+! Skip the remaining characters of the word if there are any
+!
+			while (IsEndChar(InputBuffer->self.lbpos) == 0)
+			{
+                       		++self.lbpos;
+			}
+!
+! Scan the vocabulary table to see if the typed word is there
+!
+			while (Zmem(matchp) ~= 0)
+			{
+				if (CplsCmp(matchp, wordbuf)) 
+				{
+					return Zmem(matchp+4);
+				}
+				matchp = matchp + 5;
+			}
+			matchp = Vocabulary;
+!
+! It isn't. Have we reached the end of the line?
+!
+			if (IsEndChar(InputBuffer->self.lbpos) && 
+                            InputBuffer->self.lbpos ~= ' ')
+			{	
+				return 255;	! End of line
+			}
+!
+! Skip spaces to the start of the next word
+!
+			while (InputBuffer->self.lbpos == 32)
+			{
+				++self.lbpos;
+			}
+		}	
+
+       ];
+
+
+[ GetInput x lblen;
+	do
+	{
+		@random 4 -> x;
+		SysMess(x + 1);
+		PutChar(13);
+
+		if ((Options->1) == 0) SysMess(28);
+
+		InputBuffer-> 0 = 250;
+		InputBuffer-> 1 = 0;
+		InputBuffer-> 2 = 0;
+
+		Flush();
+		@aread InputBuffer 0 -> x;
+		Xpos = 0;
+		if (InputBuffer->2 == '*')
+		{
+!
+! Diagnostics
+!
+			if (InputBuffer->3 == 'F')
+			{
+				print "Quill flags:^{";
+				for (x = 0: x < 37: x++) 
+				{
+					print QuillFlags->x, " ";
+				}
+				print "}^";
+			}
+		}
+		else
+		{
+!
+! 0-terminate the command line.
+!
+			lblen = 2 + InputBuffer->1;
+			InputBuffer->lblen = 0;
+			LineInput.lbpos = 2;
+			QuillVerb = LineInput.MatchWord();
+			if (QuillVerb ~= 255)
+			{
+				QuillFlags->33 = QuillVerb;
+				QuillNoun = LineInput.MatchWord();
+				QuillFlags->34 = QuillNoun;
+				if (QuillNoun == 255) QuillNoun = 254;
+			}
+			else
+			{
+				InputBuffer->2 = '*';	! force re-entry
+				SysMess(6);
+				PutChar(13);
+			}
+		}
+
+
+	} until (InputBuffer->2 ~= '*');	
+	
+];
+
+!
+! Peek a Spectrum location
+!
+[Zmem addr;
+
+	switch(Options->5)
+	{
+		Spectrum:
+
+		addr = addr - ZxSnapBase;
+		if (addr >= 0 && addr < 9217) return SnapshotL->addr;
+		addr = addr - 9217;
+		return SnapshotH->addr;
+
+		CPC:
+		addr = addr - CPCSnapBase;
+
+		if (addr >= 0 && addr < 256) return SnapshotVL->addr;
+		addr = addr - 256;	
+		if (addr >= 0 && addr < 9217) return SnapshotL->addr;
+		addr = addr - 9217;
+		return SnapshotH->addr;
+
+		C64:
+                addr = addr - C64SnapBase;
+                if (addr >= 0 && addr < 256) return SnapshotVL->addr;
+                addr = addr - 256; 
+                if (addr >= 0 && addr < 9217) return SnapshotL->addr;
+                addr = addr - 9217;
+                return SnapshotH->addr;
+	}
+];
+
+[PeekW addr;
+
+	return Zmem(addr) + 256 * Zmem(addr + 1);
+];
+
+
+[GetQuillBase n;
+
+	if (Options->5 == CPC) 
+	{
+		Options->1 = 10;
+		return 7108;		! Base address is constant in all the
+	}				! Quilled snapshots I've seen
+	if (Options->5 == C64)
+	{
+		Options->1 = 5;
+		return 2039;		! Again, constant base address
+	}
+        for (n = ZxSnapBase: n ~= ZxSnapTop - 10: n++)
+        {
+		if ((Zmem(n   ) == 16) && 
+                    (Zmem(n+ 2) == 17) &&
+                    (Zmem(n+ 4) == 18) && 
+                    (Zmem(n+ 6) == 19) &&
+                    (Zmem(n+ 8) == 20) &&
+		    (Zmem(n+10) == 21)) 
+		{
+			return n;	
+		}
+        }
+	rfalse;
+];
+!
+! The process tables
+!
+Include "iqproc";
+
+!
+! Outputting text
+!
+Global PendingChar;
+
+[PutCharQ ch;
+	if      (ch == 13)   { Xpos = 0; ""; }
+	@print_char ch;
+
+	if (Options->5 == Spectrum)
+	{
+		if (Xpos == 31) { Xpos = 0; ""; }
+		else Xpos++;	
+	}
+	else
+	{
+		if (Xpos == 39) { Xpos = 0; ""; }
+		else Xpos++;
+	}
+];
+
+[PutChar ch;
+	if (ch == 8)
+	{
+		PendingChar = 0;
+		rtrue;
+	}
+	if (PendingChar ~= 0) PutCharQ(PendingChar);
+	PendingChar = ch;
+];
+
+
+[Flush;
+	if (PendingChar ~= 0) PutCharQ(PendingChar);
+	PendingChar = 0;
+];
+
+
+
+Array Graf --> ' ' '?' 'B' '7' 64 ':' 'F' '0' 'A' 'E' '9' '/' '8' '1' '/' '6';
+
+[PutGraphics ch x;
+
+        if (Options->3)
+        {
+                PutChar('?');
+                return;
+        }
+!
+! First: Check if the terp provides font 2. If it does, it is almost 
+!       certainly not Z-spec compliant.
+!
+	@set_font 2 -> x;
+	if (x ~= 0)
+	{
+		@set_font x -> x;
+		PutChar('?');
+		return;
+	}
+!
+! Second: Check if it provides font 3. 
+!
+	@set_font 3 -> x;
+	if (x == 0) 
+	{
+		PutChar('?');
+		return;
+	}
+!
+! Now translate to a graphical character
+!
+	ch = ch - 128;
+	ch = Graf-->ch;
+	PutChar(ch);	
+	@set_font 4 -> x;
+
+];
+
+
+[ExpandDict char d;
+
+	if (Options->1 == 0) rtrue;	! No dictionary in early games
+
+	d = QuillDict;
+	char = char - 164;
+	while (char > 0)
+	{
+		if (Zmem(d) > 127) char --;
+		d++;	
+	}
+!
+! d = address of expansion text
+!
+	while (Zmem(d) < 128) 
+	{
+		QuillChar(Zmem(d) & 127,d);
+		++d;	
+	}
+	QuillChar(Zmem(d) & 127, d);
+];
+
+
+
+[QuillChar char address tbsp;
+
+	if ((Options->5 == Spectrum))
+	{
+        	if      (char > 31  && char < 127) PutChar(char);
+       		else if (char > 164)               ExpandDict(char);
+	        else if (char > 128)               PutGraphics(char);
+		else if (char == 6)
+		{
+			Flush(); 
+                        do { PutChar(' '); Flush(); } 
+                        until ((Xpos % 16) == 0);
+                } 
+		else if (char == 8) 		   PutChar(8);
+		else if (char == 13)		   PutChar(13);
+		else if (char == 23) 
+		{
+			Flush();
+			++address; 
+			tbsp = 255 - Zmem(address); 
+			++address; 
+			if (Xpos > tbsp) PutChar(13);
+			for ( : tbsp > Xpos: tbsp--) PutChar(' ');
+		}
+		else if (char == 16)  
+		{ 
+			++address; 
+			Flush();
+			Ink  (255-Zmem(address)); 
+		}
+		else if (char == 17)  
+		{ 	
+			++address; 
+			Flush();
+			Paper(255-Zmem(address)); 
+		}
+		else if (char == 18)  
+		{ 	
+			++address; 
+			Flush();
+			Flash(255-Zmem(address)); 
+		}
+		else if (char == 19)  
+		{ 	
+			++address; 
+			Flush();
+			Bright(255-Zmem(address)); 
+		}
+		else if (char == 20)  
+		{ 	
+			++address; 
+			Flush();
+			Inverse(255-Zmem(address)); 
+		}
+		else if (char > 17 && char < 22) ++address;
+	}
+	else if (Options->5 == CPC)	! CPC
+	{
+	        if      (char > 31  && char < 127) PutChar(char);
+        	else if (char > 128)               PutChar('?');
+		else if (char == 13 || char == 20) PutChar(13);
+		else if (char == 9) 		   
+		{
+			Flush();
+			Inverse(~zxInverse);
+		}
+	}
+	else ! C64
+	{
+	        if (char >= 65 && char <= 90) char = char + 32;
+		if (char >= 128) char = char - 128;
+		if (char == 127) PutChar('?');
+		else if (char > 31) PutChar(char);
+		else if (char == 8 || char == 13) PutChar(char);
+	}
+	return address;
+];
+
+[ Cls;
+	Flush();
+	@erase_window -1;
+	@set_window 0;
+];
+
+[TablePrint t entry addr cch ech;
+
+	addr = PeekW(t + 2*entry);
+
+	if (Options->5 == Spectrum) ech = 31; else ech = 0;
+	cch = 31 - ech;
+
+	while (cch ~= ech)
+	{
+		cch = 255 - Zmem(addr);
+		addr = 1 + QuillChar(cch, addr);
+	}
+	DefaultColours();
+];
+
+
+
+[SysMess n addr cch ech;
+
+	if (Options->1)	! Late game
+	{
+		TablePrint(Sysmessages, n);
+		return;
+	}
+	addr = Sysmessages;
+!
+! Old-style system messages list has no convenient lookup table. We have 
+! to do it by trawling through the table in search of the correct messages.
+!
+        if (Options->5 == Spectrum) ech = 31; else ech = 0;
+	cch = 31 - ech;
+
+	while (n > 0)
+	{
+		while (cch ~= ech) 
+		{
+			cch = 255 - Zmem(addr);
+			addr++;
+		}
+		n--;
+		cch = 255 - Zmem(addr);
+		addr++;
+	}
+	addr--;
+
+	while (cch ~= ech)
+	{
+		cch = 255 - Zmem(addr);
+		addr = QuillChar(cch, addr) + 1;
+	}
+	DefaultColours();
+];
+!
+! Flag and object manipulation
+!
+[ DecFlag n;
+	if (QuillFlags->n == 0) return;
+	QuillFlags->n = (QuillFlags->n) - 1;
+];
+
+
+[ ObjectPresent obj;
+	if (ObjectPos->obj == 254) rtrue; 
+        if (ObjectPos->obj == 253) rtrue;
+	if (ObjectPos->obj == QuillFlags->35) rtrue;
+	rfalse;
+];
+
+[ ObjectAbsent obj;
+	if (ObjectPresent(obj)) rfalse;
+	rtrue;
+];
+
+[ ListContents room any n;
+	
+	any = 0;
+	for (n = 0: n < ObjectCount: n++)
+	{
+		if (ObjectPos->n == room)
+		{
+			if (any == 0)
+			{
+				any = 1;
+				if (room < 253)
+				{
+					SysMess(AlsoSee);
+					PutChar(13);
+				}
+				
+			}
+			TablePrint(Objecttab, n);
+			PutChar(13);
+		}
+	}
+
+];
+
+!
+! Rooms and movement
+!
+[ DescribeRoom;
+	Cls();
+	! Dark, and no light source
+	if (QuillFlags->0 ~= 0 && ObjectAbsent(0))
+	{
+		SysMess(0);
+		QuillChar(13);
+	}
+	else
+	{
+		TablePrint(Locations, QuillFlags->35);
+		QuillChar(13);
+		ListContents(QuillFlags->35);
+	}
+];
+
+!
+! One-time initialisation of the Quill engine
+!
+[InitQuill x;
+	RamSaveBuf	-> 256 = 0;	! No RAMsaved game
+
+	ObjectLimit = Zmem(QuillBase + 13);
+	ObjectCount = Zmem(QuillBase + 14);
+	LocCount    = Zmem(QuillBase + 15);
+	MessageCount= Zmem(QuillBase + 16);
+
+	if (Options->1) SysCount = Zmem(QuillBase + 17);
+	else		SysCount = 32;
+
+	x = QuillBase + 17;
+	if (Options->1) x++;	! Later game has an extra byte here
+
+	Responses   = PeekW(x);	
+	Processes   = PeekW(x+2);
+	Objecttab   = PeekW(x+4);
+	Locations   = PeekW(x+6);
+	Messages    = PeekW(x+8);
+
+	if (Options->1) { x = x + 2; Sysmessages = PeekW(x+8); }
+	else		             Sysmessages = PeekW(23675) + 168;
+
+	Connections = PeekW(x+10);
+	Vocabulary  = PeekW(x+12);
+
+	Obstarttab  = PeekW(x+14);
+	
+	Objectwords = PeekW(x+16);
+
+	QuillDict   = x + 27;
+
+	font on;	! Spectrum games will assume a fixed-width font.	
+	Xpos = 0;
+];
+
+[DefaultColours;
+
+	if (Options->5 == Spectrum)
+	{
+		Flush();
+		! Default colours
+		Inverse(Zmem(QuillBase + 9));
+		Bright (Zmem(QuillBase + 7));
+		Flash  (Zmem(QuillBase + 5));
+     		Paper  (Zmem(QuillBase + 3));
+		Ink    (Zmem(QuillBase + 1));
+	}
+	else if (Options->5 == CPC)
+	{
+		Inverse(0);
+	}
+];
+
+
+[QuillRestart x n;
+
+	@random 0 x;		! Randomise
+
+	PendingChar = 0;	! Flush text buffers;
+
+	DefaultColours();
+	
+	AlsoSee = 1;			!
+	FileId  = 255;			! Quill runtime settings
+	GameObjectLimit = ObjectLimit;	!
+
+	for (n = 0: n < 36: n++) 
+	{
+		QuillFlags->n = 0;
+	}
+
+	! print "QuillRestart";
+
+	for (n = 0: n < 255: n++)
+	{
+		ObjectPos->n = Zmem(Obstarttab+n);
+		if (ObjectPos->n == 254) QuillFlags->1 = QuillFlags->1 + 1;
+	}
+	! "End of QuillRestart";	
+];
+
+[ QuillGame desc r;
+
+	desc = 1;
+	while (1)
+	{
+		if (desc)
+		{
+			DescribeRoom();
+
+			desc = 0;
+!
+! Decrement the built-in counters.
+!
+			DecFlag(2);
+			if (QuillFlags->0) DecFlag(3);
+			if (QuillFlags->0 && ObjectAbsent(0)) DecFlag(4);	
+		} 
+!
+! UnQuill 0.7.1: Move these flags to after the process table was run;
+! this makes Bugsy run correctly.
+!
+		QuillVerb = 255;
+		QuillNoun = 255;
+
+ 		r = RunTable(Processes);
+		if (r == 2) { desc = 1; } 
+		else if (r == 3) rfalse;
+		else 
+		{
+                	DecFlag(5);
+               		DecFlag(6);
+       		        DecFlag(7);
+	                DecFlag(8);
+       		        if (QuillFlags->0) DecFlag(9);
+	                if (QuillFlags->0 && ObjectAbsent(0)) DecFlag(10);
+
+			GetInput();
+			QuillFlags->31 = (1 + QuillFlags->31) & 255;
+			if (QuillFlags->31 == 0) ++(QuillFlags->32);
+! 0.8: AttemptMove() even if the verb is >20
+			if (AttemptMove()) desc = 1;
+			else	
+			{	
+				r = RunTable(Responses);
+				if (r == 2) desc = 1;
+				else if (r == 3) rfalse;
+				else if (r == 4) rtrue;
+			}
+			if (r == 0) 
+			{
+				if (QuillVerb < 20) 
+				{
+					SysMess(7); ! Can't go that way
+					PutChar(13);
+				}
+				else
+				{
+					SysMess(8); ! Can't do that
+					PutChar(13);
+				}
+			}
+		}
+	}
+        rfalse;
+];
+
+
+
+[Main x playing;
+	Banner();
+
+	if (Options->0 == 0)
+	{
+		print "^This file has not been combined with a Quill snapshot 
+		       by UnQuill. You should only see this message if you
+                       are running the empty file IQRUN.Z5, which is supplied
+                       as part of the UnQuill build process. Use UnQuill with
+                       the -T5 option to generate playable Z-code games.^";
+                print "Press SPACE to terminate.^";
+                @read_char 1 x;
+		rtrue;
+	}
+
+	print "^^Initialising the Quill runtime...^^";
+	QuillBase = GetQuillBase();
+	if (QuillBase == 0)
+	{
+		print "Quill signature not found in memory image.^";
+		print "Press SPACE to terminate.^";
+		@read_char 1 x;
+	}
+	else
+	{
+		Dummy->1 = 0;	! Suppress compiler warning
+		DebugAttribute();
+		workflag = 0;
+		debug_flag = 0;
+
+		InitQuill();
+
+		playing = 1;
+		while (playing ~= 0)
+		{	
+			QuillRestart();
+
+			if (QuillGame() == 0)  ! Ask to restart?
+			{
+				SysMess(13);
+				print "^";
+				if (YesNo() == 'N') 
+				{
+					SysMess(14);
+					Flush();
+					playing = 0;
+				}
+			}	
+	
+		}
+	}
+];

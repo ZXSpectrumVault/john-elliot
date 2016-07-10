@@ -1,0 +1,70 @@
+.\" -*- nroff -*-
+.\"
+.\" fon2fnts.1: fon2fnts man page
+.\" Copyright (c) 2005, 2007 John Elliott
+.\"
+.\"
+.\"
+.\" psftools: Manipulate console fonts in the .PSF format
+.\" Copyright (C) 2005, 2007  John Elliott
+.\"
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2 of the License, or
+.\" (at your option) any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program; if not, write to the Free Software
+.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+.\"
+.TH fon2fnts 1 "11 April, 2008" "Version 1.0.7" "PSF Tools"
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH NAME
+fon2fnts - extract fonts from a Windows EXE, DLL or FON file
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH SYNOPSIS
+.PD 0
+.B fon2fnts
+.RI INPUTFILE 
+.RI [ INPUTFILE ... ]
+.P
+.PD 1
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH DESCRIPTION
+.LP
+fon2fnts extracts font resources from a Windows EXE, DLL or FON file, and
+saves them as .FNT files.
+.LP
+Each file will be saved with a unique name. For example, using fon2fnts on 
+ROMAN.FON will extract four files, called Roman_36.fnt, Roman_36_1.fnt, 
+Roman_36_2.fnt and Roman_36_3.fnt.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.\" .SH OPTIONS
+.\"
+.\"------------------------------------------------------------------
+.\"
+.\".SH BUGS
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH SEE ALSO
+fnts2fon(1)
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH AUTHOR
+John Elliott <jce@seasip.demon.co.uk>.
+.PP

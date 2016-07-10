@@ -1,0 +1,241 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;   JOYCE/ANNE v2.1.0: PCW emulator                                           ;
+;                                                                             ;
+;   Copyright (C) 1998-1999, John Elliott <jce@seasip.demon.co.uk>            ;
+;                                                                             ;
+;    This program is free software; you can redistribute it and/or modify     ;
+;    it under the terms of the GNU Library General Public License as          ;
+;    published by the Free Software Foundation; either version 2 of the       ;
+;    License, or(at your option) any later version.                           ;
+;                                                                             ;
+;    This program is distributed in the hope that it will be useful,          ;
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of           ;
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            ;
+;    GNU Library General Public License for more details.                     ;
+;                                                                             ;
+;    You should have received a copy of the GNU Library General Public        ;
+;    License along with this program; if not, write to the Free Software      ;
+;    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.                ;
+;                                                                             ;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	org	0100h
+
+FCB	EQU	005Ch
+FDOS	EQU	5
+CR	EQU	0Dh
+LF	EQU	0Ah
+EOF	EQU	1Ah
+;
+;We start with protection against being run from DOS.
+;
+BASE:	DEFB	0EBh,04h	;DOS protection... JMPS LABE
+	EX	DE,HL
+	JP	BEGIN
+	DEFB	0B4h,09h	;DOS protection... MOV AH,9
+	DEFB	0BAh
+	DEFW	BVMES		;DOS protection... MOV DX,OFFSET BVMES
+	DEFB	0CDh,021h	;DOS protection... INT 21h.
+	DEFB	0CDh,020h	;DOS protection... INT 20h.
+
+	DEFB	cr,'JOYCE QUIT v'
+	include	version.inc
+	DEFB	' (c) John Elliott',cr,lf
+	DEFB	'Date: '
+	include	built.inc
+	DEFB	cr,lf,eof
+;
+BEGIN:	SUB	A		;Filter out the 8080s
+	JP	PE,BADVER
+	LD	C,0Ch		;Filter out CP/M <3
+	CALL	FDOS
+	CP	30h
+	JR	C,BADVER
+	XOR	A
+	DEFB	0EDh, 0FEh	;Get JOYCE version
+	INC	A		;Must return A=0FFh for Joyce v1.00
+	JR	Z,JRTSO
+BADVER:	LD	DE,BVMES	;Failed.
+	LD	C,9
+	JP	FDOS
+;
+JRTSO:	XOR	A	;A = 0 : called from CP/M
+	CALL	MAIN
+	RST	0
+		
+	DEFS	BASE + 078h - $
+	DEFB	'JOYCE',1,0,0	;File signature at end of first record.
+				;DB 'JOYCE',1;  2 expansion bytes.
+;
+MAIN:	LD	DE,80h
+	LD	A,(DE)
+	LD	L,A
+	LD	H,0
+	INC	DE
+	ADD	HL,DE
+	LD	(HL),0
+	EX	DE,HL
+OPTLP:	LD	A,(HL)	;Check for options, or numeric input
+	INC	HL
+OPTL1:	OR	A
+	JR	Z,QMAIN	;0 : EOL
+	CP	'-'
+	JR	Z,ANOPT	;Option found
+	CP	'/'
+	JR	Z,ANOPT
+	CP	'['
+	JR	Z,ANOPT
+	CALL	NUMERIC	;If numeric or &, it's the start of a number
+	JR	NC,ANUM
+	CP	'&'
+	JR	NZ,OPTLP
+ANUM:	PUSH	HL	;Parse number
+	CALL	PNUM
+	JR	C,PNF
+	LD	(ERROR),DE
+PNF:	POP	HL
+PNF1:	LD	A,(HL)	;Skip over numeric characters
+	INC	HL
+	CP	'&'
+	JR	Z,PNF1
+	CALL	IFHEX
+	JR	NC,PNF1
+	OR	A		;EOL?
+	JR	NZ,OPTL1
+QMAIN:	LD	DE,80h
+	LD	A,'M'-'A'
+	CALL	FREE		;Find free space on M:
+	LD	IX,80h
+	LD	A,L
+	CP	(IX+0)
+	JR	NZ,MFILE
+	LD	A,H
+	CP	(IX+1)
+	JR	NZ,MFILE
+	LD	A,E
+	CP	(IX+2)		;Free space = total space, so M: is empty. Quit.
+	JR	NZ,MFILE
+
+QUIT:	LD	A,0FFh
+	LD	HL,(ERROR)
+	DEFB	0EDh,0FEh
+	RET
+;
+ANOPT:	LD	A,(HL)
+	OR	A
+	JP	Z,QMAIN
+	CP	'O'
+	JR	NZ,ANOPT1
+	LD	(OFLAG),A
+	INC	HL
+	JP	OPTLP
+;
+ANOPT1:	CP	'H'
+	JR	Z,HELP
+	CP	'?'
+	JP	NZ,OPTLP
+HELP:	LD	DE,HELP$
+	include	print.lib
+;
+MFILE:	LD	A,(OFLAG)
+	OR	A
+	JR	NZ,QUIT
+	LD	DE,QPROMPT
+	CALL	PRINT
+MFILE1:	CALL	INKEY
+	CALL	UPCASEA
+	CP	'Y'
+	JR	Z,QUIT
+	CP	'N'
+	JR	NZ,MFILE1
+	LD	E,A
+	CALL	OPCHAR
+	LD	DE,CRLF$
+	JP	PRINT
+;
+UPCASEA:
+	CP	'a'
+	RET	C
+	CP	'z'+1
+	RET	NC
+	SUB	20h
+	RET
+;
+INKEY:	LD	C,6
+	LD	E,0FDh
+	JP	FDOS
+;
+OPCHAR:	LD	C,2
+	JP	FDOS
+;
+;Calculate available space on drive
+;
+;Enter with A=drive, DE->128-byte buffer
+;
+FREE:	LD	(DRV),A
+	LD	C,1Ah
+	CALL	FDOS
+
+	LD	C,19h
+	CALL	FDOS
+	LD	(ODRV),A
+	LD	A,(DRV)
+	LD	E,A
+	LD	C,0Eh
+	CALL	FDOS
+	LD	C,1Fh
+	CALL	FDOS	;Get DPB for drive
+	PUSH	HL
+	POP	IX
+	LD	L,(IX+5)
+	LD	H,(IX+6)
+	INC	HL	;HL=no. of blocks
+	LD	DE,0
+	LD	B,(IX+2)	;Block shift
+BSHLP:	SLA	L
+	RL	H
+	RL	E
+	RL	D
+	DJNZ	BSHLP		;DEHL = no. of records in drive
+	LD	C,(IX+7)
+	LD	B,(IX+8)
+	INC	BC		;BC=no. directory entries
+	SRL	B
+	RR	C
+	SRL	B
+	RR	C		;BC=no. directory records
+	AND	A
+	SBC	HL,BC
+	JR	NC,BLCNT1
+	DEC	DE
+BLCNT1:	PUSH	HL
+	PUSH	DE		;DEHL=no. of file blocks
+	LD	DE,(DRV)
+	LD	C,2Eh
+	CALL	FDOS		;Find free space
+	LD	DE,(ODRV)
+	LD	C,0Eh
+	CALL	FDOS
+	POP	DE
+	POP	HL
+	RET
+;
+	include	pnum.lib
+;
+DRV:	DEFB	0
+ODRV:	DEFB	0
+BVMES:	DEFB	'This program will only run in the JOYCE emulator'
+CRLF$:	DEFB	cr,lf,'$'
+QPROMPT:
+	DEFB	7,'There are files on drive M:. If you quit they will be lost.',cr,lf,lf
+	DEFB	'Press Y to leave JOYCE, N to cancel: $'
+
+ERROR:	DEFW	98
+OFLAG:	DEFB	0
+
+HELP$:	DEFB	'JOYCE QUIT v1.00',cr,lf,lf
+	DEFB	'Syntax: QUIT { number } { [O] } ',cr,lf,lf
+	DEFB	'The number is the error level to return to DOS (defaults to 98)',cr,lf
+	DEFB	'[O] - quit without checking whether there are files on M:',cr,lf
+	DEFB	'$'
+	END

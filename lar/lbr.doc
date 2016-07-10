@@ -1,0 +1,32 @@
+lbr v5.1.1
+==========
+
+  lbr is a shell script which, used in conjunction with lar, allows the
+Midnight Commander (mc) to browse inside LBR files in the same way that
+it can browse TAR files.
+
+Setting up
+==========
+   (Depending upon your particular environment, ${installdir} may be 
+   /usr/lib, /usr/local/lib or, with more recent Linux distributions,
+   /usr/share/mc.)
+
+  See ${installdir}/mc/extfs/README for more details. The steps you will 
+need to take are:
+
+1. Install lbr in the directory ${installdir}/lib/mc/extfs
+2. Edit extfs.ini, and add the line
+
+lbr
+
+3. Run mc, and select Command | Extension file edit
+4. Add the following lines just above the "Default target" line:
+
+#lbr
+regex/\.(lbr|LBR)$
+	Open=%cd %d/%p#lbr/
+	View=%view{ascii} lar tv '%f'
+        Extract=lar e '%f'
+
+To test if it worked, start mc and highlight an LBR file. Press RETURN and
+you should be able to browse its contents.  

@@ -1,0 +1,92 @@
+.\" -*- nroff -*-
+.\"
+.\" cpi2psf.1: cpi2psf man page
+.\" Copyright (c) 2005, 2007 John Elliott
+.\"
+.\"
+.\"
+.\" psftools: Manipulate console fonts in the .PSF format
+.\" Copyright (C) 2005, 2007  John Elliott
+.\"
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2 of the License, or
+.\" (at your option) any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program; if not, write to the Free Software
+.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+.\"
+.TH cpi2psf 1 "11 April, 2008" "Version 1.0.7" "PSF Tools"
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH NAME
+cpi2psf - extract a font from a DOS codepage (.CPI)
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH SYNOPSIS
+.PD 0
+.B cpi2psf
+.RI [ "--height=x" ]
+.RI [ "--codepage=nnn" ]
+.RI [ "--psf1" ]
+.RI [ "--psf2" ]
+.RI INPUTFILE 
+.RI [ OUTPUTFILE ]
+.P
+.PD 1
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH DESCRIPTION
+cpi2psf extracts a font from a DOS codepage (.CPI) file. All known
+codepage file formats are supported (MSDOS, DRDOS, Windows NT, and Linux).
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH OPTIONS
+.TP
+.B --height=x
+Extract the font with the specified height. Otherwise the first height found 
+will be used.
+.TP
+.B --codepage=nnn
+Extract only the specified codepage as a 256-character font. If this option is
+not present, all the characters of the requested size from all the codepages
+in the font will be extracted, with duplicates being merged. nnn must be a
+numeric codepage specifier such as 437 or 850.
+.TP
+.B --psf1
+Outputs in PSF1 format. It is recommended that this is only used if the 
+--codepage option is also present, otherwise the resulting PSF1 file may not
+hold all the characters from the codepage.
+.TP
+.B --psf2
+Outputs in PSF2 format (default).
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH BUGS
+.LP
+If no filename is provided, the program will attempt to load its input
+file from standard input. The success of this operation depends on the
+internal structure of the CPI file, and the capabilities of the C 
+library.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH SEE ALSO
+psfs2cpi(1), cpicomp(1), cpidcomp(1)
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH AUTHOR
+John Elliott <jce@seasip.demon.co.uk>.
+.PP

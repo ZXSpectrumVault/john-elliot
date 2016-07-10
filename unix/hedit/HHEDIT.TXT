@@ -1,0 +1,121 @@
+HHEDIT v0.3                                          John Elliott, 14 May 2009
+==============================================================================
+
+  HHEDIT is a simple editor for the Spectrum game Hungry Horace.
+
+  To use it, launch it from a DOS prompt with the name of the game to edit.
+This should be saved in .SNA format. If no filename is supplied, it is
+assumed to be "hhorace.sna".
+
+  HHEDIT can optionally display in CGA and MDA video modes, rather than the
+default VGA/MCGA mode. To select these, add "-cga" or "-mda" to the command
+line.
+
+In use
+~~~~~~
+  Assuming the game loaded, you will see the first map onscreen. You can use 
+the following keys:
+
+Q/Z/I/P, Q/A/O/P or cursor keys: Move the cursor.
+Space: Paint the current tile at the cursor position, replacing what was 
+      there. The mouse can also be used for this.
+T/Y:   Choose next/previous tile type.
+0-9:   Select numbered tile pattern.
+-:     Go to previous level.
++:     Go to next level.
+H:     Make Horace's start point the current cursor position. 
+B:     Put the bell at the current cursor position. 
+K:     Make the keeper start at the current cursor position. 
+U:     If the game is a 16k game, upgrade it to 48k.
+L:     Make this level the last one (48k only; 16k games always have 4 levels)
+D:     Displacement editor (see below)
+Ctrl+T: Edit the bitmap for the current tile.
+*:     Edit the title screen.
+F1:    Display list of keys.
+F2:    Save changes so far.
+F4:    Revert to last saved copy of the snapshot.
+ESC:   Leave the editor. Changes will not be saved.
+
+Displacement editor
+~~~~~~~~~~~~~~~~~~~
+  The displacement editor is used to set the destination of bridge/wrap tiles
+(in VGA these are coloured yellow; in CGA and MDA they are shaded).
+  When 'D' is pressed, the system will attempt to show all possible 
+displacements as arrows. One displacement will be shown in red (or otherwise
+highlighted); the others will be shown in black. The highlighted displacement
+is the one directly affected by the editor, while all the others change in
+step with it.
+  In the editor, select the destination using the cursor keys (or Q/Z/I/P or
+Q/A/O/P). Press ESC or RETURN or D to leave the displacement editor.
+
+Hungry Horace Data Format
+~~~~~~~~~~~~~~~~~~~~~~~~~
+  Hungry Horace has two data tables: One at 6FD7h, with four words per level,
+  and one at 6FF7h with 768 bytes per level.
+
+  The table at 6FD7h has four words per level:
+    DW  offset     ;Added to Horace's position (or subtracted, depending which
+                   ;direction he's going) when he enters a bridge/wraparound.
+    DW  bell_pos   ;Bell position
+    DW  keeper_pos ;Initial keeper position
+    DW  start_pos  ;Initial Horace position
+
+            (all held as offsets from the start of video RAM)
+
+  The four maps are at 6FF7h (for some reason, in the order 1, 0, 2, 3). A
+  map is 768 bytes long, giving a 32x24 screen. Each byte in the map is:
+    0 => blank
+    1 => horizontal wall
+    2 => flower
+    3 => entrance / exit
+    4 => vertical wall
+    5 => top left corner
+    6 => top right corner
+    7 => bottom left corner
+    8 => bottom right corner
+    9 => bridge or wraparound.
+
+  Other values will behave like walls. The bitmaps for these tiles can be
+  found at 7BF7h.
+
+  The title screen is at 6E8Fh. It contains 10 lines of 32 bytes each, which 
+  are displayed in two blocks of five lines, separated by a gap. Each byte 
+  corresponds to a character cell, divided into four quadrants:
+	Bit 5 => upper right quadrant
+	Bit 4 => upper left quadrant
+	Bit 1 => lower right quadrant
+	Bit 0 => lower left quadrant
+
+Notes on upgrade to 48k
+~~~~~~~~~~~~~~~~~~~~~~~
+  When upgraded to 48k, the data format changes:
+
+  The number of levels is now 42.
+
+  The table at 6FD7h now has 42 entries.
+  The tile bitmaps are now immediately after that table, at 7127h. This allows
+ up to 256 tile bitmaps to be defined; the provided upgrade creates a few
+ extra tile types for joining walls neatly.
+  The level layouts are now at 8000h, and there are 42 of them. This leaves
+ the top 512 bytes of memory free.
+
+Copying
+~~~~~~~
+
+    HHEDIT: Hungry Horace editor
+    Copyright (C) 2009 John Elliott <jce@seasip.demon.co.uk>
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+

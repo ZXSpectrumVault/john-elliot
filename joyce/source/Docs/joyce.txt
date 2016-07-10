@@ -1,0 +1,2350 @@
+JOYCE v2.2.8
+
+John Elliott
+
+Abstract
+
+JOYCE is an Amstrad PCW emulator for UNIX and Windows. It 
+emulates the PCW 8000, 9000 and 10 series computers, but not the 
+PCW 16; see ANNE for PCW16 emulation.
+
+
+Table of Contents
+
+
+
+
+  Introduction
+
+  Copyright
+
+Copyright 1997,2001-7,2009-10,2012,2014,2016 John Elliott. Parts 
+copyright 1994, 1995 Ian Collier; other parts copyright 1987, 
+1999 Caldera[footnote:
+The copyright message in the source files names Caldera. Actual 
+ownership of the copyrights has probably since passed to DRDOS 
+Inc.
+]. JOYCE can be distributed freely under the conditions of the 
+GNU General Public License (sic) - see the file COPYING.
+
+  What JOYCE does
+
+JOYCE emulates a PCW computer (8000, 9000 or 10 series). Run it, 
+and your Unix or Windows computer becomes a PCW.
+
+  What's new?
+
+  Since v2.2.0
+
+  JOYCE now emulates the Electric Studio light pen.
+
+  JOYCE will now prompt you when a CP/M program attempts to 
+  access files outside the emulator (for example, the supplied 
+  IMPORT or EXPORT utilities). This warning can be controlled 
+  from f6=Settings | General | File Access...
+
+  The Windows version is distributed with the latest SDL.DLL.
+
+  Keyboard emulation has been made more accurate; the three 
+  keyboard option links are now emulated.
+
+  The underlying libdsk and lib765 libraries have been updated.
+
+  Since v2.1.0
+
+  A bug in the Z80 emulation which caused Starglider to hang has 
+  been corrected.
+
+  The PCKEY utility (in JOYCE) did not work. It has been 
+  repaired.
+
+  Initial support for compiling under MacOS X has been added.
+
+  The ability to present a folder on the host computer as a PCW 
+  drive, without any additional PCW software. This is still a 
+  very new experimental feature -- use it with caution!
+
+  Native LOGO support has been corrected and should now work.
+
+  Native GSX support has been restored, based on original Digital 
+  Research source code. 
+
+  Various bugfixes in the floppy drive emulation.
+
+  JOYCE doesn't hang if Trivial Pursuit is run with the emulated 
+  CPS8256 interface attached.
+
+  JOYCE now emulates several joystick models.
+
+  The code has been updated to compile without modification on 
+  systems with GCC 3.x and SDL 1.2.6.
+
+  A bug has been fixed in the creation of new .DSK files.
+
+  Garbled text in the boot screen has been fixed.
+
+  The utility .DSKs provided actually contain all the files they 
+  should.
+
+  Windows GDI printing was printing at a third of the correct 
+  size; this has been corrected.
+
+  Help text corrected if you press F1 on the boot screen.
+
+  The Windows version now works if there are no printers set up 
+  on the system.
+
+  Since v2.0.0
+
+  Some internal structural changes. 
+
+  LocoLink can be emulated using the parallel port (only under 
+  Linux 2.4 or later), Unix domain sockets, or TCP/IP.
+
+  The built-in printer emulations support direct printing under 
+  Windows.
+
+  All the utility programs have been rewritten to cross-build 
+  under Unix rather than natively under CP/M. This may introduce 
+  some instabilities.
+
+  Since earlier versions
+
+See section [sec: changes]. 
+
+  <sec: concepts>Concepts
+
+When moving from a PCW to an emulator, the biggest change you 
+have to accustom yourself to is the way that JOYCE handles discs. 
+Real PCWs (except the few with add-on hard drives) use real 
+floppy discs; you use a start-of-day disc to use LocoScript or 
+MicroDesign, a data disc to save your work on, and so on.
+
+It is possible for JOYCE to use real disc drives in the same way 
+that a PCW does. However this is pretty slow and awkward; since 
+the PC's got a hard drive, you might as well use it. 
+
+  Disc image files
+
+PCW programs can't generally use the PC's hard drive directly. 
+For one thing, it's too big; and for another, it's not in CP/M 
+format[footnote:
+If you do happen to have a CP/M partition on your hard drive, I 
+don't want to know. JOYCE still won't use it.
+]. Instead, JOYCE creates one or more “disc image files”. Each of 
+these is the equivalent of one real PCW disc.
+
+Disc image files have a number of advantages:
+
+  They are much faster than real floppy discs.
+
+  You don't have to be shuffling a stack of floppies every time 
+  you want to use JOYCE.
+
+  If you want more discs, you don't have to go to the shop to buy 
+  them. You just create more disc image files.
+
+By convention, these have names ending in “.dsk”. So instead of 
+having a “manuscripts” disc, you would have a disc image file 
+called “manuscripts.dsk”. To normal Unix or Windows software, “
+manuscripts.dsk” is just one file, but PCW programs see it as a 
+disc with any number of PCW files on it.
+
+One consequence of this is that the PCW's “A” and “B” drives have 
+nothing to do with your PC's real floppy drives. The emulated PCW 
+can be happily using a disc in its “B” drive even if your PC has 
+only one drive.
+
+Converting your PCW discs to disc image files is covered in 
+section [sec: setup].
+
+  Disc image folders
+
+JOYCE 2.1.8 and later can also use folders instead of disc image 
+files. In this system, one PCW disc corresponds to one PC folder. 
+This has the advantage that each PCW file corresponds exactly to 
+one PC file. For example, you could instruct the PCW to make 
+ASCII files, save them to such a disc/folder, and then read them 
+directly with PC software.
+
+  Compiling JOYCE
+
+If you have downloaded JOYCE as a binary for your platform (eg: 
+the full Windows install, or an RPM), you can skip this section.
+
+To compile JOYCE, you will need:
+
+  SDL, the Simple DirectMedia Layer: <http://www.libsdl.org>. You 
+  need version 1.0.8 or later.
+
+  libxml, the xml parser used by GNOME <http://www.libxml.org/>. 
+  JOYCE was tested with version 2.2.6.
+
+  libpng, the image library. <http://www.libpng.org/pub/png/>. 
+  You need version 1.0.6 or later.
+
+You should be able to compile with the following commands: 
+
+./configure
+
+make
+
+sudo make install 
+
+On systems with a GCC version earlier than 3.0, the first line 
+should be “./configure --with-ministl”.
+
+To cross-compile JOYCE for Windows, you need the XMINGW32 
+cross-compiler pack from <http://www.libsdl.org>, and MINGW32 
+versions of the above libraries.
+
+  JOYCE on Mac OS X
+
+I have successfully compiled JOYCE on a Mac OS X (10.4.2) system. 
+The process (and indeed MacOS X support in general) is pretty new 
+and unpolished.
+
+Firstly, the three libraries mentioned above (SDL, libxml and 
+libpng) had to be compiled from source and installed using their “
+make install” commands; pre-packaged OS X versions didn't seem to 
+be suitable. 
+
+Secondly, the configure script needed to be told what the host 
+system was:
+
+./configure --host=powerpc-darwin-apple8.2.2
+
+make
+
+sudo make install
+
+Thirdly, this builds a JOYCE that is still very much a UNIX 
+application; there's no application icon, no native OS X menu, 
+and so on.
+
+Finally, OS X uses the [f9] and [f10] keys for Exposé; so you 
+will need to use [Command]+[F9] and [Command]+[F10] instead.
+
+  Missing Features
+
+These features were present in JOYCE 1.36 but not in the current 
+JOYCE:
+
+  Built-in debugger.
+
+  Internet resources
+
+The latest versions of JOYCE - and any future updates - will be 
+downloadable from <http://www.seasip.info/Unix/Joyce/>.
+
+Announcements of new JOYCE releases, if any, will be made to the 
+newsgroup <news:comp.sys.amstrad.8bit>. It is also on-topic to 
+discuss JOYCE in this newsgroup.
+
+  <sec: setup>Setting Up
+
+  Directory organisation
+
+  Under Windows
+
+JOYCE uses two directories - a “system” directory common to all 
+users (eg, “C:/Program Files/Joyce/lib” and a “user” directory 
+(eg: “C:/My Documents/Joyce”). Each of these directories will 
+have subdirectories called Boot (boot files and boot disc images) 
+and Disks (all other disc images). In the remainder of this 
+document you will see directory names which look like “
+~/Joyce/Boot”; you should take the “~” to stand for the “My 
+Documents” directory.
+
+If you don't want JOYCE to put its files in “My Documents”, then 
+you can override it. In JOYCE, press [f9] for the menu, [f6] for 
+settings, and select “General”. Then enter the new directory 
+name, and press RETURN. You will need to copy or move the “Joyce” 
+directory from “My Documents” to the new directory you specified.
+
+  Under Unix
+
+JOYCE uses two directories - a “system” directory common to all 
+users (by default, /usr/local/share/Joyce - see Appendix [sec: admins]
+) and a “user” directory for each user (by default, ~/Joyce). 
+Each of these directories will have subdirectories called Boot 
+(boot files and boot disc images) and Disks (all other disc 
+images).
+
+  Running JOYCE for the first time
+
+  You will need:
+
+  A version of JOYCE that installed correctly. 
+
+  A screen capable of 800x600x256 graphics. JOYCE may well be 
+  faster in 256 colour mode than in (say) 16-bit mode. 
+
+  One of the following: 
+
+  At least one 3.5” PCW start-of-day disc; 
+
+  Disc images of PCW start-of-day discs, that you have previously 
+    generated;
+
+  A working JOYCE 1.3x installation.
+
+  The JOYCE command
+
+Under Windows, JOYCE should be run from the Start Menu. Under 
+Unix, the command to use is either “xjoyce” (to run in a window) 
+or “xjoyce -f” (to run full screen). Other command line options 
+are given in section [sec: cmdline].
+
+  <sec: addboot>Adding boot discs
+
+The first time JOYCE is started, it will detect that no boot 
+discs have been read in. Unless you want to boot laboriously from 
+a floppy every time you use JOYCE, you should choose the “set up 
+boot discs properly” option.
+
+If you had a previously working JOYCE installation, then this 
+will be detected, and you will be given the option to copy boot 
+discs from it. If you decide not to to this, you will have to 
+provide start-of-day discs or disc image files.
+
+The next menu that appears asks you for the location of the boot 
+disc to use. If you are using real floppies, then select the 
+correct drive (A: or B:). If you are using pre-prepared DSK 
+files, choose the correct file. 
+
+If you are copying a MicroDesign program disc with copy 
+protection (or other similar programs such as Tweak3), you will 
+also need to click on “Advanced” at this point and select the “
+MicroDesign program disc” option. Note that this will not work on 
+stock Windows NT, 2000 or XP; see section [sec: md3nt].
+
+Next select “Continue”. You will be asked for a name to give to 
+this boot disc (eg: “LocoScript” or “CP/M”). 
+
+Once you have entered the name, the disc is read in and converted 
+to a JOYCE .DSK file. If you were copying from a real disc, you 
+can put it away when the drive light goes out; JOYCE won't need 
+it again.
+
+You can then repeat for as many boot discs as you like.
+
+If you have trouble copying boot discs under Windows 95, 98 or 
+ME, then see section [failread] which describes a workaround 
+using PCWTRANS.
+
+  After copying boot discs
+
+The JOYCE opening screen will appear, with up to 9 boot discs 
+listed on it. If you read in more than 9, press [f3] to see the 
+others. Choose the disc you want to use, and the black stripes 
+should start to march down the screen.
+
+When you are ready to quit, press [f10].
+
+  Reading in other discs
+
+The JOYCE automatic setup routine only covers start-of-day discs. 
+To convert other discs (eg, data discs), press [f9] for the JOYCE 
+menu, then [f2] for the Discs menu, and select “Disc Management”. 
+From the menu that appears, choose “Convert floppy to JOYCE DSK 
+file”. The rest of the procedure is similar to the one for boot 
+discs, described in section [sec: addboot].
+
+  What if I haven't got 3.5” start-of-day discs? 
+
+If you have the ability to transfer files to and from your PCW 
+(by a serial link or LocoLink, for example) and 1Mb of memory 
+(512k for 8000 series PCWs) then you can use DU54 to make the 
+disc images. Download DU54 from my website, and use its “Copy” 
+option to copy from a disc to a file in CPCEMU format. Then 
+transfer the resulting file to your PC. These files will be 
+bigger than the floppies they were copied from; so you need a big 
+RAMdrive to put them in.
+
+Once you have the files on the PC in CPCEMU format, proceed as 
+described in section [sec: addboot], with pre-prepared disc 
+images.
+
+  What if I haven't got start-of-day discs at all?
+
+Let me make this clear: I can not supply copies of start-of-day 
+discs. My recommendation would be to buy new ones from SD 
+Microsystems; contact sdmicro@aol.com.
+
+  In Use
+
+  What is emulated
+
+  The Z80. 
+
+  2MB of memory.
+
+  The screen. 
+
+  The keyboard. 
+
+  The timer. 
+
+  The PCW8256/8512/9256/10 dot-matrix printer. Unless you have a 
+  printer that isn't supported by the PCW (eg: the HP Deskjet 
+  720C) or you are using software such as LocoScript 1 that 
+  doesn't support external printers, I recommend that you use the 
+  CPS8256 printer interface instead.
+
+  The PCW9512/9512+ daisywheel printer. The same caveats apply as 
+  for the dot-matrix printer.
+
+  The CPS8256 parallel/serial interface. You can print to a disc 
+  file or a UNIX command (eg, “lpr” for direct printer output). 
+  Serial ports can be mapped to a file or a device node (eg “
+  /dev/ttyS0” for direct connection to other computers). 
+
+  A Centronics-only printer interface. You can print to a disc 
+  file or a UNIX command (eg, “lpr” for direct printer output). 
+  Some CP/M versions cannot detect the Centronics interface; in 
+  this case, you should disable it and enable the CPS8256 
+  interface instead.
+
+  Most of the floppy disc controller. However, JOYCE has only 
+  limited access to the PC's real floppy drive. 
+
+  The mouse (in AMX or Kempston mode). You will need a 
+  three-button mouse to use the AMX mode properly - the Microsoft 
+  Intellimouse with the scroll wheel is fine. 
+
+  The Electric Studio light pen.
+
+  The PCW9512 PAR port.
+
+  The beeper.
+
+  The LocoLink interface.
+
+  <sec: morediscs>How the disc drives are handled
+
+The basic concept of disc image files was described in section [sec: concepts]
+. There are several subtleties to be aware of:
+
+  Boot discs (also known as start-of-day discs)
+
+When JOYCE is started, both disc drives are normally empty. As 
+soon as you select which system to boot, the disc image you chose 
+(normally named something like ~/Joyce/Boot/boot1.dsk) will be 
+inserted in the PCW's A drive. You can add, remove or rename boot 
+discs using the Disc Management menu (press [f9] for the JOYCE 
+menu, then [f2] (Disc) and choose “Disc Management”).
+
+  Ejecting a disc
+
+To eject a disc, press [f9] for the JOYCE menu, then [f2] (Disc). 
+If there is a disc in the PCW's A or B drive, you can eject it by 
+selecting the corresponding “eject” option. Remember that 
+ejecting discs from JOYCE's emulated drives doesn't have anything 
+to do with whatever floppy drives are actually fitted to the PC.
+
+  <sec: cmdline>Command-line options
+
+To start JOYCE and make it automatically boot from one of the 
+discs on the boot menu, use:
+
+xjoyce -A #n
+
+for example
+
+xjoyce -A #2
+
+will choose option 2 from the boot menu.
+
+If you want JOYCE automatically to run a boot disc file (not 
+necessarily one of the ones on the menu), then use -A with a 
+filename:
+
+xjoyce -A locoscript3.dsk
+
+will load "locoscript3.dsk”. 
+
+If you want to start with a floppy disc in drive B:, then use the 
+-B command-line option: 
+
+xjoyce -B /home/fred/Joyce/Disks/diskb.dsk
+
+JOYCE can also start an EMS/EMT file directly. To do this, use 
+-E:
+
+xjoyce -E /tmp/j14cpm3.ems
+
+You can add a memory-size option to any of the above commands - 
+for example, 
+
+xjoyce -A locoscript140.dsk -m 256
+
+will boot from “locoscript140.dsk” with 256k memory (LocoScript 
+1.40 malfunctions with the default 2Mb).
+
+  Non-floppy discs
+
+  JOYCEDRV.FID gives the emulated PCW a hard drive, and/or direct 
+  access to PCW floppy discs. It requires a recent version of 
+  CP/M (BIOS 1.8 or later) or LocoScript 2.30 or later. It uses a 
+  similar "disc image file" system to the floppy drives, but the 
+  image files can be up to 8Mb in size.
+
+  REDIR.COM allows you to use one or more Unix directories as 
+  CP/M drives. It will run under any version of CP/M. This avoids 
+  the problem that the host PC can't see "inside" image files 
+  without extra software.
+
+  IMPORT.COM and EXPORT.COM will copy single files into or out of 
+  the JOYCE environment. They will run under any version of CP/M.
+
+All these utilities are on the file UTILS.DSK. You can get at 
+them with a command something like:
+
+xjoyce -B=/usr/local/lib/Joyce/Disks/utils.dsk
+
+and they will appear on drive B:. REDIR.COM and its companion 
+programs are in Group 1; the others are in Group 0.
+
+  What if the speed is wrong? 
+
+  If JOYCE is too slow
+
+One solution is to increase the CPU speed. Press [f9], then [f6] 
+and select 'General'. Then enter the new speed; since my original 
+PCW had a Sprinter, I prefer to run at 200% speed.
+
+It may also be possible to improve the performance of JOYCE by 
+changing the video refresh frequency. This is normally 12, but it 
+can be reduced to improve performance. If it is reduced to 3.75, 
+for example, then programs that use a mouse pointer may appear a 
+little jerky, but JOYCE should run at its full speed.
+
+To change the video refresh frequency, start JOYCE. At the 
+opening screen, press [f9], then [f6] and select 'Video'. Then 
+enter the new frequency and press RETURN.
+
+  If JOYCE is too fast
+
+The built-in speed regulation in JOYCE should stop it running too 
+fast. Possibly you could reduce the overall speed: press [f9], 
+then [f6] and select 'General'. Then enter a new speed.
+
+  Peripherals in JOYCE
+
+  The keyboard
+
+The PC keyboard is laid out a bit differently from the PCW 
+keyboard. The following keys have non-obvious meanings: 
+
+[This is for a UK keyboard with XFree86. Other X servers may 
+behave differently].
+
+
+
+
+
+
++--------------+----------------+-----------------------------------+
+|   PC key     |    PCW key     |               Notes               |
++--------------+----------------+-----------------------------------+
++--------------+----------------+-----------------------------------+
+|     ESC      |     EXIT       |                                   |
++--------------+----------------+-----------------------------------+
+|     ` ¬      |     STOP       | (top left hand corner, under ESC) |
++--------------+----------------+-----------------------------------+
+|     \ |      | \frac{1}{2}
+@  |   (down by the left-hand SHIFT)   |
++--------------+----------------+-----------------------------------+
+|     ' @      |      § <       |                                   |
++--------------+----------------+-----------------------------------+
+|     # ~      |      # >       |                                   |
++--------------+----------------+-----------------------------------+
+|    CTRL      |     EXTRA      |           (can use ALT)           |
++--------------+----------------+-----------------------------------+
+|     ALT      |      ALT       |          (can use CTRL)           |
++--------------+----------------+-----------------------------------+
+|   WINDOWS    |     EXTRA      |                                   |
++--------------+----------------+-----------------------------------+
+|     F11      |      [+]       |               (Set)               |
++--------------+----------------+-----------------------------------+
+|     F12      |      [-]       |               Clear               |
++--------------+----------------+-----------------------------------+
+| PrintScreen  |      PTR       |                                   |
++--------------+----------------+-----------------------------------+
+|  Keypad *    |      PTR       |                                   |
++--------------+----------------+-----------------------------------+
+|  Keypad -    |      [-]       |               Clear               |
++--------------+----------------+-----------------------------------+
+|  Keypad +    |      [+]       |                Set                |
++--------------+----------------+-----------------------------------+
+|   Delete     |      CAN       |       (numeric keypad “.”)        |
++--------------+----------------+-----------------------------------+
+|   Insert     |     RELAY      |       (numeric keypad “0”)        |
++--------------+----------------+-----------------------------------+
+|     End      |   FIND/EXCH    |       (numeric keypad “1”)        |
++--------------+----------------+-----------------------------------+
+|  PageDown    |   UNIT/PARA    |       (numeric keypad “3”)        |
++--------------+----------------+-----------------------------------+
+|    Home      |   LINE/EOL     |       (numeric keypad “7”)        |
++--------------+----------------+-----------------------------------+
+|   PageUp     |   WORD/CHAR    |       (numeric keypad “9”)        |
++--------------+----------------+-----------------------------------+
+|   Insert     |      CUT       |        (under PrintScreen)        |
++--------------+----------------+-----------------------------------+
+|    Home      |     COPY       |        (under ScrollLock)         |
++--------------+----------------+-----------------------------------+
+|   PageUp     |     PASTE      |        (under Pause/Break)        |
++--------------+----------------+-----------------------------------+
+|   Delete     |     DEL->      |          (under Insert)           |
++--------------+----------------+-----------------------------------+
+|     End      |      CAN       |           (under Home)            |
++--------------+----------------+-----------------------------------+
+|  PageDown    |   DOC/PAGE     |          (under PageUp)           |
++--------------+----------------+-----------------------------------+
+
+
+
+
+
+
+This is the full keyboard:
+
+
+
+
+
+<Graphics file: /home/jce/C/Joyce++/Docs/pcwkey.ps>
+
+
+
+
+
+If you find these mappings inconvenient, you can use PCKEY (on 
+the Utilities disc) to change keyboard mappings.
+
+The keyboard has two user-configurable settings. To set them, 
+press [f9] in JOYCE; then [f6] for Settings, and choose Keyboard. 
+
+  <sec: keyswap>CTRL / ALT key swapping
+
+There are two ways the CTRL and ALT keys can be set up. These 
+are:
+
+  The PC ALT key is used as the PCW ALT key. In this mode the key 
+  captions match better than the key positions.
+
+  The PC ALT key is used as the PCW CTRL key. This makes the 
+  positions of the keys match better than their captions.
+
+
+
+
+
+
++---------+-------------------+------------------+
+| PC key  | PCW key (mode 1)  | PCW key (mode 2) |
++---------+-------------------+------------------+
++---------+-------------------+------------------+
+|  ALT    |       ALT         |      EXTRA       |
++---------+-------------------+------------------+
+|  CTRL   |      EXTRA        |       ALT        |
++---------+-------------------+------------------+
+
+
+
+
+
+
+  <sec: keyswap2>Delete key swapping
+
+In the same way, the Backspace and Delete keys can be swapped. 
+You may need to use this, depending how your X-Window system is 
+configured.
+
+  The Mouse / other pointing device
+
+There were three major types of PCW mouse:
+
+  AMX
+
+  Kempston
+
+  KeyMouse
+
+JOYCE emulates the first two of these; alternatively, it can 
+emulate the Electric Studio lightpen. To choose which type is 
+selected, press [f9] in JOYCE; then [f6] for Settings, and choose 
+Mouse. 
+
+  <sec: mousetypes>AMX mouse 
+
+The AMX mouse emulation is tuned for MicroDesign 3, with the 
+mouse movement option set to “Slow”. Most programs support the 
+AMX mouse, so this is probably the best choice. However, you will 
+need a three-button mouse (or one with a scroll wheel) to use it 
+successfully.
+
+  Kempston mouse
+
+The Kempston mouse emulation is designed for Stop Press. Fewer 
+programs support the Kempston mouse than the AMX, but it doesn't 
+need a three-button mouse.
+
+  Electric Studio lightpen
+
+The lightpen emulation is designed for the programs supplied with 
+the lightpen: NEWSDESK, ART and DDESP.PRL. Since the original 
+light pen had no switches, the mouse buttons do not do anything; 
+you will need to use keys on the keyboard as directed.
+
+  <sec: autopatch>Mouse auto-patch
+
+The Mouse Auto-Patch feature (only available with the AMX mouse 
+emulation) is used to improve mouse handling in PCW programs. 
+When it is switched on, JOYCE will attempt to link Microdesign, 
+Stop Press or Masterpaint directly to the PC's mouse, bypassing 
+the normal mouse driver. If successful, this results in smoother 
+mouse performance.
+
+When you start the program that uses the mouse, you will see 
+either “No mouse patch applied” (in which case, the link could 
+not be established) or “Applied program mouse patch” (the link 
+was established). 
+
+  The disc drives
+
+Instead of real disc drives, JOYCE works with “disc image files” 
+on the computer's hard drive. These are fully described in 
+sections [sec: concepts] and [sec: morediscs].
+
+  The LocoLink interface
+
+JOYCE allows two forms of LocoLink communication (only one under 
+Windows, though). In each case, you must have suitable software 
+(LocoLink or PCWLink). 
+
+  LocoLink to a real computer (requires Linux)
+
+  For JOYCE to act as the slave computer, use a LapLink cable 
+  (not the original LocoLink cable) to connect the parallel ports 
+  of the two computers being linked. Go into the settings for the 
+  LocoLink interface, and set it to “Output to parallel port”, 
+  specifying the name of the parallel port device (eg: 
+  /dev/parport0).
+
+  For JOYCE to act as the master, connect the parallel port of 
+  your Linux box to the other computer (if it's another PC, use a 
+  LapLink cable; if it's a PCW, use the original LocoLink cable). 
+  Go into the settings for the PAR port, and set it to “Output to 
+  parallel port”, as above.
+
+  LocoLink to another emulator
+
+  For JOYCE to act as the slave computer, go into the settings 
+  for the LocoLink interface and set it to “output to Socket”. On 
+  the screen that appears, select the correct socket type and 
+  name (see below) and ensure the “Server (LocoLink slave)” 
+  option is ticked.
+
+  For JOYCE to act as the master computer, go into the settings 
+  for the PAR port and set it to “output to Socket”. On the 
+  screen that appears, select the correct socket type and name 
+  (see below) and ensure the “Client (Normal)” option is ticked.
+
+  Socket types and names
+
+  UNIX domain sockets (not supported on Windows) can be used to 
+  communicate with other emulators on the same computer. They 
+  work pretty much like normal files, and their names are normal 
+  filenames; so, for example, one might be called “
+  /tmp/locolink.socket”. When you are establishing a link, it is 
+  important that both ends are using the same socket name.
+
+  TCP/IP sockets can be used to communicate with other emulators 
+  not only on the same computer, but across a network or the 
+  Internet. However, JOYCE does not perform any security checks 
+  on socket connections, so I strongly recommend that you do not 
+  use TCP/IP sockets while connected to the Internet. 
+
+  For a LocoLink master, the name of a TCP/IP socket is formed “
+  host:port” - for example, “localhost:8256”, “127.0.0.1:8512” or 
+  even “www.somewhere.com.invalid:8080”. 
+
+  For a LocoLink slave, the name of the socket is formed “
+  interface:port”. The interface is usually either “127.0.0.1” 
+  (accept only connections from this computer) or “0.0.0.0” 
+  (accept connections from any computer). 
+
+  The port has to be the same on both master and slave sides of 
+  the connection, and the host/interface have to refer to the 
+  same computer. For two emulators on the same computer, use “
+  127.0.0.1:port” for both master and slave. 
+
+  The JOYCE Menu
+
+If you press [f9] (or the Menu key on a Windows95 keyboard, or 
+Command+F9 on a Mac OS X system) a menu will appear at the top of 
+the screen. It offers the following options:
+
+  ESC=Back to JOYCE
+
+Leaves the menu system.
+
+  f1 = Help
+
+Display the keyboard layout onscreen.
+
+  f2 = Discs
+
+Options for floppy drives A: and B:. Use this to "insert" and 
+"eject" discs, and to read floppy discs into the JOYCE 
+environment. It brings up the Discs menu below.
+
+  f4 = Printer
+
+Control the built-in dot-matrix or daisywheel printer. You should 
+not normally need to use this menu; the “printer control” state 
+(obtained by pressing [*] on the numeric keypad or [PrintScreen]) 
+should be able to perform the necessary functions.
+
+  f5 = Reboot
+
+Reboot the PCW; equivalent to SHIFT+EXTRA+EXIT. You will be asked 
+for confirmation.
+
+  f6 = Settings
+
+Settings for all aspects of the emulator. The Settings menu will 
+appear.
+
+  f7 = Dbg
+
+Display the Debug menu ([sec: dbgmenu]). 
+
+  f8 = Action
+
+Display the Action menu ([sub:The-Action-Menu]).
+
+  f10 = Quit
+
+Leave JOYCE. You will be asked for confirmation. Under Mac OS X, 
+[f10] is used by Exposé so use Command+F10.
+
+  <sub:The-Action-Menu>The Action Menu
+
+This menu has only one option: “Select PCW screen.” This is 
+intended for use with GSX programs (such as DR Graph) which exit 
+without shutting GSX down properly. In such cases, the program 
+will appear to hang, but selecting the PCW screen will display 
+the A> prompt. It can also be used if you run DISCKIT while in 
+the 800x600 screen mode; DISCKIT always sends its output to the 
+original PCW screen.
+
+  <sec: dbgmenu>The Debug Menu
+
+There are three options here, intended mainly for advanced users 
+or JOYCE developers. 
+
+  “CPU state” displays the values of the Z80 registers and the 
+  memory paging.
+
+  “Debug mode” displays the debug console, on which system 
+  messages will appear[footnote:
+In previous versions, JOYCE had a built-in debugger that ran in 
+the debug console. This is not present in JOYCE v1.9.0.
+].
+
+  “RAM dump” writes out the bottom 256k of memory to a file in 
+  the current directory called “joyce.ram”. This is not a full 
+  snapshot facility; memory dumps can't be reloaded, and they 
+  don't contain CPU state.
+
+  The Disks menu
+
+The Disks menu displays the status of the floppy drives, and 
+allows you to eject or insert discs. Each drive has three lines 
+in the menu:
+
+  The first line reads either “Drive A: (Ejected)” or “Drive A: 
+  (Filename)”. This shows whether there is a “disc” (.DSK file) 
+  in the drive or not.
+
+  The second line reads either “Eject” or “Insert...” depending 
+  whether there's a disc in the drive. “Eject” ejects the current 
+  disc (.DSK file); while “Insert...” brings up a window asking 
+  for the file to insert. You can also “insert” a real floppy 
+  drive; this allows the emulated PCW to access a real drive 
+  directly (if slowly). If you ask to “insert” a folder, and the 
+  folder you select has not previously been used in this way by 
+  JOYCE, then you will be asked what format the folder should 
+  pretend to be in.
+
+  The bottom line for each drive reads “Read only”. If there is a 
+  tick beside it then the write protect holes on the disc have 
+  been opened and it cannot be written to.
+
+  If you select“Disc management...” then a menu appears allowing 
+  you to read in extra floppy discs, or convert .DSK files back 
+  to real discs.
+
+  The Disc Management menu
+
+There are five options:
+
+  Add a boot disc - Reads in a start-of-day disc and adds it to 
+  the opening menu.
+
+  Rename a boot disc - Allows you to change the caption 
+  associated with a start-of-day disc.
+
+  Delete a boot disc - Removes a start-of-day disc from the 
+  opening menu. Use this option with caution!
+
+  Convert floppy to JOYCE .DSK file - Read in a normal (data) 
+  disc, storing the new disc image file in the “user discs” 
+  directory.
+
+  Write .DSK file back out to floppy - Convert a disc image file 
+  (either normal or start-of-day) back to a floppy disc.
+
+  The Settings menu
+
+Choose the item of hardware for which you want to make changes. 
+Note that if you make a change such as disconnecting or 
+connecting an interface, the emulated PCW may not pick it up 
+until the next reboot. It's safest to change JOYCE settings while 
+the opening menu is on the screen - after all, you wouldn't plug 
+an interface into a real PCW with the power on, would you?
+
+  <sec: genopt>General options
+
+This screen allows you to choose which PCW model to emulate, and 
+how fast it should appear to be. Some points to note are:
+
+  JOYCE knows the difference between boot discs for dot-matrix 
+  PCWs (8256, 8512, 9256, 10) and daisywheel PCWs (9512, 9512+). 
+  If you have selected a PCW model that doesn't match the boot 
+  disc, JOYCE selects the closest equivalent when booting.
+
+  JOYCE treats the PCW8256 and PCW8512 as one choice, since the 
+  only difference is the number of disc drives and the memory 
+  size, both of which can be configured in other menus.
+
+  JOYCE also treats the PCW9256 and the PCW10 as one choice. The 
+  differences between these models are the memory size and the 
+  presence of a Centronics port, both of which are configurable 
+  in other menus.
+
+This screen also allows you to control the warning that appears 
+when a CP/M program attempts to access files outside the emulator 
+(as, for example, the supplied IMPORT and EXPORT utilities do). 
+Select “File Access...” and select one of three options:
+
+  Allow full access Programs running under CP/M will be able to 
+  read and write any file on your computer, without prompting. 
+  This is how JOYCE 2.2.6 and previous versions behaved.
+
+  Prompt for each file When a CP/M program attempts to read or 
+  write a file, JOYCE will display a prompt asking whether this 
+  should be allowed (see below).
+
+  No file access CP/M programs will not be able to access 
+  arbitrary files on your computer. The IMPORT and EXPORT 
+  utilities will not operate.
+
+If 'Prompt for each file' is selected, then when a CP/M program 
+attempts to open a file, the following warning will be displayed:
+
+Confirm host file access
+
+
+
+A CP/M program is attempting to access the file:
+
+bank_passwords.txt
+
+Do you want to allow access to this file?
+
+
+
+No
+
+No, and don't ask again
+
+Yes
+
+The prompt will offer three options:
+
+  No Access to the file will be blocked. You will be prompted 
+  again if the program attempts to read or write a different 
+  file.
+
+  No, and don't ask again Access to the file will be blocked, and 
+  the File Access settings screen will be switched to the “No 
+  file access” option, blocking all future file access. If you 
+  subsequently want to grant access again, this must be done 
+  through the File Access menu screen.
+
+  Yes Access to this file will be allowed. You will be prompted 
+  again if the program attempts to read or write a different 
+  file.
+
+  Memory
+
+This allows you to set the memory size of your emulated PCW. If 
+your computer is running very low on memory, the “Current memory 
+size” may be less than requested. 
+
+If you are running a very old version of CP/M, you may need to 
+reduce memory to 512k to get DISCKIT to run. Some LocoScript 1 
+versions also malfunction if there's more than 512k of memory.
+
+  Disc drives
+
+Note: The menus in this section only allows you to create 
+configurations that could exist on a real PCW. By manually 
+editing ~/Joyce/joycehw.xml, you can create “impossible” 
+configurations, such as a system with three floppy drives (CP/M 
+and LocoScript won't detect the third one.) If the configuration 
+is “impossible”, the menus will look different as they attempt to 
+accommodate the changes.
+
+The settings in this menu are:
+
+  Boot discs are read-write / read-only: 
+
+This sets whether JOYCE makes emulated boot discs 
+write-protected. Note that early CP/M releases (such as the 1.4 
+BIOS issued with 8000 series PCWs) need to have a change made to 
+SUBMIT.COM[footnote:
+Here's a transcript of a SID session making the necessary change:
+
+A>SID SUBMIT.COM
+
+CP/M 3 SID - Version 3.0
+
+NEXT MSZE  PC  END
+
+1600 1600 0100 DAFF
+
+#S3A6
+
+03A6 CD 3E
+
+03A7 E4 0D
+
+03A8 03 00
+
+03A9 32 .
+
+#W
+
+002Ah record(s) written.
+
+#G0
+] before they can boot from write-protected disc images.
+
+To override this for a particular boot disc, press [f9] while the 
+loading stripes are on the screen; then press [f2] and change the 
+setting.
+
+  Controller type (8256/8512/9512 vs. 9256/9512+/10) 
+
+You should set the correct controller type to match your system 
+discs. At least some versions of Locoscript 3 for the PCW9256 
+refuse to load unless the controller type is also set to 9256. 
+This option is also set by the “PCW model” setting in the general 
+options screen.
+
+  Drive A: settings / Drive B: settings: 
+
+This brings up its own menu, allowing you to set what type of 
+disc drive is attached to the PCW. The three standard types are 
+those supplied as standard with PCWs. If you want to emulate 5.25”
+ drives or anything else unusual, select “other” and manually 
+enter the drive type, the number of cylinders[footnote:
+The drive documentation may call this figure the number of tracks 
+rather than the number of cylinders. Either way, it's usually 40 
+or 80.
+] it can access, and whether it's single or double-sided.
+
+To emulate a single-drive PCW, set the type of drive B: to “Not 
+connected”.
+
+  <sec: extradrv>Extra drives
+
+This menu allows you to set up drives C: - L: and N: - P:. 
+Obviously these drives don't exist on real PCWs, but they can on 
+a JOYCE system, provided you are using a recent version of CP/M 
+(1.12 / 2.12 or later) or LocoScript (2.50 or later). You will 
+need to have a copy of JOYCEDRV.FID on your start-of-day disc for 
+these drives to become available - see section [sec: joycedrv].
+
+For each drive, you can set it up in three ways:
+
+  As direct access to the PC's floppy drives. 
+
+  As a floppy drive that accesses a standard disc image file, 
+  just like the emulated A: and B: drives.
+
+  As a hard drive with 8Mb of storage. The hard drive will also 
+  be stored on a .DSK file (or in a folder, depending which 
+  option you chose), but this .DSK file will not be usable in 
+  emulated floppy drives.
+
+To set up a drive, choose it from the list. Then choose or enter 
+the filename and drive type, as listed below:
+
+
+
+
+
+
++---------------------------------------------------+----------------------+---------------+
+|               Type of drive to use                |     Choose file      | Choose option |
++---------------------------------------------------+----------------------+---------------+
++---------------------------------------------------+----------------------+---------------+
+|              Floppy drive A: or B:                |      A: or B:        | floppy drive  |
++---------------------------------------------------+----------------------+---------------+
+| Floppy drive using standard image file or folder  | .DSK file or folder  | floppy drive  |
++---------------------------------------------------+----------------------+---------------+
+|  Hard drive using special image file or folder    | .DSK file or folder  |  hard drive   |
++---------------------------------------------------+----------------------+---------------+
+
+
+
+
+
+
+  Matrix printer
+
+The dot-matrix printer menu offers the following settings:
+
+  Connected/Disconnected: Is the printer plugged in or not? 
+
+  Paper size: There are a number of standard paper sizes; or you 
+  can enter your own using “Custom”.
+
+  Output format: PostScript or PNG. PNG output produces a small 
+  graphic file (around 20k) per page, while PostScript output 
+  produces one vast file (we're talking 6Mb per page) containing 
+  all the output from a JOYCE session. Note that although the PNG 
+  files produced are small in size, they are big in area. Under 
+  Windows, there is also a “Use Windows' GDI” option, which sends 
+  output to the default Windows printer.
+
+  Output to Directory: PNG output goes to disc files called “
+  matrix0.png”, “matrix1.png” etc., while PostScript output goes 
+  to “matrix0.ps”, “matrix1.ps”... The directories used are 
+  ~/Joyce/Pngs and ~/Joyce/PS respectively.
+
+  Output to UNIX command: Output goes to a Unix pipeline. You can 
+  use this to send output to the Unix printing system. It is 
+  recommended to use PostScript output for this. Note that 
+  printing will usually only start when JOYCE shuts down.
+
+  Daisywheel printer
+
+The daisywheel printer menu offers the following settings:
+
+  Connected/Disconnected: Is the printer plugged in or not? Note 
+  that unlike on a real PCW, disconnecting the daisywheel with 
+  the computer turned on does not damage the memory chips!
+
+  Output format: Windows only. You can choose between PostScript 
+  (each session produces a single .ps file) or “Use Windows' GDI”
+  , which sends output to the default Windows printer.
+
+  Paper size: There are a number of standard paper sizes; or you 
+  can enter your own using “Custom”.
+
+  Output to Directory: The output is in PostScript format, and is 
+  sent to “daisy0.ps”, “daisy1.ps”, etc. in the directory 
+  ~/Joyce/PS.
+
+  Output to UNIX command: Output goes to a Unix pipeline. You can 
+  use this to send output to the Unix printing system. Note that 
+  printing will usually only start when JOYCE shuts down.
+
+  CEN port and PAR port
+
+The following settings are available for the CEN port and the PAR 
+port:
+
+  Connected/Disconnected: Is the appropriate interface connected 
+  to the PCW?
+
+  Output to file: Output goes to a disc file. When you select 
+  this option, you are asked for the filename to send the output 
+  to.
+
+  Output to UNIX command: Output goes to a Unix pipeline. You can 
+  use this to send output to the Unix printing system (enter “lpr”
+   here, with any appropriate options).
+
+  Output to Parallel port : The port is directly mapped to one of 
+  the computer's parallel ports (/dev/parport0, /dev/parport1, 
+  etc.) This allows the port to act as a LocoLink master when 
+  connected to a real PCW.
+
+  Output to socket: Output is sent to another process or 
+  computer, over a socket. This allows the port to act as a 
+  LocoLink master in conjunction with another instance of JOYCE.
+
+  Under Windows, you also get the option to send data directly to 
+  LPT ports. 
+
+  CPS8256
+
+There are three configuration screens available for the CPS8256. 
+The first one has the following settings:
+
+  Connected/Disconnected: Is the CPS8256 interface connected to 
+  the PCW?
+
+  Parallel port: Brings up the same settings screen as for the 
+  standalone CEN port, to configure output.
+
+  Serial port: Displays the filenames used for serial input and 
+  output. These can both be set to a device special file (eg: “
+  /dev/ttyS0”) for direct access to serial ports. Under Windows 
+  COM1: to COM4: can be chosen.
+
+  Joystick
+
+This allows a real joystick on the computer to simulate an add-on 
+joystick for the PCW. The first part of the menu is used to 
+select what PCW interface is being emulated - Kempston, 
+Spectravideo or Cascade. Note that the Spectravideo and Cascade 
+interfaces conflict with the CPS8256 serial interface; don't try 
+to use both at the same time. 
+
+Once you have set the joystick type, select the second option to 
+choose which joystick on the host system should be connected to 
+the emulated interface.
+
+  Keyboard
+
+The keyboard settings screen has five options. The first two are 
+related to swapping keys: One controls which way round the CTRL 
+and ALT keys are mapped (see section [sec: keyswap]) and the 
+other controls which way round the DELETE keys are (see section [sec: keyswap2]
+).
+
+The next three keyboard options relate to the option links. PCW 
+keyboards have three option links, and by default none of these 
+links are connected. To my knowledge no PCW software uses the 
+links, but for completeness JOYCE allows you to connect them 
+here. The only one with a noticeable effect is LK2; if it's 
+connected, pressing the Shift key will not cancel Shift Lock. For 
+details of what LK1 and LK3 do, see the PCW hardware guide.
+
+There are also two joystick options. These relate to a curious 
+little piece of history. The controllers in all PCW keyboards 
+include joystick support; but there's no joystick socket for them 
+to plug in to (compare the PC1512 keyboard, where there is a 
+joystick socket). Strictly in the interests of completeness, 
+JOYCE provides the joystick sockets. To activate one or the 
+other, select “Joystick 1” or “Joystick 2”. A menu appears 
+listing the joysticks on the host computer; select the one to 
+use. To the best of my knowledge no PCW software supports the 
+keyboard joystick; use one of the other joystick models to to get 
+something useful done.
+
+  Mouse / Lightpen
+
+Two pointing device settings are available here:
+
+  Emulation mode: No mouse, AMX mouse, Kempston mouse or Electric 
+  Studio lightpen (see section [sec: mousetypes]).
+
+  Auto patch on or off (see section [sec: autopatch]).
+
+  Video
+
+The Video settings allow you to change:
+
+  “Video refresh” - the number of times per second that the 
+  screen is redrawn. You can go up to 50Hz (ie, the screen is 
+  redrawn 50 times a second) or down to 0.01Hz (the screen is 
+  drawn once every 10 seconds). The default setting in JOYCE is 
+  12Hz, which is fine for nearly all programs; even at 3.75Hz 
+  CP/M and LocoScript work fine.
+
+  The beeper is usually emulated using the PC's sound card. You 
+  can also have it manifest as a red flash of the screen (“Visual 
+  Beeper”) or silence (“Disable beeper”).
+
+  You can also choose whether to have a green screen (8000 
+  series), white screen (9000 series) or any other screen colours 
+  here.
+
+  LocoLink
+
+The LocoLink settings allow you to set whether or not a LocoLink 
+interface is connected. If it is, then you get the same options 
+as for a parallel port. However, only “Output to Parallel port” 
+and “Output to socket” can be used for a LocoLink connection.
+
+  Use “Output to Parallel port” to act as the LocoLink slave when 
+  the “master” computer is a real PC. Connect the parallel ports 
+  together with a LapLink cable.
+
+  Use “Output to socket” to act as the LocoLink slave when the “
+  master” is an emulated computer. 
+
+  Save settings
+
+If you do not save the settings, they will remain in force only 
+for the duration of your current JOYCE session. The settings will 
+be saved to the file Joyce/joycehw.xml in your home directory.
+
+  JOYCE Utilites
+
+The following utility programs are supplied with JOYCE. They are 
+designed to access features of the emulator which have no 
+equivalent on a real PCW. You will find them on the disc image “
+utils.dsk”.
+
+  CENPORT
+
+CENPORT is a fast driver for the standalone Centronics printer 
+port. Just type:
+
+CENPORT
+
+and printer output will be sent to the destination defined for 
+that port. Any DEVICE setting for the printer will be ignored.
+
+CENPORT only works under CP/M. LocoScript 1 cannot print from 
+JOYCE (except using the emulated dot-matrix printer). If 
+LocoScript 2 and later do not detect the Centronics port, use the 
+CPS8256 printer port instead. 
+
+  DDJOYCE.PRL
+
+DDJOYCE is a GSX driver for the host PC's graphics screen, 
+allowing high-resolution colour graphics to be used from CP/M. It 
+requires JOYCE 2.1.7 or later.
+
+To use it, edit your ASSIGN.SYS file. Remove the entry which 
+reads
+
+01 @:DDSCREEN
+
+and replace it by
+
+01 @:DDJOYCE
+
+DDJOYCE has been tested with the Digital Research programs DR 
+Draw and DR Graph, with the following issues:
+
+  DR Graph works correctly, but when it shuts down the screen 
+  goes blank. This is because DR Graph does not make a proper 
+  'close workstation' call when it closes. Use the Action menu 
+  (section [sub:The-Action-Menu]) to switch back to the PCW 
+  screen.
+
+  DR Draw works correctly, though text rendering is rather ugly.
+
+  DOSDIR
+
+DOSDIR displays the contents of a directory in the host 
+filesystem (the name DOSDIR is for compatibility with MYZ80). 
+Syntax is:
+
+     DOSDIR
+
+  or DOSDIR {x:/path/}filespec
+
+Note that if you include a path you must include a filename. The 
+command
+
+     DOSDIR C:/IMAGES/       is invalid, but
+
+     DOSDIR C:/IMAGES/*.*    is valid.
+
+To get lower-case commands, use:
+
+     A>DOSDIR \
+
+     DOSDIR>/usr/local/bin/* 
+
+  EMULIOS.RSX
+
+EMULIOS allows Digital Research Logo to use the 800x600 screen. 
+This was buggy in JOYCE 2.0.0-2.1.6, but has now been corrected.
+
+
+
+To set it up, use the following commands (under CP/M):
+
+PIP EMULOGO.COM=LOGO.COM
+
+GENCOM EMULOGO
+
+GENCOM EMULOGO EMULIOS
+
+- Then EMULOGO.COM will behave as LOGO.COM, but using the 800x600 
+screen.
+
+The following commands will behave differently:
+
+  setpc Allows a number from 0 to 255
+
+  setbg Allows a number from 0 to 255
+
+  savepic The .PIC file saved is in Windows BMP format, and can 
+  be exported, renamed to .BMP, and loaded by paint programs.
+
+  loadpic The .PIC file loaded must be in Windows BMP format and 
+  have 256 colours, but its size does not have to be 800x600.
+
+  EXPORT
+
+EXPORT will write CP/M files out as UNIX files. It respects exact 
+file sizes.
+
+The syntax is:
+
+     EXPORT cpmfile                    { [O] }
+
+     EXPORT unixfile=du:cpmfile        { [O] }
+
+The first form of the command produce a UNIX file with the same 
+name as the CP/M file. 
+
+The second form creates a UNIX file with a name that may be 
+different from the CP/M name.
+
+Beware: because the CP/M CCP renders all filenames into 
+uppercase, it's very unlikely you'll be able to pass directory 
+names to EXPORT; if you say
+
+     EXPORT /home/fred/cpmfile
+
+EXPORT.COM will see "/HOME/FRED/CPMFILE", which probably won't 
+exist. To get
+
+round this, use:
+
+     A>EXPORT \
+
+     EXPORT>/home/fred/cpmfile
+
+  IMPORT
+
+IMPORT will read UNIX files into the CP/M filesystem. It sets 
+exact file sizes.
+
+The syntax is:
+
+     IMPORT {/path/}hostfile            { [O] }
+
+     IMPORT du:=/path/hostfile          { [O] }
+
+     IMPORT du:cpmfile=x:/path/hostfile { [O] }
+
+The first form imports the named file (or files) to the current 
+drive and user area.
+
+The second form imports the file (or files) to the specified 
+drive and user area, keeping the original name(s).
+
+The third form imports the files, changing their name(s) to match 
+the provided CP/M filename(s).
+
+If the [O] option is present, existing CP/M files with the same 
+name as an imported file will be overwritten without asking. 
+Otherwise you are asked for confirmation.
+
+Both filenames may include wildcards, and the second and third 
+forms can include CP/M driveletters and user numbers:
+
+     A:IMPORT \
+
+     IMPORT>2F:*.ASC=/usr/doc/*.txt
+
+will import all the .txt files in /usr/doc to drive F, group 2.
+
+Filenames are expanded case-sensitively, so you will normally 
+need to use the backslash, as above, to get lower-case letters 
+into the command line.
+
+  <sec: joycedrv>JOYCEDRV
+
+JOYCEDRV.FID is a file which is used to add one or more extra 
+disc drives to CP/M (v1.12/2.12+) or LocoScript (v2.30+) running 
+within JOYCE. The first of these drives will usually be drive C:.
+
+Unless the settings are changed (see section [sec: extradrv]) the 
+drives will be set up as 8Mb hard drives, called 
+~/Joyce/Disks/c.dsk, ~/Joyce/Disks/d.dsk, etc.
+
+How many drives you get depends on your environment, but on my 
+system I get five under CP/M (C:,D:,E:,F:,and G:), and thirteen 
+under LocoScript (C: to L: and N: to P:).
+
+To enable JOYCEDRV, copy the file JOYCEDRV.FID to your 
+start-of-day disc image. For example:
+
+  Start JOYCE.
+
+  Select CP/M from the boot menu.
+
+  When the A> prompt appears, press [f9], then [f2] (Disc), then 
+  choose the “Insert” option for drive B:. Click on “disc file”.
+
+  In the file chooser that appears, click “System disc files”, 
+  then “utils.dsk”. Then click OK.
+
+  Back in the f2=Disc menu, choose “EXIT”. Then press ESC to 
+  leave the menu system.
+
+  Back at the CP/M prompt, type PIP A:=B:JOYCEDRV.FID
+
+  Press [f9], then [f5] to reboot, and confirm this.
+
+  Select CP/M from the boot menu.
+
+  JOYCEDRV should now list available drives. If not, then your 
+  version of CP/M is too old.
+
+If you try to use a disc image that JOYCEDRV cannot understand, 
+you will not be able to access it. Under CP/M, you will get an 
+"invalid drive" error; under LocoScript, you will get a "FID 
+error".
+
+  PCKEY
+
+Syntax: 
+
+PCKEY keyfile
+
+or: 
+
+PCKEY keyfile fidfile
+
+PCKEY is used to alter the mapping of PC keys to PCW keys. You 
+may need to use this utility if your keyboard does not have a UK 
+layout, or you are using a laptop where some keys are difficult 
+to get at. This was buggy in JOYCE 2.0.0-2.1.9, but has now been 
+corrected.
+
+When PCKEY is given one parameter, it will read the keyfile and 
+make the changes immediately. When it is given two, it will 
+compile the keyfile into a .FID file, which can then be put on a 
+start-of-day disc and which will make the necessary assignments 
+every time JOYCE is started.
+
+The format of the keyfile is a series of lines; each line reads:
+
+pc-number  modifier  pcw-number  {comment}
+
+  pc-number is the number of the key. For a full listing, see 
+  Appendix [keycodes].
+
+  NOTE: These numbers changed between SDL 0.8 and SDL 0.10; so if 
+  you are upgrading JOYCE from a version which used SDL 0.8, you 
+  need to rewrite your PCKEY files.
+
+  modifier must be N, for compatibility with the old DOS version 
+  of JOYCE.
+
+  pcw-number is the PCW key number. These are listed in the PCW 
+  manual.
+
+So, a typical line might read:
+
+ 
+
+27 N 8  ESC goes to EXIT
+
+ 
+
+  Notes:
+
+  The key mapping you have set remains until you exit JOYCE.
+
+  The option in the Settings menu to swap CTRL/ALT and 
+  Backspace/Delete uses the same method as PCKEY. It is probably 
+  best not to map these four keys.
+
+  Key 256 brings up the JOYCE menu. Key 257 brings up the Exit 
+  Confirmation screen.
+
+  If you use VGACOM to switch into VGA mode, note that keys set 
+  up by PCKEY don't affect the keyboard in VGA mode.
+
+  QUIT
+
+Syntax: 
+
+QUIT { number } { [O] }
+
+QUIT will exit JOYCE. With no parameters, it will check whether 
+there are files on drive M: which may need saving, and if there 
+are it will ask for confirmation.
+
+The number parameter is the error level which JOYCE should 
+return. If there is no number parameter, JOYCE returns 98.
+
+The [O] option disables the M: drive check and quits immediately.
+
+  REDIR
+
+REDIR allows you to use one or more PC directories as drives 
+under CP/M. See the separate file REDIR.DOC for more information.
+
+  RTC
+
+  Syntax: 
+
+RTC 
+
+or 
+
+RTC [C]
+
+RTC reads the PC's built-in clock. It can be used in two ways.
+
+  RTC by itself will set the PCW's clock from the PC's clock. The 
+  timing of the PCW's clock will then depend on the speed of 
+  emulation, which is another way of saying that it will 
+  gradually diverge from the PC's clock.
+
+  RTC [C] links the PCW's clock to the PC's clock; it will be set 
+  to the correct time whenever CP/M reads it.
+
+  VGA and VGACOM
+
+VGA.FID allows CP/M programs to make direct use of the PC screen 
+and keyboard. This gives more text on the screen and faster 
+output.
+
+Once VGA.FID has loaded, type VGACOM ON to activate it, and 
+VGACOM OFF to deactivate it.
+
+Your PCW screen will now be 100 columns x 36 lines. Nearly all 
+the normal PCW escape codes are supported, which should enable 
+character-based programs to be run. Since screen output is now 
+being done by the host PC's processor, you should notice an 
+improvement in speed.
+
+If you run DISCKIT or a graphical program like Stop Press, you 
+will find that no output is visible; use the Action menu (section 
+[sub:The-Action-Menu]) to switch back to the native PCW screen. 
+
+The following escape codes work differently in the 800x600 VGA 
+mode:
+
+  ESC b / ESC c set colours (so the numbers in the PALETTE 
+  command actually have meaning).
+
+  ESC y sets 32x90 mode.
+
+  ESC z sets 36x100 mode.
+
+  XPALETTE
+
+Syntax: 
+
+XPALETTE b f
+
+or: 
+
+XPALETTE br bg bb fr fg fb
+
+XPALETTE takes advantage of the colours on a VGA screen to allow 
+the PCW to display in any colour scheme, not just black and 
+white. 
+
+The version with two parameters works the same way as on a CPC or 
+a Spectrum +3 (though neither of these has as many colours as 
+JOYCE has). For example, on a CPC you might type:
+
+PALETTE 2 63
+
+to get white text on a blue background. So, in JOYCE, type
+
+XPALETTE 2 63
+
+and the screen colours obediently change.
+
+The version with six parameters allows any colour in the 24-bit 
+range to be selected, rather than just 64. Instead of a colour 
+being represented by one number, it is represented by three:
+
+XPALETTE 0 0 32 255 255 251
+
+will give you a very dark blue background and a foreground with 
+the slightest tinge of yellow.
+
+XPALETTE does not mind how the numbers are separated (with 
+commas, spaces, *s or whatever) and accepts Hex numbers preceded 
+with & (128 = &80 etc.).
+
+Note! Unlike PALETTE 0 0, XPALETTE 0 0 really does select black 
+on black. This is not recommended.
+
+  JOYCE utilities (PC hosted)
+
+If you don't want to use JOYCE's own methods for converting 
+between disc files and image files, you can also use the dsktrans 
+program, which is installed with JOYCE.
+
+The command to use is either:
+
+dsktrans /dev/fdn dskfile 
+
+    - Floppy disc to image file
+
+or 
+
+dsktrans dskfile /dev/fdn -otype floppy 
+
+    - Image to floppy disc.
+
+DSKTRANS isn't as versatile as CPCTRANS (for example, it can only 
+handle discs in recognisable PCW or +3DOS formats) but it doesn't 
+need telling what sort of disc it is using, and it is a native 
+(not DOS-hosted) program.
+
+To copy a MicroDesign 3 protected disc with DSKTRANS, add “-md3” 
+to the end of the command line. 
+
+  <sec: md3nt>MD3 discs and Windows NT / 2000 / XP
+
+Windows NT, 2000 and XP will flat-out refuse to read MicroDesign 
+3 program discs, owing to the copy protection used on them. If 
+you are using Windows 2000 or XP, then it is possible to install 
+Simon Owen's floppy disc driver <http://simonowen.com/fdrawcmd/>. 
+In this case, select the “Alternative floppy” option as well as 
+choosing “MicroDesign program disc”.
+
+If you are using Windows NT, or if you don't have the correct 
+driver installed, there is no way to make JOYCE capable of 
+reading MD3 discs. You will need to:
+
+  Create a bootable DOS floppy disc. If you're on a system which 
+  can't do this, then you may be able to get hold of one at 
+  www.bootdisk.com. If you only have one floppy drive, the boot 
+  disc needs to include a RAM drive at least 1Mb in size. 
+
+  Copy MD3TRANS.EXE to the DOS disc.
+
+  Boot from the DOS disc.
+
+  If you have two drives: Insert the MD3 disc in drive B: and 
+  type
+
+MD3TRANS B: A:dskfile
+
+  If you have one drive: Copy MD3TRANS to the RAM drive
+
+COPY MD3TRANS.EXE C:
+
+  then insert your MD3 disc and run MD3TRANS
+
+C:MD3TRANS A: C:dskfile
+
+then insert your boot disc and copy the resulting file back.
+
+COPY C:dskfile A:
+
+Either way, MD3TRANS will produce some error messages when 
+copying the protected track. Answer 'I'gnore to any error 
+messages that might appear. 
+
+  <failread>Problems reading floppies on Windows 9x
+
+On some versions of Windows 95, 98 or ME, JOYCE has trouble 
+creating disc image files. The transfer appears to work, but runs 
+very very slowly; and the resulting .DSK file is blank.
+
+To get round this:
+
+  Open a DOS prompt.
+
+  Change to the drive and directory holding JOYCE - eg:
+
+C:\WINDOWS>CD “\Program Files\JOYCE”
+
+C:\Program Files\JOYCE>
+
+  Use a PCWTRANS command to read the discs:
+
+PCWTRANS x: dskfile
+
+  When adding the disks to JOYCE, browse to the .DSK file that 
+  was just created rather than choosing a real drive.
+
+  <sec: changes>Recent Changes
+
+  New in v2.2.9:
+
+  Added support for the Electric Studio light pen.
+
+  New in v2.2.7:
+
+  External file access by CP/M programs now prompts for each file 
+  being read / written.
+
+  New in v2.2.5:
+
+  Compilation fixes for recent versions of libpng.
+
+  Fix for a crash when the cursor was moved offscreen in the VGA 
+  terminal.
+
+  New in v2.2.4:
+
+  Improvements to keyboard emulation.
+
+  In the Windows version, updated to the latest stable SDL.DLL.
+
+  New in v2.2.3:
+
+  More compilation fixes.
+
+  New in v2.2.2:
+
+  Compilation fixes for Linux version.
+
+  New in v2.2.1:
+
+  Updated to the latest LibDsk and Lib765.
+
+  New in v2.2.0:
+
+  Minor code cleanups only.
+
+  New in v2.1.11:
+
+  Corrected a Z80 emulation bug that caused Starglider to hang.
+
+  The CPU state shown in the debugger now includes memory paging 
+  status.
+
+  The JOYCE memory dump saves 256k rather than 160k.
+
+  In the file browser you can choose 'Current directory' as well 
+  as JOYCE's default directories.
+
+  New in v2.1.10:
+
+  Restored the functioning of the PCKEY utility.
+
+  New in v2.1.9:
+
+  Various changes to improve performance and allow building on 
+  Mac OS X.
+
+  Updated LibDsk to 1.1.9, fixing a bug in rcpmfs for files saved 
+  as User 1.
+
+  New in v2.1.8:
+
+  Exposed the 'rcpmfs' functionality in LibDsk, allowing folders 
+  to be used as disc images.
+
+  New in v2.1.7:
+
+  Finally reinstated the native GSX driver, using Digital 
+  Research GEM code released under the GPL.
+
+  Got the native LOGO driver working again; it hadn't worked 
+  properly since the port from DOS.
+
+  Added 'Select PCW screen' command.
+
+  Added “Extended .DSK” and “Alternative floppy” to the Drive 
+  Type menu.
+
+  New in v2.1.6:
+
+  Bug fix: JOYCE does not crash if run on a Windows system with 
+  no printers set up.
+
+  Fixed a bug where writes to DSK files would fail with 
+  mysterious errors.
+
+  Added compatibility for DSK files which have both 512 byte and 
+  1k sectors.
+
+  JOYCE doesn't hang if Trivial Pursuit is run with the emulated 
+  CPS8256 interface attached.
+
+  New in v2.1.5:
+
+  Joystick support.
+
+  Compiles under SDL 1.2.6
+
+  New in v2.1.3, 2.1.4:
+
+  Minor bug fixes.
+
+  New in v2.1.2:
+
+  Bug fix in creation of hard drive .DSK files.
+
+  Compiles without modification under gcc 3.2 (if configured with 
+  the --with-stl option).
+
+  New in v2.1.1:
+
+  Bug fixes in the 2.1.x boot ROM and utilities.
+
+  Scale of the Windows GDI output corrected for PCW9512 printing.
+
+  New in v2.1.0:
+
+  Internal restructuring - part of the creation of ANNE.
+
+  LocoLink emulation.
+
+  Support for printing to a Windows GDI printer.
+
+  New in v2.0.1:
+
+  Fixed a bug parsing JOYCEHW.XML.
+
+  New in v1.9.9:
+
+  Windows serial port emulation is now usable.
+
+  New in v1.9.5:
+
+  Windows serial port emulation improved, though it still isn't 
+  very good.
+
+  Custom screen colours can be set through the menu system.
+
+  New in v1.9.4:
+
+  Dot-matrix printer output can now be in PostScript format 
+  rather than PNG.
+
+  Daisywheel emulation added.
+
+  Bug fixes in the 100x36 text screen (as provided by VGA.FID / 
+  VGACOM.COM)
+
+  Partial and buggy serial port support under Windows.
+
+  Floppy controller emulation changed so that .DSK files can be 
+  created and formatted.
+
+  New in v1.9.3:
+
+  JOYCE can now read MicroDesign 3 discs (except on Windows NT / 
+  2000 / XP). 
+
+  It is possible to map the PCW's floppy drives directly to the 
+  PC's floppy drives. 
+
+  Bug fix: The keypad minus key now correctly maps to the PCW “
+  [-]” key.
+
+  Bug fix: No DirectSound crash when JOYCE terminates on Win95.
+
+  New in v1.9.2:
+
+  It is now possible to set the PCW memory size at startup with 
+  the “-m” option.
+
+  Sound output added.
+
+Bug fixes:
+
+  Fix for incorrect colours on some Windows systems.
+
+  The file chooser now works properly in the Windows version.
+
+  New in v1.9.1:
+
+Windows version created.
+
+  New in v1.9.0: 
+
+  JOYCE has been thoroughly overhauled and rewritten in C++. 
+
+  TIMINGS.COM is no longer necessary. The speed of JOYCE is now 
+  set using the “General” option from the [f6] settings menu.
+
+  The menu system is entirely new. 
+
+  CPS8256 emulation has been added.
+
+  Dot-matrix printer emulation has been added.
+
+  The disc controller emulation has been rewritten from scratch. 
+  It should support disc image files in the CPCEMU “extended” 
+  format.
+
+  The Z80 emulation is now Ian Collier's code from xz80.
+
+  The AMX and Kempston mouse emulation are now much more usable, 
+  even without the auto-patch mode.
+
+ 
+
+  <sec: admins>For Unix system administrators
+
+First and foremost, don't run JOYCE as the root user! JOYCE gives 
+the PCW programs within it various methods to access the host 
+filesystem; it is entirely possible that a malicious PCW program 
+running within JOYCE could damage important Unix files. 
+
+It is possible to set up a system-wide installation of JOYCE with 
+default settings, boot discs and other discs. To do this, first 
+set up the desired configuration as a normal user. Then copy the 
+following files:
+
+  From ~user/Joyce to /usr/local/share/Joyce: joycehw.xml
+
+  From ~user/Joyce/Boot to /usr/local/share/Joyce/Boot: boot*.dsk 
+  and joycebt.xml
+
+  From ~user/Joyce/Disks to /usr/local/share/Joyce/Disks: Any 
+  other .dsk files that should be common.
+
+This will then become the default configuration on your system. 
+Users will still be able to change settings or add additional 
+discs; these will be saved to their local configuration 
+directories.
+
+  <keycodes>Keyboard codes
+
+Note that many of these keys don't exist in a standard PC 
+keyboard. For example, the PC keyboard has no “$” key (it uses 
+SHIFT + 4 instead) so assigning codes to that key will have no 
+effect.
+
+
++-------+----------------------------+
+| Code  |            Key             |
++-------+----------------------------+
++-------+----------------------------+
+|  8    |         Backspace          |
++-------+----------------------------+
+|  9    |            Tab             |
++-------+----------------------------+
+|  12   |           Clear            |
++-------+----------------------------+
+|  13   |           Return           |
++-------+----------------------------+
+|  19   |           Pause            |
++-------+----------------------------+
+|  27   |           Escape           |
++-------+----------------------------+
+|  32   |           Space            |
++-------+----------------------------+
+|  33   |             !              |
++-------+----------------------------+
+|  34   |             “              |
++-------+----------------------------+
+|  35   |             #              |
++-------+----------------------------+
+|  36   |             $              |
++-------+----------------------------+
+|  38   |             &              |
++-------+----------------------------+
+|  39   |             '              |
++-------+----------------------------+
+|  40   |             (              |
++-------+----------------------------+
+|  41   |             )              |
++-------+----------------------------+
+|  42   |             *              |
++-------+----------------------------+
+|  43   |             +              |
++-------+----------------------------+
+|  44   |             ,              |
++-------+----------------------------+
+|  45   |             -              |
++-------+----------------------------+
+|  46   |             .              |
++-------+----------------------------+
+|  47   |             /              |
++-------+----------------------------+
+|  48   |             0              |
++-------+----------------------------+
+|  49   |             1              |
++-------+----------------------------+
+|  50   |             2              |
++-------+----------------------------+
+|  51   |             3              |
++-------+----------------------------+
+|  52   |             4              |
++-------+----------------------------+
+|  53   |             5              |
++-------+----------------------------+
+|  54   |             6              |
++-------+----------------------------+
+|  55   |             7              |
++-------+----------------------------+
+|  56   |             8              |
++-------+----------------------------+
+|  57   |             9              |
++-------+----------------------------+
+|  58   |             :              |
++-------+----------------------------+
+|  59   |             ;              |
++-------+----------------------------+
+|  60   |             <              |
++-------+----------------------------+
+|  61   |             =              |
++-------+----------------------------+
+|  62   |             >              |
++-------+----------------------------+
+|  63   |             ?              |
++-------+----------------------------+
+|  64   |             @              |
++-------+----------------------------+
+|  91   |             [              |
++-------+----------------------------+
+|  92   |             \              |
++-------+----------------------------+
+|  93   |             ]              |
++-------+----------------------------+
+|  94   |             ^              |
++-------+----------------------------+
+|  95   |             _              |
++-------+----------------------------+
+|  96   |             `              |
++-------+----------------------------+
+|  97   |             A              |
++-------+----------------------------+
+|  98   |             B              |
++-------+----------------------------+
+|  99   |             C              |
++-------+----------------------------+
+| 100   |             D              |
++-------+----------------------------+
+| 101   |             E              |
++-------+----------------------------+
+| 102   |             F              |
++-------+----------------------------+
+| 103   |             G              |
++-------+----------------------------+
+| 104   |             H              |
++-------+----------------------------+
+| 105   |             I              |
++-------+----------------------------+
+| 106   |             J              |
++-------+----------------------------+
+| 107   |             K              |
++-------+----------------------------+
+| 108   |             L              |
++-------+----------------------------+
+| 109   |             M              |
++-------+----------------------------+
+| 110   |             N              |
++-------+----------------------------+
+| 111   |             O              |
++-------+----------------------------+
+| 112   |             P              |
++-------+----------------------------+
+| 113   |             Q              |
++-------+----------------------------+
+| 114   |             R              |
++-------+----------------------------+
+| 115   |             S              |
++-------+----------------------------+
+| 116   |             T              |
++-------+----------------------------+
+| 117   |             U              |
++-------+----------------------------+
+| 118   |             V              |
++-------+----------------------------+
+| 119   |             W              |
++-------+----------------------------+
+| 120   |             X              |
++-------+----------------------------+
+| 121   |             Y              |
++-------+----------------------------+
+| 122   |             Z              |
++-------+----------------------------+
+| 127   |            Del             |
++-------+----------------------------+
+| 256   |          Keypad 0          |
++-------+----------------------------+
+| 257   |          Keypad 1          |
++-------+----------------------------+
+| 258   |          Keypad 2          |
++-------+----------------------------+
+| 259   |          Keypad 3          |
++-------+----------------------------+
+| 260   |          Keypad 4          |
++-------+----------------------------+
+| 261   |          Keypad 5          |
++-------+----------------------------+
+| 262   |          Keypad 6          |
++-------+----------------------------+
+| 263   |          Keypad 7          |
++-------+----------------------------+
+| 264   |          Keypad 8          |
++-------+----------------------------+
+| 265   |          Keypad 9          |
++-------+----------------------------+
+| 266   |          Keypad .          |
++-------+----------------------------+
+| 267   |          Keypad /          |
++-------+----------------------------+
+| 268   |          Keypad *          |
++-------+----------------------------+
+| 269   |          Keypad -          |
++-------+----------------------------+
+| 270   |          Keypad +          |
++-------+----------------------------+
+| 271   |        Keypad ENTER        |
++-------+----------------------------+
+| 272   |          Keypad =          |
++-------+----------------------------+
+| 273   |          Up arrow          |
++-------+----------------------------+
+| 274   |         Down arrow         |
++-------+----------------------------+
+| 275   |        Right arrow         |
++-------+----------------------------+
+| 276   |         Left arrow         |
++-------+----------------------------+
+| 277   |           Insert           |
++-------+----------------------------+
+| 278   |            Home            |
++-------+----------------------------+
+| 279   |            End             |
++-------+----------------------------+
+| 280   |          Page up           |
++-------+----------------------------+
+| 281   |         Page down          |
++-------+----------------------------+
+| 282   |             F1             |
++-------+----------------------------+
+| 283   |             F2             |
++-------+----------------------------+
+| 284   |             F3             |
++-------+----------------------------+
+| 285   |             F4             |
++-------+----------------------------+
+| 286   |             F5             |
++-------+----------------------------+
+| 287   |             F6             |
++-------+----------------------------+
+| 288   |             F7             |
++-------+----------------------------+
+| 289   |             F8             |
++-------+----------------------------+
+| 290   |             F9             |
++-------+----------------------------+
+| 291   |            F10             |
++-------+----------------------------+
+| 292   |            F11             |
++-------+----------------------------+
+| 293   |            F12             |
++-------+----------------------------+
+| 294   |            F13             |
++-------+----------------------------+
+| 295   |            F14             |
++-------+----------------------------+
+| 296   |            F15             |
++-------+----------------------------+
+| 300   |          Num lock          |
++-------+----------------------------+
+| 301   |         Caps lock          |
++-------+----------------------------+
+| 302   |        Scroll lock         |
++-------+----------------------------+
+| 303   |        Right shift         |
++-------+----------------------------+
+| 304   |         Left shift         |
++-------+----------------------------+
+| 305   |       Right control        |
++-------+----------------------------+
+| 306   |        Left control        |
++-------+----------------------------+
+| 307   |         Right Alt          |
++-------+----------------------------+
+| 308   |          Left Alt          |
++-------+----------------------------+
+| 309   | Right Meta (OS X: Command) |
++-------+----------------------------+
+| 310   | Left Meta (OS X: Command)  |
++-------+----------------------------+
+| 311   |        Left Windows        |
++-------+----------------------------+
+| 312   |       Right Windows        |
++-------+----------------------------+
+| 313   |       Mode / Alt Gr        |
++-------+----------------------------+
+| 315   |            Help            |
++-------+----------------------------+
+| 316   |        Print screen        |
++-------+----------------------------+
+| 317   |           SysRq            |
++-------+----------------------------+
+| 318   |           Break            |
++-------+----------------------------+
+| 319   |            Menu            |
++-------+----------------------------+
+| 320   |           Power            |
++-------+----------------------------+
+| 321   |            Euro            |
++-------+----------------------------+
+
+
+  Acknowledgements
+
+This version of JOYCE could not have been written without:
+
+  Ian Collier, who wrote the "xz80" emulator. The Z80 emulator in 
+  JOYCE is based on the one in xz80.
+
+  Richard Clayton, who supplied vital information on the 
+  interactions between the XBIOS and the hardware.
+
+  Cliff Lawson, who made the PCW hardware specification public.
+
+  Richard Fairhurst and Jacob Nevins, who provided hardware 
+  information.
+
+  The many authors of Linux, GNU, gcc, SDL, libpng and libxml.
+
+  The MICO authors who created the mini-STL.
+
+  Frank D. Cringle, who wrote the Z80 emulator test suite in 
+  YAZE.
+
+  David Cantrell, for his posting on comp.sys.amstrad.8bit 
+  describing the use of PostScript in printer emulation.
+
+  Matthew Gomez, who suggested some of the colour names in the 
+  custom colour menu.
+
+  Digital Research, the original authors of CP/M, GEM and GSX.
+
+  Caldera (as was; it later ended up as Lineo), for releasing GEM 
+  under the GPL.
+
+  Everyone who over the years has spared the time to contact me 
+  about JOYCE, in particular those who found incompatibilities in 
+  the emulation.
+
+  Previous versions also owed much to:
+
+  Marat Fayzullin, who wrote the original Z80 emulation code. 
+  However, none of this code now remains in JOYCE, because it is 
+  not compatible with the GPL.
+
+  Ian Macdonald, who tested JOYCE for DOS.
+
+  The authors of DJGPP, GRX20 and DRDOS.
+
+  Samuel Vincent, the author of the SVAsync library.
+
+  Martynas Kunigelis, on whose DJGPP keyboard driver I based that 
+  of JOYCE for DOS.
+

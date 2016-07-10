@@ -1,0 +1,11 @@
+TAPROM v1.00                                   John Elliott, 25 September 1995.
+===============================================================================
+
+  TAPROM is a program to load a custom (pokeable) Spectrum +3 ROM, at the same
+time patching it with a system which simulates tapes using disc files. TAPROM
+includes five utilities: TAPSNA, TAPE2TAP, ZXTCOPY, ZXTPUT and ZXTRACT.
+
+  This archive includes TAPROM in two formats: as a .DSK image, and as 
+a self-extract archive. To extract the archive, copy TAPROM.ZEA and TAPROM.ZEB
+onto a +3, and LOAD "TAPROM.ZEB".
+

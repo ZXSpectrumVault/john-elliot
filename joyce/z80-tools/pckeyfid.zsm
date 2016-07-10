@@ -1,0 +1,72 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;   JOYCE/ANNE v2.1.0: PCW emulator                                           ;
+;                                                                             ;
+;   Copyright (C) 1998-1999, John Elliott <jce@seasip.demon.co.uk>            ;
+;                                                                             ;
+;    This program is free software; you can redistribute it and/or modify     ;
+;    it under the terms of the GNU Library General Public License as          ;
+;    published by the Free Software Foundation; either version 2 of the       ;
+;    License, or(at your option) any later version.                           ;
+;                                                                             ;
+;    This program is distributed in the hope that it will be useful,          ;
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of           ;
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            ;
+;    GNU Library General Public License for more details.                     ;
+;                                                                             ;
+;    You should have received a copy of the GNU Library General Public        ;
+;    License along with this program; if not, write to the Free Software      ;
+;    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.                ;
+;                                                                             ;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	org	0
+
+cr	equ	0Dh
+lf	equ	0Ah
+
+FIDBASE:
+	DEFW	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0	;PRL header
+	DEFW	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+	DEFW	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+	DEFW	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+	DEFW	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+	DEFW	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+	DEFW	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+	DEFW	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+						;Relocation map:
+	JP	FIDEMS				;00 01 >02<
+	DEFB	26,26,26,26,26,26,26,26,'FID'	;03 04 05 06 07 08 09 0A 0B 0C 0D
+	DEFW	0112H				;0E 0F
+FIDCSM:	DEFW	0,0,0,0,0,0,0,0			;10 11 12 13 14 15 16 17 18 19 1A 1B 1C 1D 1E 1F
+;
+FIDEMS:	LD	A,D				;20
+	OR	A				;21
+	JR	NZ,FIDERR			;22 23
+	DEFB	0EDh,0FEh			;24 25
+	INC	A	;Util compat no.	;26
+	JR	NZ,FIDERR			;27 28
+	AND	A				;29
+	LD	DE,0112h			;2A 2B 2C
+	SBC	HL,DE				;2D 2E
+	JR	C,FIDERR			;2F 30
+	LD	A,0Ch				;31 32
+	LD	C,2				;33 34
+	LD	IX,TABLE			;35 36 37 >38<
+	LD	E,(IX+-2)			;39 3A 3B
+	LD	D,(IX+-1)			;3C 3D 3E
+	DEFB	0EDh,0FEh			;3F 40
+	SCF					;41
+	LD	HL,GVM1				;42 43 >44<
+	RET					;45
+;
+FIDERR:	LD	HL,BVM1				;46 47 >48<
+	XOR	A				;49
+	RET					;4A
+
+BVM1:	DEFB	'xxxxxxxx.FID will not run in this environment.',cr,lf,255
+GVM1:	DEFB	'Keyboard mappings loaded.',cr,lf,255
+
+TABLEN:	DEFW	0
+TABLE:	DEFB	0
+
+	END

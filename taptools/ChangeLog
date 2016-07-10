@@ -1,0 +1,90 @@
+2014-08-23 John Elliott
+
+	* General: Moved all .TAP manipulation into tapeio.c / tapeio.h.
+	* General: Added support for .TZX and .PZX files. Any program that
+		  outputs a tape file now takes -f options to specify the
+		  output format.
+	* tapcat:  New options allow a raw binary file to be treated as any
+		  kind of Spectrum file.
+	* mkmgtfs: New program created: behaves as mkp3fs, but with	
+		  MGT disk format rather than Spectrum +3.
+	* mkibmtap: New program created: behaves as tapcat, but with
+	 	  IBM 5150 tape format rather than Spectrum.
+
+2011-03-27 John Elliott
+
+	* sna2dsk: New program created: wraps a .SNA snapshot in an 
+	 auto-booting +3 diskette image.
+
+2010-05-03 John Elliott
+
+	* taptools-1.0.7 released.
+
+	* dsk2tap: Tweaked the BASIC loader so that if it runs to completion,
+	 the program stops with 9 STOP rather than whatever error the +3DOS
+	 loader came up with.
+
+2010-04-17 John Elliott
+
+	* taptools-1.0.6 released.
+
+	* dsk2tap: Naively converts an unprotected .DSK to a .TAP file which,
+	 when run, formats a floppy and creates a copy of the original disc.
+
+2010-01-24 John Elliott
+
+	* taptools-1.0.5 released.
+
+	* tapcat: Added a -H option to append headerless blocks to the
+	 tape file.
+
+2008-02-09 John Elliott
+
+	* taptools-1.0.4 released.
+
+	* sna2tap: Naively converts a .SNA file to an autoloading .TAP file.
+
+	* tapls, tapsplit, tap2dsk: Recognise tape blocks created by SNA2TAP. 
+	Also fix an integer overflow issue on DOS systems with 16-bit integers.
+
+2008-03-18 John Elliott
+
+	* taptools-1.0.3 released.
+
+	* bin2bas: New program created to wrap a BASIC loader round a 
+	 binary blob.
+
+2008-03-16 Garry Lancaster
+
+	* specform, tapcat: -a option added to set load address.
+
+	* tapget: Various bugfixes.
+
+2007-06-28 John Elliott
+
+	* taptools-1.0.2 released.
+
+	* tap2dsk, mkp3fs: New utilities created to construct +3 disc images
+	 from scratch.
+
+2007-06-07 John Elliott
+
+	* tapsplit: It seems that on or about 2005-07-11, one Javier Herrera
+	 released a modified version of tapsplit but breached the GPL by not
+	 distributing source (see
+	 <1121094019.524192.7650@g43g2000cwa.googlegroups.com> ).
+	 Created tapsplit-1.0.1, which should be a suitable substitute and 
+	 can be distributed without fear of my armies of undead lawyers.
+
+2005-06-30 John Elliott
+
+	* taptools-1.0.0 released, comprising specform, unspecform,
+	tapcat, tapget, tapls and tapsplit.
+
+2000-06-10 John Elliott
+
+	* tapsplit-1.0.0 released.
+
+1996-12-14 John Elliott
+
+	* Earliest known tapcat source.

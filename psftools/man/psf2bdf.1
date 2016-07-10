@@ -1,0 +1,110 @@
+.\" -*- nroff -*-
+.\"
+.\" psf2bdf.1: psf2bdf man page
+.\" Copyright (c) 2005, 2007 John Elliott
+.\"
+.\"
+.\"
+.\" psftools: Manipulate console fonts in the .PSF format
+.\" Copyright (C) 2005, 2007  John Elliott
+.\"
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2 of the License, or
+.\" (at your option) any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program; if not, write to the Free Software
+.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+.\"
+.TH psf2bdf 1 "11 April, 2008" "Version 1.0.7" "PSF Tools"
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH NAME
+psf2bdf - convert part or all of a PSF Font file to an X11 BDF.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH SYNOPSIS
+.PD 0
+.B psf2bdf
+.RI [ "--first=FIRST" ]
+.RI [ "--last=LAST" ]
+.RI [ "--256" ]
+.RI [ "--fontname=NAME" ]
+.RI [ "--defchar=INDEX" ]
+.RI [ "--descent=VALUE" ]
+.RI [ "--codepage=CODEPAGE" ]
+.RI [ "--iso10646" ]
+.RI [ INPUTFILE 
+.RI [ OUTPUTFILE ]]
+.P
+.PD 1
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH DESCRIPTION
+psf2bdf saves some or all characters from a .PSF font to an X11-format BDF
+font file. The resulting file should then be tidied up in an editor such
+as xmbdfed(1) before being installed.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH OPTIONS
+.TP
+.B --codepage=x
+Extracts only the characters in the given codepage (requires the source
+PSF file to have a Unicode directory). Any characters in the codepage not
+present in the source font are replaced by blanks. The codepage can be
+specified by number or name; see psfpages(1) for a list of acceptable 
+codepage names.
+.TP
+.B --first=n
+Extracts characters starting at the specified character. 
+.TP
+.B --last=n
+Extracts characters up to and including the specified character. 
+.TP
+.B --256
+Equivalent to --first=0 --last=255.
+.TP
+.B --fontname=name
+Sets the XLFD name of the font being output.
+.TP
+.B --descent=n 
+Sets the descent (pixels between the character baseline and the bottom of the
+character cell). If this is not entered it is assumed to be 1/4 of the 
+character height.
+.TP
+.B --defchar=n
+Sets the number of the default character to use.
+.TP
+.B --iso10646
+If this option is present and the source file has a Unicode directory, the 
+font will encode the ID of each character as its Unicode position. Otherwise
+the character's ID is equal to its position in the file.
+.LP
+If a codepage and a range of characters are both specified, the range
+is applied to the subset of characters extracted by the codepage.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH BUGS
+The BDF needs tidying up after generation, as mentioned above.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH SEE ALSO
+xmbdfed(1),psfpages(1)
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH AUTHOR
+John Elliott <jce@seasip.demon.co.uk>.
+.PP

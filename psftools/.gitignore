@@ -1,0 +1,82 @@
+# Object files
+*.o
+*.ko
+*.obj
+*.elf
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Libraries
+*.lib
+*.a
+*.la
+*.lo
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Executables
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+
+# Configure
+config.cache
+config.h
+config.log
+config.status
+libtool
+stamp-h
+autom4te.cache/
+
+# Makefiles (uses Configure instead)
+Makefile
+
+# Symbols etc.
+*.dSYM
+*.lai
+
+# Binaries & libraries
+*/.libs/*
+lib/dumpcps
+tools/bbc2psf
+tools/cpi2psf
+tools/cpicomp
+tools/cpidcomp
+tools/cpitest
+tools/latin1.inc
+tools/mda2psf
+tools/page2cp2
+tools/psf2bbc
+tools/psf2bdf
+tools/psf2bsd
+tools/psf2inc
+tools/psf2pbms
+tools/psf2raw
+tools/psf2txt
+tools/psf2wof
+tools/psf2wyse
+tools/psf2xbm
+tools/psf2zx
+tools/psfjoin
+tools/psfmerge
+tools/psfpages
+tools/psfs2cpi
+tools/psfxform
+tools/raw2psf
+tools/txt2psf
+tools/wof2psf
+tools/wyse2psf
+tools/zx2psf
+winfonts/fnt2psf
+winfonts/fnts2fon
+winfonts/fon2fnts
+winfonts/psf2fnt

@@ -1,0 +1,48 @@
+#define MAX_COLOR               256
+#define MAX_LINE_STYLE          7
+#define MAX_L_WIDTH             40
+#define MAX_MARK_INDEX          6
+#define MAX_FONT                1
+#define MX_FIL_STYLE            4
+#define MX_FIL_HAT_INDEX        12
+#define MX_FIL_PAT_INDEX        24
+#define MAX_MODE                3
+#define MAX_ARC_CT              70
+
+
+/* Device-independent enumeration values. */
+#define SQUARED 0
+#define ARROWED 1
+#define CIRCLED 2
+
+#define LLUR    0
+#define ULLR    1
+
+/* Device-independent equivalences. */
+#define xres      m_globals->m_DEV_TAB[0]
+#define yres      m_globals->m_DEV_TAB[1]
+#define xsize     m_globals->m_DEV_TAB[3]
+#define ysize     m_globals->m_DEV_TAB[4]
+//#define iptscnt   CONTRL[1]
+//#define optscnt   CONTRL[2]
+//#define iintcnt   CONTRL[3]
+//#define ointcnt   CONTRL[4]
+//#define gdp_code  CONTRL[5]
+#define	DEF_CHWT  m_globals->m_SIZ_TAB[0].x
+#define	DEF_CHHT  m_globals->m_SIZ_TAB[0].x
+#define	DEF_LWID  m_globals->m_SIZ_TAB[2].x
+#define DEF_MKWD  m_globals->m_SIZ_TAB[4].x
+#define DEF_MKHT  m_globals->m_SIZ_TAB[4].y
+#define MAX_MKWD  m_globals->m_SIZ_TAB[5].x
+#define MAX_MKHT  m_globals->m_SIZ_TAB[5].y
+
+// Text font buffer equates
+#define left_offset  0
+#define right_offset 3
+#define max_cell_wd  8
+#define cell_wd      ((left_offset + right_offset + max_cell_wd + 15)/8)
+#define cell_ht     16
+#define cell_size   (cell_ht*cell_wd)
+
+#define cur_mot_max_x 8
+#define cur_mot_max_y 16

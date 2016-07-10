@@ -1,0 +1,89 @@
+.\" -*- nroff -*-
+.\"
+.\" wyse2psf.1: wyse2psf man page
+.\" Copyright (c) 2005, 2007 John Elliott
+.\"
+.\"
+.\"
+.\" psftools: Manipulate console fonts in the .PSF format
+.\" Copyright (C) 2005, 2007  John Elliott
+.\"
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2 of the License, or
+.\" (at your option) any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program; if not, write to the Free Software
+.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+.\"
+.TH wyse2psf 1 "11 April, 2008" "Version 1.0.7" "PSF Tools"
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH NAME
+wyse2psf - convert a Wyse-60 soft font to a PC Screen Font file.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH SYNOPSIS
+.PD 0
+.B wyse2psf
+.RI [ "--height=HEIGHT" ]
+.RI [ "--width=WIDTH" ]
+.RI [ "--codepage=CODEPAGE" ]
+.RI [ "--psf1" ]
+.RI [ "--psf2" ]
+.RI [ INPUTFILE 
+.RI [ OUTPUTFILE ]]
+.P
+.PD 1
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH DESCRIPTION
+.LP 
+wyse2psf converts a Wyse-60 soft-font (a sequence of Wyse-60 escape codes)
+to the .PSF format.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH OPTIONS
+.TP
+.B --height=HEIGHT
+Specifies the character height of the resulting PSF. If this is omitted the 
+height of the tallest character in the soft font will be used.
+.TP
+.B --width=WIDTH
+Specifies the character width of the resulting PSF. If this is omitted 8 will
+be assumed.
+.TP
+.B --codepage=CODEPAGE
+Add a Unicode directory for the specified codepage, which can be identified by
+number or name. See psfpages(1) for a list of valid codepage names.
+.TP
+.B --psf1
+Force output in the PSF1 format.
+.TP
+.B --psf2
+Force output in the PSF2 format (default).
+
+.\"------------------------------------------------------------------
+.\"
+.\" .SH BUGS
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH SEE ALSO
+pat2sf(1), sf2pat(1), psf2wyse(1)
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH AUTHOR
+John Elliott <jce@seasip.demon.co.uk>.
+.PP

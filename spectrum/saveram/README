@@ -1,0 +1,14 @@
+  SAVERAM is a simple proof-of-concept program that saves the Spectrum 128
+RAMdisk to tape in one operation (or loads it again).
+
+  SVRAM.ZXB should be loaded at 8000h (32768). 
+
+To save the RAMdisc: RANDOMIZE USR 32768
+To load the RAMdisc: LET x = USR 32771
+
+  On return, x will be zero if there was an error, nonzero otherwise.
+
+  As I mentioned before, this program is a proof of concept, and there are
+many ways it could be improved; the obvious one would be not saving empty
+space.
+

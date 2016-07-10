@@ -1,0 +1,178 @@
+.\" -*- nroff -*-
+.\"
+.\" psfxform.1: psfxform man page
+.\" Copyright (c) 2005, 2007 John Elliott
+.\"
+.\"
+.\"
+.\" psftools: Manipulate console fonts in the .PSF format
+.\" Copyright (C) 2005, 2007  John Elliott
+.\"
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2 of the License, or
+.\" (at your option) any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program; if not, write to the Free Software
+.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+.\"
+.TH psfxform 1 "11 April, 2008" "Version 1.0.7" "PSF Tools"
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH NAME
+psfxform - Apply various transformations to a PC Screen Font file
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH SYNOPSIS
+.PD 0
+.B psfxform
+.RI [ "--first=FIRST" ]
+.RI [ "--last=LAST" ]
+.RI [ "--256" ]
+.RI [ "--bold=RANGE" ]
+.RI [ "--centre=RANGE" ]
+.RI [ "--double=RANGE" ]
+.RI [ "--flip=RANGE" ]
+.RI [ "--repeat=RANGE" ]
+.RI [ "--scale=RANGE" ]
+.RI [ "--thin=RANGE" ]
+.RI [ "--strip" ]
+.RI [ "--width=WIDTH" ]
+.RI [ "--height=HEIGHT" ]
+.RI [ "--codepage=CODEPAGE" ]
+.RI [ "--setcodepage=CODEPAGE" ]
+.RI [ "--permute=FILE" ]
+.RI [ "--psf1" ]
+.RI [ "--psf2" ]
+.RI [ INPUTFILE 
+.RI [ OUTPUTFILE ]]
+.P
+.PD 1
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH DESCRIPTION
+psfxform extracts some or all characters from a font in the .PSF format, 
+applies various transformations, and saves the result as another .PSF font. 
+Subsets can be extracted as a range of characters, as a codepage, or both.
+.LP
+The character ranges passed to --bold, --double and so on are optional. 
+If present, they are formed as a comma-separated list - each element is
+.RI nnn
+for a single character, 
+.RI nnn-nnn
+for a contiguous set of characters. For example, to apply --repeat to
+characters 8,10 and 179 to 223: 
+.B --repeat=8,10,179-223
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH OPTIONS
+.TP
+.B --codepage=x
+Extracts only the characters in the given codepage (requires the source
+PSF file to have a Unicode directory). Any characters in the codepage not
+present in the source font are replaced by blanks. The codepage can be
+specified by number or name; see psfpages(1) for a list of acceptable 
+codepage names.
+.TP
+.B --setcodepage=x
+Replace any Unicode information in the extracted font by the Unicode 
+mappings for the specified codepage. Note that this option does not change
+the character bitmaps in any way.
+.TP
+.B --strip
+Forces the output font to be written with no Unicode directory, even if the
+source font had one.
+.TP
+.B --first=n
+Extracts characters starting at the specified character. 
+.TP
+.B --last=n
+Extracts characters up to and including the specified character. 
+.TP
+.B --256
+Equivalent to --first=0 --last=255.
+.TP
+.B --permute=filename
+Rearrange the character bitmaps in the output file. This only affects 
+character bitmaps, not the Unicode directory. The filename passed to --permute
+can be "-" for standard input; its format should be a series of lines, each
+containing two numbers separated by a comma. The first number is the character
+number to change from, and the second is the number to change to. For example, 
+two lines, the first reading "65,66" and the second reading "66,65", will 
+swap the glyphs for A and B. Anything after a # or ; is a comment. The numbers
+used relate to the source file, before any subset is extracted.
+.TP
+.B --width
+Alter the character cell width in the target font. This doesn't scale 
+characters; it's Procrustean, so glyphs are either packed with whitespace 
+or cropped.
+.TP
+.B --height
+Alter the character cell height in the target font.
+.TP
+.B --bold=RANGE
+Makes characters bold by drawing them twice. Note that if no --width option
+is supplied, this will make the target font one pixel wider than the source
+font.
+.TP
+.B --centre=RANGE
+If the character cell is being made larger or smaller, aligns character cells
+by their centres rather than by their top left-hand corners. The spelling 
+--center is also recognised.
+.B --double=RANGE
+Doubles each row in the source character. This should be used with the --height
+option to increase the number of character rows, otherwise only the top half
+of each character will be used.
+.TP
+.B --flip=RANGE
+Mirror characters left/right.
+.B --repeat=RANGE
+When increasing the size with --height or --width, repeat the last character
+row and column into new rows/columns, rather than leaving them blank. This may
+help to keep line graphic characters joined up. When combined with --centre,
+characters will be expanded at all four edges if necessary.
+.TP
+.B --scale=RANGE
+If the character cell is being made larger or smaller, attempts to scale 
+the characters to fit. This will probably look awful unless the new size is
+an exact multiple of the old size, or unless you tidy the characters by hand
+afterwards.
+.TP
+.B --thin=RANGE
+Makes characters thin by reducing vertical lines wider than one pixel.
+.TP
+.B --psf1
+Forces output to be in PSF1 format.
+.TP
+.B --psf2
+Forces output to be in PSF2 format.
+.LP
+If a codepage and --first / --last are both specified, the --first / --last
+apply to the subset of characters extracted by the codepage. Similarly 
+all character ranges on --bold, --thin etc. apply to the extracted subset.
+
+.\"
+.\"------------------------------------------------------------------
+.\"
+.\".SH BUGS
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH SEE ALSO
+psfpages(1)
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH AUTHOR
+John Elliott <jce@seasip.demon.co.uk>.
+.PP

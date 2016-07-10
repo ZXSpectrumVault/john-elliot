@@ -1,0 +1,123 @@
+;
+; SAVERAM: Save/restore the Spectrum 128 RAMdisc to/from tape
+; Copyright 2005 John Elliott <jce@seasip.demon.co.uk>
+;
+;   This software is provided 'as-is', without any express or implied
+;  warranty.  In no event will the authors be held liable for any damages
+;  arising from the use of this software.
+;
+;  Permission is granted to anyone to use this software for any purpose,
+;  including commercial applications, and to alter it and redistribute it
+;  freely, subject to the following restrictions:
+;
+;  1. The origin of this software must not be misrepresented; you must not
+;     claim that you wrote the original software. If you use this software
+;     in a product, an acknowledgment in the product documentation would be
+;     appreciated but is not required.
+;  2. Altered source versions must be plainly marked as such, and must not be
+;     misrepresented as being the original software.
+;  3. This notice may not be removed or altered from any source distribution.
+;
+PORTM	equ	7FFDh
+BANKM	equ	5B5Ch
+;
+; Strategy: We save the RAMdisc as 76k of headerless blocks. There is minimal
+; error checking or helpfulness; this code is more proof of concept.
+;
+	org	08000h
+	jp	save
+	jp	load
+;
+; Save: Save each chunk of memory in turn.
+;
+save:	ld	hl,banks
+	ld	bc,PORTM
+loops:	call	getparam
+	ret	nc
+	push	hl
+	push	bc
+	call	04C2h
+	pop	bc
+	pop	hl
+	jr	loops
+;
+; Load: Load each chunk of memory in turn. Returns BC=PORTM if OK, 0 if error.
+;
+load:	ld	hl,banks
+	ld	bc,PORTM
+loopl:	call	getparam
+	ret	nc
+	push	hl
+	push	bc
+	scf
+	call	0556h
+	pop	bc
+	pop	hl
+	jr	c,loopl
+	ld	bc,0
+	ret
+;
+; Page in the next chunk, and load A, DE and IY with tape I/O parameters.
+; Returns Carry set if OK, Carry clear if no more chunks to do.
+;
+getparam:
+;
+; See if we're at the end
+;
+	ld	a,(hl)
+	cp	0FFh
+	ret	z
+;
+; No. Select the specified bank.
+;
+	ld	a,(BANKM)
+	and	0F8h
+	or	(hl)
+	di
+	ld	(BANKM),a
+	out	(c),a
+	ei
+;
+; Load A, IX and DE for tape load/save.
+;
+	ld	a,(hl)	;Bank number
+	inc	hl
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+	push	de
+	pop	ix	;Load address
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	inc	hl	;Length
+	scf		;Not at end
+	ret	
+;
+; Memory bank descriptors
+; Format is: Bank number, address, bytes
+; The bank number is also used as the block type on cassette.
+;
+banks:	defb	5		;System variables governing the RAMdisc
+	defw	5B83h, 5	
+
+	defb	1		;All of bank 1
+	defw	0C000h, 04000h
+
+	defb	3		;All of bank 3
+	defw	0C000h, 04000h
+
+	defb	4		;All of bank 4
+	defw	0C000h, 04000h
+
+	defb	6		;All of bank 6
+	defw	0C000h, 04000h
+
+	defb	7		;The RAMdisc part of bank 7
+	defw	0C000h, 02C00h
+
+	defb	0FFh		;End of list
+
+	end
+;

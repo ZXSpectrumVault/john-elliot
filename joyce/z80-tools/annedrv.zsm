@@ -1,0 +1,119 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;   JOYCE/ANNE v2.1.0: PCW emulator                                           ;
+;                                                                             ;
+;   Copyright (C) 1998-1999, John Elliott <jce@seasip.demon.co.uk>            ;
+;                                                                             ;
+;    This program is free software; you can redistribute it and/or modify     ;
+;    it under the terms of the GNU Library General Public License as          ;
+;    published by the Free Software Foundation; either version 2 of the       ;
+;    License, or(at your option) any later version.                           ;
+;                                                                             ;
+;    This program is distributed in the hope that it will be useful,          ;
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of           ;
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            ;
+;    GNU Library General Public License for more details.                     ;
+;                                                                             ;
+;    You should have received a copy of the GNU Library General Public        ;
+;    License along with this program; if not, write to the Free Software      ;
+;    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.                ;
+;                                                                             ;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+;ANNEDRV.Z80 is a PCW16 version of JOYCEDRV. See JOYCEDRV for the full
+;description.
+;
+	include	org.inc
+	include	ver.inc
+
+SVC_D_HOOK EQU	$+0FE05h	;Add a disc drive
+	
+	JP	FIDEMS		;A standard PCW FID header
+	DEFB	'ANNE    FID'
+	DEFW	version
+	DEFW	0,0,0,0,0,0,0,0
+;
+DRVNO:	DEFB	0FEh		;These option bytes are passed to JOYCE
+FIDOPT:	DEFB	0		;while in FID_EMS.
+;
+FIDEMS:	LD	A,D		;FID environment must be 0.
+	OR	A
+	JP	NZ,FIDERR
+	DEFB	0EDh, 0FEh	;This call with A=0 => check for JOYCE.
+	INC	A
+	JP	NZ,NJERR
+	LD	A,H
+	CP	2
+	JR	NC,VEROK	;Check the JOYCE version is >=1.22
+	LD	A,L
+	CP	22h
+	JP	C,NJERR
+
+VEROK:	LD	D,4		;D=4 => entering the FID_EMS loop.
+	JR	GENERR
+;
+;This loop is run as many times as possible. Each time round, there is an attempt
+;to hook another drive.
+;
+REHOOK:	LD	DE,DJB		;Disk jump block
+;;;	LD	HL,513		;Alloc vector
+;;;	LD	IX,64		;CKS
+;;;	LD	IY,0		;1024		;HASH
+	CALL	SVC_D_HOOK
+	LD	D,A
+	JR	NC,GENERR	;NC => error
+	LD	E,B
+	SCF			;D=0 => we have the drive in E
+	LD	D,0
+GENERR:	LD	BC,(DRVNO)
+	LD	A,7		;See EDOPS.TXT for explanation of this call.
+	LD	HL,MSGBUF
+	DEFB	0EDh,0FEh	;Hand over to JOYCE for a bit.		
+	AND	A
+	RET	Z
+	CP	2
+	RET	C
+	JR	REHOOK
+;
+NJERR:	LD	HL,MSGBUF	;Not running under JOYCE.
+	AND	A
+	RET
+;
+DJB:	JP	DDLOGIN		;The disc service calls.
+	JP	DDREAD
+	JP	DDWRITE
+	JP	DDFLUSH
+	JP	DDMESS
+;
+DDLOGIN:
+	LD	A,3
+	JR	DDGEN
+;
+DDREAD:	LD	A,4	
+	JR	DDGEN
+;
+DDWRITE:
+	LD	A,5
+	JR	DDGEN
+;
+DDFLUSH:
+	LD	A,6
+DDGEN:	DEFB	0EDh,0FEh
+	RET
+;
+DDMESS:	LD	A,14
+	DEFB	0EDh,0FEh
+	RET
+;
+FIDERR:	LD	D,3	;Version control
+	JR	GENERR
+;
+MSGBUF:	DEFB	'ANNEDRV.FID requires ANNE v2.1.0+ to run.'
+	DEFB	0Dh,0Ah,0FFh
+	DEFB	0,0,0,0,0, 0,0,0,0,0
+	DEFB	0,0,0,0,0, 0,0,0,0,0
+	DEFB	0,0,0,0,0, 0,0,0,0,0
+	DEFB	0,0,0,0,0, 0,0,0,0,0
+	DEFB	0,0,0,0,0			;45 zeroes
+
+	END
+

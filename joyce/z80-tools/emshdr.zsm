@@ -1,0 +1,54 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;   JOYCE/ANNE v2.1.0: PCW emulator                                           ;
+;                                                                             ;
+;   Copyright (C) 1998-1999, John Elliott <jce@seasip.demon.co.uk>            ;
+;                                                                             ;
+;    This program is free software; you can redistribute it and/or modify     ;
+;    it under the terms of the GNU Library General Public License as          ;
+;    published by the Free Software Foundation; either version 2 of the       ;
+;    License, or(at your option) any later version.                           ;
+;                                                                             ;
+;    This program is distributed in the hope that it will be useful,          ;
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of           ;
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            ;
+;    GNU Library General Public License for more details.                     ;
+;                                                                             ;
+;    You should have received a copy of the GNU Library General Public        ;
+;    License along with this program; if not, write to the Free Software      ;
+;    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.                ;
+;                                                                             ;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;
+; This file contains the first 256 bytes of BOOTFILE.EMJ. See emsdata.zsm for
+; the reasoning behind assembling this bit separately.
+;
+	org	0
+;
+; Some EMS files seem to need three zero bytes at the beginning. I'll follow
+; this convention.  
+;
+L0000:	nop
+	nop
+	nop
+	jr	L003B
+L0005:	ret	;No FDOS
+	defw	0ff00h	;Top of memory
+
+	defs	0038h-$
+
+L0038:	ret	;Interrupt handler
+	nop
+	nop
+L003B:	ld	hl,013eh	;3E 01
+	ld	(0),hl
+	ld	hl,0f8d3h	;D3 F8  (ie OUT 248,1 - Reboot)
+	ld	(2),hl
+	ld	sp,80h		;32 stack levels
+	ld	hl,0
+	push	hl		;RETs go to 0.
+	jp	0100h
+
+	defs	0100h-$
+
+	end

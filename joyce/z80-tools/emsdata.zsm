@@ -1,0 +1,571 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;   JOYCE/ANNE v2.1.0: PCW emulator                                           ;
+;                                                                             ;
+;   Copyright (C) 1998-1999, John Elliott <jce@seasip.demon.co.uk>            ;
+;                                                                             ;
+;    This program is free software; you can redistribute it and/or modify     ;
+;    it under the terms of the GNU Library General Public License as          ;
+;    published by the Free Software Foundation; either version 2 of the       ;
+;    License, or(at your option) any later version.                           ;
+;                                                                             ;
+;    This program is distributed in the hope that it will be useful,          ;
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of           ;
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            ;
+;    GNU Library General Public License for more details.                     ;
+;                                                                             ;
+;    You should have received a copy of the GNU Library General Public        ;
+;    License along with this program; if not, write to the Free Software      ;
+;    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.                ;
+;                                                                             ;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	org	0100h
+	include	ver.inc
+;
+; New for JOYCE 1.9.0 (boot image 1.5.0): [f1] and [f3] now have special
+; meanings.
+;
+; Earlier changes (v1.2.2): The original boot image used [f1] and [f3] to select 
+;one of 2 boot discs. This then switched to the choose-from-list-of-10
+;system.
+;
+;Source for PCW emulator boot image. Note that it loads at 100h, and should
+;be combined with EMSHDR.Z80 (which provides the Zero Page). The reason for
+;the separation is to allow the part which loads at 0100h to be compressed
+;with POPCOM. However, the compression is no longer done because POPCOM 
+;produced a faulty file that could not decompress.
+;
+FDOS	EQU	5
+CR	EQU	0Dh
+LF	EQU	0Ah
+EOF	EQU	1Ah
+
+MAXBT	EQU	10	;Maximum of 10 loadable images
+
+RRAM	EQU	0EE00h	;Roller-RAM - used by video hardware
+SCRRAM	EQU	09400h	;Video memory
+RRBYT	EQU	077h	;=RRAM/512
+
+	DEFB	0EBh,04h	;Just in case this is run as a .COM file
+				;on a PeeCee, keep the 8086 out of trouble.
+				;(jumps to the DOS protection routine below).
+
+	EX	DE,HL		;Reverses the effect of the first 0EBh byte. 
+				;This program might need a parameter passed
+				;in HL at some stage.
+	JP	BEGIN		
+;
+;8086 processors arrive here.
+;
+	DEFB	0B4h,09h	;DOS protection... MOV AH,9
+	DEFB	0BAh
+	DEFW	BVMES		;DOS protection... MOV DX,OFFSET BVMES
+	DEFB	0CDh,021h	;DOS protection... INT 21h.
+	DEFB	0CDh,020h	;DOS protection... INT 20h.
+;
+;The message below serves a dual purpose. Firstly it is printed by the 
+;boot image when it loads, and secondly it appears when the .COM file is 
+;viewed using TYPE or ID.
+;
+SIGNON:	DEFB	cr,'PCW boot image v'
+	include	version.inc
+	DEFB	' (c) John Elliott',cr,lf
+	DEFB	'Date: '
+	include	built.inc
+	DEFB	cr,lf,eof
+;
+BVMES:	DEFB	'This program requires a PCW.',cr,lf,'$'
+NCMES:	DEFB	'This program should not be run as a .COM file.',cr,lf,'$'
+
+BEGIN:	LD	DE,BVMES
+	SUB	A		;Test for 8080 processors.
+	JP	PE,BADVER	;Lose the 8080s.
+	LD	A,(FDOS)
+	CP	0C3h		;Test for CP/M. This image should not be
+	JR	NZ,MAIN		;run under CP/M.
+	LD	DE,NCMES
+BADVER:	LD	C,9
+	CALL	FDOS
+	RST	0
+;
+MAIN:	LD	A,40h		;Switch the screen in
+	OUT	(0F7h),A
+	LD	HL,SIMFDOS
+	LD	(6),HL
+	LD	A,0CDh
+	LD	(5),A	;Make the instruction at 5 a CALL so that it doesn't
+			;make the test above think CP/M is present.
+	LD	HL,INTVEC
+	LD	(39h),HL
+	LD	A,0C3h	;Interrupt handler
+	LD	(38h),A
+	IM	1
+	EI
+;
+;Set up the video memory. For various reasons the video hardware uses 17-bit
+;addresses in 16-bit words, so a little legerdemain is required to produce
+;the correct figures.
+;
+	LD	HL,SCRRAM
+	PUSH	HL
+	LD	DE,SCRRAM+1
+	LD	BC,59FFh
+	LD	(HL),L
+	LDIR		;Zap screen RAM.
+	INC	HL	;HL->roller RAM.
+	POP	DE
+	SRL	D	;DE->screen RAM (17 bits).
+	RR	E
+	LD	B,32	;32 text lines
+TLINE:	LD	C,8	;8 scan lines / text line
+	PUSH	DE
+SLINE1:	LD	(HL),E
+	INC	HL
+	LD	(HL),D
+	INC	HL
+	INC	E
+	DEC	C
+	JR	NZ,SLINE1
+	POP	DE
+	PUSH	BC
+	LD	BC,168h
+	EX	DE,HL
+	ADD	HL,BC
+	EX	DE,HL
+	POP	BC
+	DJNZ	TLINE
+;
+;Video memory initialised. Fill it with the title screen, then select it.
+;
+	LD	HL,DEFSCR	;Title screen image
+	LD	DE,SCRRAM
+	LD	BC,5A00h
+	LDIR
+
+	LD	A,RRBYT		;Point roller-RAM at our roller
+	OUT	(0F5h),A
+	XOR	A
+	OUT	(0F6h),A	;Screen origin to top
+	LD	A,0C0h
+	OUT	(0F7h),A	;Black on white
+	LD	DE,SIGNON
+	CALL	OPSTR		;Sign on
+	XOR	A		;Function 0 : Test for JOYCE	
+	DEFB	0EDh,0FEh	;
+	OR	A		;0 if true PCW
+	JP	Z,TRUEPCW
+	LD	A,H
+	CP	2
+	JR	NC,OKVER
+	LD	A,L
+	CP	22h		;JOYCE 1.22 or later required.
+	JR	NC,OKVER
+	LD	DE,VERERR
+	CALL	OPSTR		;Print the "incorrect version message"
+	CALL	CRLF
+	JP	SYSHLT		;and halt.	
+
+OKVER:	LD	A,H		;Convert major version to ASCII
+	ADD	A,'0'
+	LD	(JVERH),A
+	LD	A,L
+	LD	DE,JVERL	;Convert minor version to ASCII
+	CALL	BCD2D
+	LD	DE,VER$		;Report the host JOYCE version
+	CALL	OPSTR
+	LD	DE,MENU$	;Print the menu
+	CALL	OPSTR
+	CALL	GETBT		;Get list of boot discs
+	CALL	PRBT		;Print it
+MENU1:	LD	A,(0FFF0h)
+	BIT	0,A
+	JP	NZ,JK_F3
+	BIT	2,A
+	JP	NZ,JK_F1
+	CALL	RDKEY
+	JR	C,DBOOT
+	LD	A,(0FFF1h)
+	BIT	0,A
+	JP	NZ,QUITEM
+	JR	MENU1
+;
+; Handle F3 and F1. If these return with A=0, it means this boot image is 
+; running on an older JOYCE.
+;
+JK_F1:	LD	BC,0FF01h
+	JR	JK_CMN
+;
+JK_F3:	LD	BC,0FF00h
+JK_CMN:	CALL	SPLBOOT
+	OR	A
+	JR	NZ,MENU1
+	LD	DE,NOSPL
+	CALL	OPSTR
+	JR	MENU1
+
+SPLBOOT:	
+	LD	A,10h
+	DEFB	0EDh,0FEh
+	RET	
+;
+DBOOT:	SUB	'0'
+	LD	B,A
+;
+;Make the emulator boot.
+;
+	LD	HL,BOOTMP
+	LD	E,B
+	LD	D,0
+	ADD	HL,DE
+	LD	A,(HL)
+	CP	1
+	JP	NZ,MENU1
+	LD	A,1		;Function 1 - boot
+	DEFB	0EDh,0FEh
+	LD	DE,ERR$		;Only returns if error
+	CALL	OPSTR
+	CALL	PRBT
+	JP	MENU1
+;
+SYSHLT:	LD	DE,HLT$
+	CALL	OPSTR
+SYSHL1:	LD	A,(0FFF5h)
+	BIT	7,A
+	JR	Z,SYSHL1
+QUITEM:
+	LD	A,0FFh
+	DEFB	0EDh,0FEh	;Quit emulator
+	JP	TRUEPCW
+;
+TRUEPCW:
+	LD	DE,TPCW$	;This routine runs if JOYCE isn't 
+	CALL	OPSTR		;detected (ie, this has been booted. 
+TPCW1:	LD	A,(0FFF5h)	;on a real PCW). It prints a "JOYCE required"
+	BIT	7,A		;message, waits for SPACE to be pressed, then 
+	JR	Z,TPCW1		;terminates.
+	RST	0
+;
+CRLF:	LD	E,CR		;Print carriage return, line feed.
+	CALL	OPCHAR
+	LD	E,LF
+	CALL	OPCHAR
+	RET
+;
+SIMFDOS:
+	POP	HL	;Compensate for the CALL at 5
+	LD	A,C
+	CP	1
+	JP	Z,INKEY
+	CP	2
+	JP	Z,OPCHAR
+	CP	6
+	JP	Z,CON6
+	CP	9
+	JP	Z,OPSTR
+	LD	HL,0FFh
+	LD	A,L
+	LD	B,H
+	RET
+;
+INKEY:	CALL	CON6FF
+	OR	A
+	RET	NZ
+	JR	INKEY
+;
+CON6:	LD	A,E
+	CP	0FFh
+	JP	NZ,OPCHAR
+CON6FF:	LD	HL,0FFF0h
+	LD	B,10
+	XOR	A
+INKEY1:	OR	(HL)
+	INC	HL
+	JR	NZ,INKEY2
+	DJNZ	INKEY1
+	JP	RET00
+;
+INKEY2:	LD	C,(HL)
+	XOR	A
+	LD	B,8
+INKEY3:	RR	C
+	JR	C,INKEY4
+	INC	A
+	DJNZ	INKEY3
+	JP	RET00
+;	
+INKEY4:	LD	C,A
+	LD	A,L
+	AND	0Fh
+	ADD	A,A	;*2
+	ADD	A,A	;*4
+	ADD	A,A	;*8
+	ADD	A,C	;Key number
+	LD	L,A
+	LD	H,0
+	LD	B,H
+	RET	
+;
+OPSTR:	EX	DE,HL
+OPSTR1:	LD	A,(HL)
+	CP	1Ah
+	JP	Z,RET00
+	LD	E,A
+	PUSH	HL
+	CALL	OPCHAR
+	POP	HL
+	INC	HL
+	JR	OPSTR1
+;
+OPCHAR:	LD	A,E
+	CP	0Dh
+	JR	NZ,OPCH1
+DOCR:	LD	A,13
+	LD	(XPOS),A
+	JR	RET00
+;
+OPCH1:	CP	0Ah
+	JR	NZ,OPCH2
+DOLF:	LD	A,(YPOS)
+	INC	A
+	CP	30
+	JR	C,OPCH1A
+	LD	A,10
+OPCH1A:	LD	(YPOS),A
+	PUSH	AF
+	LD	A,(XPOS)
+	PUSH	AF
+	LD	B,62
+OPCH1B:	PUSH	BC
+	LD	E,' '
+	CALL	OPCH2
+	POP	BC
+	DJNZ	OPCH1B
+	POP	AF
+	LD	(XPOS),A
+	POP	AF
+	LD	(YPOS),A
+	JR	RET00
+;
+OPCH2:	LD	D,0
+	EX	DE,HL
+	ADD	HL,HL	;*2
+	ADD	HL,HL	;*4
+	ADD	HL,HL	;*8
+	LD	DE,SCRFONT
+	ADD	HL,DE
+	PUSH	HL
+	LD	HL,(YPOS)
+	LD	H,0
+	ADD	HL,HL	;*2
+	ADD	HL,HL	;*4
+	ADD	HL,HL	;*8
+	ADD	HL,HL	;*16
+	LD	D,H
+	LD	E,L
+	ADD	HL,HL	;*32
+	ADD	HL,HL	;*64
+	ADD	HL,HL	;*128
+	ADD	HL,DE	;*144
+	LD	D,H
+	LD	E,L
+	ADD	HL,HL	;*288
+	ADD	HL,HL	;*576
+	ADD	HL,DE	;*720
+	EX	DE,HL	;DE=offset to start of line
+	LD	HL,(XPOS)
+	LD	H,0
+	ADD	HL,HL	;*2
+	ADD	HL,HL	;*4
+	ADD	HL,HL	;*8
+	ADD	HL,DE	;HL=character offset from screen start
+	LD	DE,SCRRAM
+	ADD	HL,DE
+	EX	DE,HL	;DE=destination address of character
+	POP	HL	;HL=source address of character
+	LD	BC,8
+	LDIR
+	LD	A,(XPOS)
+	INC	A
+	LD	(XPOS),A
+	CP	77
+	JR	C,RET00
+	CALL	DOCR
+	CALL	DOLF
+RET00:	XOR	A
+	LD	B,A
+	LD	L,A
+	LD	H,A
+	RET
+;
+INTVEC:	PUSH	HL		;Timer interrupt handler
+	LD	HL,(SCRRAM)
+	INC	HL
+	LD	(SCRRAM),HL
+	POP	HL
+	RET
+;
+; v2.1.10: Show as 2.1.10 not 2.1.A
+;
+BCD2D:	PUSH	AF
+	RRCA
+	RRCA
+	RRCA
+	RRCA
+	CALL	BCDDGT
+	LD	A,'.'
+	LD	(DE),A
+	INC	DE
+	POP	AF
+	JR	BCDDGT
+;
+HEX2D:	PUSH	AF
+	RRCA
+	RRCA
+	RRCA
+	RRCA
+	CALL	HEXDGT
+	LD	A,'.'
+	LD	(DE),A
+	INC	DE
+	POP	AF
+	JR	HEXDGT
+;
+HEX2:	PUSH	AF
+	RRCA
+	RRCA
+	RRCA
+	RRCA
+	CALL	HEXDGT
+	POP	AF
+;
+BCDDGT:	AND	0Fh
+	CP	10
+	JR	C,HEXDG1
+	EX	DE,HL
+	LD	(HL),'1'
+	INC	HL
+	EX	DE,HL
+	SUB	10
+	JR	HEXDG1
+;
+HEXDGT:	AND	0Fh
+	CP	10
+	JR	C,HEXDG1
+	ADD	A,7
+HEXDG1:	ADD	A,'0'
+	LD	(DE),A
+	INC	DE
+	RET
+;
+; Populate the list of JOYCE boot discs.
+;
+GETBT:	LD	HL,BOOTS+7	;Address to put titles
+	LD	DE,BOOTS1-BOOTS	;Offset to add between each title
+	LD	IX,BOOTMP	;ID numbers for each disc
+	LD	B,0		;0th image
+BTLP:	LD	A,10h
+	PUSH	DE
+	PUSH	IX
+	DEFB	0EDh,0FEh	;Get boot ID of disc number B.
+	POP	IX
+	POP	DE
+	LD	(IX+0),A
+	INC	IX
+	ADD	HL,DE
+	INC	B
+	LD	A,B
+	CP	MAXBT		;Stop after the first 10 (0-9).
+	JR	C,BTLP
+	RET
+;
+PRBT:	LD	HL,BOOTS1-BOOTS
+	LD	DE,BOOTS
+	LD	IX,BOOTMP
+	LD	B,MAXBT
+PRBT1:	PUSH	HL
+	PUSH	DE
+	PUSH	BC
+	LD	A,(IX+0)
+	CP	1
+	CALL	Z,OPSTR
+	POP	BC
+	POP	DE
+	POP	HL
+	INC	IX
+	EX	DE,HL
+	ADD	HL,DE
+	EX	DE,HL
+	DJNZ	PRBT1
+	RET
+;
+RDKEY:	LD	IX,KEYTAB
+	LD	DE,0FFF0h
+	LD	B,MAXBT
+KEYLP:	LD	H,0
+	LD	L,(IX+0)
+	ADD	HL,DE
+	LD	A,(HL)
+	AND	(IX+1)
+	JR	NZ,KEYDN
+	INC	IX
+	INC	IX
+	INC	IX
+	DJNZ	KEYLP
+	XOR	A
+	RET
+;
+KEYDN:	LD	A,(HL)
+	AND	(IX+1)
+	JR	NZ,KEYDN
+	LD	A,(IX+2)
+	SCF
+	RET	
+;
+TPCW$:	DEFB	'This is a real PCW. This EMS file is for the JOYCE emulator only'
+	DEFB	' - insert a start-of-day disc and press SPACE.',eof
+VER$:	DEFB	'JOYCE detected: version '
+JVERH:	DEFB	'0.'
+JVERL:	DEFB	'0.0 ',cr,lf,eof
+NOSPL:	DEFB	'This feature needs a newer JOYCE version.',cr,lf,eof
+MENU$:	DEFB	'[Esc]: Leave JOYCE',cr,lf
+	DEFB	'[F1] : Help',cr,lf
+	DEFB	'[F3] : Boot from alternative disc',cr,lf
+	DEFB	'[F9] : JOYCE main menu',cr,lf,eof
+ERR$:	DEFB	'Failed to boot. Press [Esc] to leave JOYCE, or:',cr,lf,eof
+HLT$:	DEFB	'System halted. Press SPACE to leave JOYCE',cr,lf,eof
+VERERR:	DEFB	'This boot image requires JOYCE v1.22 or later.',cr,lf,eof
+YPOS:	DEFB	10
+XPOS:	DEFB	13
+
+BOOTMP:	DEFS	12
+		;0....5.7
+BOOTS:	DEFB	'0    : 0000000000000000 ',cr,lf,eof
+BOOTS1:	DEFB	'1    : 1111111111111111 ',cr,lf,eof
+	DEFB	'2    : 2222222222222222 ',cr,lf,eof
+	DEFB	'3    : 3333333333333333 ',cr,lf,eof
+	DEFB	'4    : 4444444444444444 ',cr,lf,eof
+	DEFB	'5    : 5555555555555555 ',cr,lf,eof
+	DEFB	'6    : 6666666666666666 ',cr,lf,eof
+	DEFB	'7    : 7777777777777777 ',cr,lf,eof
+	DEFB	'8    : 8888888888888888 ',cr,lf,eof
+	DEFB	'9    : 9999999999999999 ',cr,lf,eof
+;
+KEYTAB:	DEFB	4,1,'0'	;Key translation table. See KEYBOARD.S for the
+	DEFB	8,1,'1'	;meaning of the first two bytes
+	DEFB	8,2,'2' 
+	DEFB	7,2,'3'
+	DEFB	7,1,'4'
+	DEFB	6,2,'5'
+	DEFB	6,1,'6'
+	DEFB	5,2,'7'
+	DEFB	5,1,'8'
+	DEFB	4,2,'9'
+;
+; Binary files containing the screen font & the welcome graphic will be 
+; concatenated here. We skip 32 bytes for the PSF header on the font, which
+; is ignored.
+;
+SCRFONT	EQU	$ + 32		;32 bytes because it's a PSF2 font 
+DEFSCR	EQU	$ + 2080	;32 + 2048
+
+	END

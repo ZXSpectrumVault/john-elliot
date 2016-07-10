@@ -1,0 +1,172 @@
+UnPhipps 0.0.2                                        John Elliott, 8 May 2012
+==============================================================================
+
+  UnPhipps disassembles adventure games written using the engine described by
+Trevor Toms in 'The ZX81 Pocket Book' (1981). Adventures of this type that
+I know of are:
+
+- City of Alzan
+- Greedy Gulch
+- Pharaoh's Tomb
+- Knight's Quest (support for this game format added in version 0.0.2)
+
+  Bearing in mind the difference in implementation language, the game engine 
+appears to be a slightly cut-down port of the 'Adventure II' game engine 
+described by Ken Reed in the August 1980 edition of 'Practical Computing'
+<http://www.yeandle.plus.com/advent/kenreed.html> -- the same article which 
+inspired the creation of the Quill, and the game engine used in early Artic 
+Computing adventures.
+
+  Since these games and the Quill share, as it were, a common ancestor, the 
+output format of UnPhipps has been designed to match that of UnQuill as 
+closely as possible. The command-line options also are designed to match 
+UnQuill, though in a UNIX idiom rather than CP/M.
+
+  Files to examine should be in .P format.
+
+Syntax is: unphipps {options} filename
+
+Options are:
+
+    -o filename: Output to specified file. If no filename is specified, 
+                standard output is used.
+    -sc: Skip Conditions
+    -sl: Skip Location descriptions
+    -sm: Skip Messages
+    -sn: Skip coNNections
+    -so: Skip Objects
+    -ss: Skip System messages
+    -sv: Skip Vocabulary
+    -sw: Skip object Word mapping
+    -v:  Verbose output: Annotate condition and connection output with 
+        the text of messages, locations and objects.
+
+  Text is converted from the ZX81 character set to ASCII, for those games 
+which use the ZX81 character set. Lower-case letters represent graphic 
+shapes, and inverse video text is surrounded by [square brackets].
+
+  Locations and messages are implemented as BASIC subroutines, rather than 
+as strings in memory arrays. Consequently, UnPhipps will display the 
+appropriate snippet of BASIC. This also means that location descriptions 
+can be varied according to game state (for example, printing 'The door is 
+open' when appropriate) and make use of compression (using BASIC strings for 
+common text elements).
+
+  There is no table of system messages, so requests to print the system 
+messages will scan the BASIC program and list all PRINT statements outside
+the areas used by locations and messages.
+
+  The various conditions and actions in the bytecode are pretty much a subset 
+of those used by the Quill. Conditions are:
+
+	AT	nn	;True if the player is in the specified room.
+
+	PRESENT nn	;True if the named object is in the current room, or
+			;is carried, or worn.
+
+	ABSENT	nn	;True if the named object isn't PRESENT.
+
+	CARRIED nn	;True if the named object is carried.	
+
+	NOTZERO nn	;True if the specified system flag is nonzero.
+
+	ZERO    nn	;True if the specified system flag is zero.
+
+	TIMEOUT nn	;True if the specified counter has reached 1.
+
+	CHANCE  nn	;True if a random number from 0-100 is less than nn.
+
+
+Actions are:
+
+	INVEN		;List the objects the player is carrying or wearing.
+
+	GET	nn	;Transfer the named object to the player's possession.
+
+	DROP	nn	;If the player is carrying the named object, transfer
+			;it to the current location.
+
+	MESSAGE nn	;Display the specified message.
+
+	SET     nn	;Set the specified flag to 1.
+
+	CLEAR   nn	;Set the specified flag to 0.
+			; The following flags are used by the game engine:
+			; Flag 1: Number of objects carried.
+			; Flag 2: Set if it is light, clear if it is dark.
+			; Flag 3: Set if carrying a source of light.
+			; Flag 4+: Available for the game.
+
+	LET	nn vv	; Set the value of counter nn to vv. Note that under 
+			; this game engine (and unlike in the Quill), counters
+			; are not the same as system flags. Counters used by
+			; the game engine are:
+			; Counter 1: Decremented every turn.
+			; Counter 2: Decremented every time a room is described
+			;            and it is dark.
+			; Counter 3: Decremented every time a room is described,
+			;            it is dark, and there is no light source.
+			; Counter 4: Decremented every turn.
+			; Counter 5+: Available for the game.
+
+	SWAP	nn  mm	; Swap the two specified objects (mm is always either
+			; nn + 1, or nn - 1).
+			; For example, exchanging a lamp and a lit lamp.
+
+	CREATE	nn	; Move the specified object to the player's current
+			; location. BUG: Note that if the object was previously
+			; carried, Flag 1 is not updated, so the player's 
+			; carrying capacity is permanently reduced.
+		
+	DESTROY	nn	; Move the specified object to location 0 (object
+			; does not exist). This does work if the object is 
+			; carried.
+
+	GOTO    nn	; Move the player to the specified location.
+
+	OKAY		; Display the message "OKAY" and behave as DONE
+	
+	NEWTEXT		; Stop processing actions and prompt for new input.
+			; Do not scan the Process table before the prompt.
+
+	DONE		; Stop processing actions and prompt for new input.
+
+	DESC		; Stop processing actions and display the location
+			; description.
+
+	QUIT		; Prompts to confirm that you want to quit, and ends 
+			; the game if the user says Yes. 
+
+	EXIT		; Ends the game.
+
+	AUTOD		; Drop an object, using the 'object names' table to
+			; identify the object by its name.
+
+	AUTOG		; Get an object, using the 'object names' table to
+			; identify the object by its name.
+
+	SCORE		; Display the player's score.
+
+	DEC     nn	; Decrease the specified counter by 1.
+
+Copying
+~~~~~~~
+
+    UnPhipps: Dumps the database in games based on the 'ZX81 Pocket Book' 
+	      engine.
+    Copyright 2012, John Elliott <jce@seasip.demon.co.uk>
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+

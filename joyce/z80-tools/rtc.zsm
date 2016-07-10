@@ -1,0 +1,369 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;   JOYCE/ANNE v2.1.0: PCW emulator                                           ;
+;                                                                             ;
+;   Copyright (C) 1998-1999, John Elliott <jce@seasip.demon.co.uk>            ;
+;                                                                             ;
+;    This program is free software; you can redistribute it and/or modify     ;
+;    it under the terms of the GNU Library General Public License as          ;
+;    published by the Free Software Foundation; either version 2 of the       ;
+;    License, or(at your option) any later version.                           ;
+;                                                                             ;
+;    This program is distributed in the hope that it will be useful,          ;
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of           ;
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            ;
+;    GNU Library General Public License for more details.                     ;
+;                                                                             ;
+;    You should have received a copy of the GNU Library General Public        ;
+;    License along with this program; if not, write to the Free Software      ;
+;    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.                ;
+;                                                                             ;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+;RTC - Get time from the PC clock
+;
+	org	0100h
+
+FCB	EQU	005Ch
+FDOS	EQU	5
+CR	EQU	0Dh
+LF	EQU	0Ah
+EOF	EQU	1Ah
+;
+;We start with protection against being run from DOS.
+;
+BASE:	DEFB	0EBh,04h	;DOS protection... JMPS LABE
+	EX	DE,HL
+	JP	BEGIN
+	DEFB	0B4h,09h	;DOS protection... MOV AH,9
+	DEFB	0BAh
+	DEFW	BVMES		;DOS protection... MOV DX,OFFSET BVMES
+	DEFB	0CDh,021h	;DOS protection... INT 21h.
+	DEFB	0CDh,020h	;DOS protection... INT 20h.
+
+	DEFB	cr,'JOYCE RTC v'
+	include	version.inc
+	DEFB	' (c) John Elliott',cr,lf
+	DEFB	'Date: '
+	include	built.inc
+	DEFB	cr,lf,eof
+;
+
+BEGIN:	SUB	A		;Filter out the 8080s
+	JP	PE,BADVER
+	LD	C,0Ch		;Filter out CP/M <3
+	CALL	FDOS
+	CP	30h
+	JR	C,BADVER
+	XOR	A
+	DEFB	0EDh, 0FEh	;Get JOYCE version
+	INC	A		;Must return A=0FFh for Joyce v1.00
+	JR	Z,JRTSO
+BADVER:	LD	DE,BVMES	;Failed.
+	LD	C,9
+	JP	FDOS
+;
+JRTSO:	XOR	A	;A = 0 : called from CP/M
+	CALL	MAIN
+	RST	0
+		
+	DEFS	BASE + 078h - $
+	DEFB	'JOYCE',1,0,0	;File signature at end of first record.
+				;DB 'JOYCE',1;  2 expansion bytes.
+;
+MAIN:	LD	DE,80h
+	LD	A,(DE)
+	INC	DE
+	LD	L,A
+	LD	H,0
+	ADD	HL,DE
+	LD	(HL),0		;0-terminate the command line
+	EX	DE,HL
+OPTLP:	LD	A,(HL)
+	INC	HL
+	CP	'-'
+	JR	Z,ISOPT
+	CP	'['
+	JR	Z,ISOPT
+	CP	'/'
+	JR	Z,ISOPT
+	CP	'\'
+	JR	Z,ISOPT
+	OR	A
+	JR	NZ,OPTLP
+;
+; No options - update the clock once
+;
+	CALL	SCBADD	;HL->SCB
+	EX	DE,HL
+	LD	E,0F4h	;DE->time entry
+	LD	C,105
+	LD	A,10
+	DI
+	DEFB	0EDh, 0FEh
+;
+; DE was preserved 
+;	
+	LD	E,0F8h	;Seconds
+	LD	(DE),A
+	EI
+;
+	LD	DE,UPD$
+	JP	ETIME
+;
+ISOPT:	LD	A,(HL)
+	CP	'C'
+	JR	Z,RTCON
+	CP	'?'
+	JR	Z,HELP
+	CP	'H'
+	JR	NZ,OPTLP
+;
+HELP:	LD	DE,HELP$
+;fall through to
+	include	print.lib
+;
+RTCON:	LD	HL,(1)	;BIOS
+	LD	L,4Eh	;BIOS TIME
+	PUSH	HL
+	POP	IX	;IX->BIOS TIME routine
+	DI
+	LD	(IX+0),0EDh
+	LD	(IX+1),0FDh
+	LD	(IX+2),0C9h
+	EI
+	LD	DE,UPDP$
+ETIME:	CALL	PRINT
+	LD	C,105
+	LD	DE,DATE
+	CALL	FDOS
+	LD	(DATE+4),A
+	LD	IX,DATE
+	CALL	OCTIME
+;
+;Print date
+;
+	PUSH	AF
+	PUSH	BC
+	PUSH	HL
+	PUSH	DE
+	LD	L,D	;Day
+	CALL	OPDEC2
+	LD	E,'-'
+	CALL	OPCHAR
+	POP	DE
+	LD	L,E
+	CALL	OPDEC2	;Month
+	LD	E,'-'
+	CALL	OPCHAR
+	POP	HL
+	CALL	OPDEC4	;Year
+	LD	E,' '
+	CALL	OPCHAR
+	CALL	OPCHAR
+	POP	HL
+	PUSH	HL	;Hours
+	CALL	OPDEC2
+	LD	E,':'
+	CALL	OPCHAR
+	POP	HL
+	LD	L,H	;Minutes
+	CALL	OPDEC2
+	LD	E,':'
+	CALL	OPCHAR
+	POP	AF	;Seconds
+	LD	L,A
+	CALL	OPDEC2
+	JP	CRLF
+;
+OPCHAR:	PUSH	AF
+	PUSH	BC
+	PUSH	DE
+	PUSH	HL
+	LD	C,2
+	CALL	FDOS
+	POP	HL
+	POP	DE
+	POP	BC
+	POP	AF	
+	RET
+;
+CRLF:	PUSH	DE
+	LD	E,0Dh
+	CALL	OPCHAR
+	LD	E,0Ah
+	CALL	OPCHAR
+	POP	DE
+	RET
+;
+SCBADD:	LD	DE,SCBPB
+	LD	C,31h
+	JP	FDOS
+;
+OPDEC4:	LD	DE,1000
+	CALL	DECS
+	LD	DE,100
+	CALL	DECS
+OPDEC2:	LD	H,0
+	LD	DE,10
+	CALL	DECS
+	LD	A,L
+	JR	DIGEND
+;
+DECS:   LD      B,0
+DECSL:  AND     A
+        SBC     HL,DE
+        JR      C,DECSE
+        INC     B
+        JR      DECSL
+;
+DECSE:  LD	A,B
+	ADD     HL,DE   ;Undo the last subtraction which went too far
+DIGEND:	ADD     A,'0'
+	LD	E,A
+	JP	OPCHAR
+;
+CPHLDE:	LD	A,H
+	CP	D
+	RET	NZ
+	LD	A,L
+	CP	E
+	RET
+;
+DIV16:	LD	HL,0
+	LD	A,16
+D16A:	SCF
+	RL	C
+	RL	B
+	ADC	HL,HL
+	SBC	HL,DE
+	JR	NC,D16B
+	ADD	HL,DE
+	DEC	C
+D16B:	DEC	A
+	JR	NZ,D16A
+	RET
+;
+OCTIME:
+;
+;Convert a CP/M timestamp at (IX...) to numbers:
+;
+;HL=Year
+; E=Month
+; D=Day
+; C=Hour
+; B=Minute
+; A=Second
+;
+	LD	L,(IX+0)
+	LD	H,(IX+1) ;HL=DAY NUMBER
+	LD	BC,730
+	ADD	HL,BC	;BASE DATES ON 1976.
+	LD	(DAY),HL
+	LD	B,H
+	LD	C,L	;DIVIDE BY 1461
+	LD	DE,1461
+	CALL	DIV16
+	LD	H,B
+	LD	L,C	;HL=DATE/1461
+	ADD	HL,HL
+	ADD	HL,HL	;HL=YEAR-1976
+	LD	BC,1976	;YEAR
+	ADD	HL,BC
+	LD	(YEAR),HL
+	LD	BC,(DAY)
+	LD	DE,1461
+	CALL	DIV16	;HL=DATE MOD 1461
+	LD	(DAY),HL
+	LD	DE,59
+	CALL	CPHLDE	;IF HL=59, IT IS 29TH FEBRUARY.
+	JR	NZ,CALC1
+	LD	HL,29
+	LD	(DAY),HL
+	LD	HL,2
+	LD	(MONTH),HL
+	JP	L470
+;
+CALC1:	JR	NC,CALC2
+	INC	HL	;IF HL>59, SUBTRACT A DAY.
+CALC2:	DEC	HL
+	LD	(DAY),HL
+	LD	B,H
+	LD	C,L
+	LD	DE,365
+	CALL	DIV16	;BC=DAY/365
+	PUSH	HL	;HL=DAY MOD 365
+	LD	HL,(YEAR)
+	ADD	HL,BC
+	LD	(YEAR),HL	;HL=YEAR. YEAR IS NOW OK.
+	POP	HL
+	LD	(DAY),HL	;HL=DAY WITHIN YEAR.
+	LD	BC,DATA
+CALC3:	LD	A,(BC)
+	LD	E,A
+	LD	D,0
+	CALL	CPHLDE		;IF HL<DE, ALL OK.
+	JR	C,CALC4
+	INC	BC
+	OR	A
+	SBC	HL,DE		;HL=HL-DE
+	JR	CALC3
+;
+CALC4:	INC	HL
+	LD	(DAY),HL	;HL=DAY WITHIN MONTH
+	LD	H,B
+	LD	L,C
+	INC	HL
+	LD	BC,DATA
+	OR	A
+	SBC	HL,BC		;HL=MONTH NUMBER
+	LD	(MONTH),HL
+;
+;YEAR IS 78-257.
+;
+L470:	LD	HL,(YEAR)
+	LD	A,(MONTH)
+	LD	E,A
+	LD	A,(DAY)
+	LD	D,A
+	LD	A,(IX+2)	;Hour
+	CALL	UNDAA
+	LD	C,A
+	LD	A,(IX+3)	;Minute
+	CALL	UNDAA
+	LD	B,A
+	LD	A,(IX+4)
+UNDAA:	PUSH	BC
+	LD	B,A
+	AND	0F0h
+	RRCA
+	RRCA
+	RRCA
+	RRCA
+	LD	C,A	;C = high nibble
+	ADD	A,A	;*2
+	ADD	A,A	;*4
+	ADD	A,C	;*5
+	ADD	A,C	;*10
+	LD	C,A	;C = high nibble * 10
+	LD	A,B
+	AND	0Fh
+	ADD	A,C
+	POP	BC
+	RET
+
+DAY:	DEFW	0	;Variables for CP/M date conversion
+MONTH:	DEFW	0
+YEAR:	DEFW	0
+DATA:	DEFB	31,28,31,30,31,30,31,31,30,31,30,31		;Lookup tables
+DATE:	DEFS	5
+HELP$:	DEFB	'RTC v1.00 for JOYCE',cr,lf,lf
+	DEFB	'Syntax:   RTC     to set the time from the PC clock once',cr,lf
+	DEFB	'          RTC [C] to update the time continually from the PC clock',cr,lf
+	DEFB	'$'
+
+UPD$:	DEFB	'Time set from PC clock: $'
+UPDP$:	DEFB	'PCW clock linked to PC clock at $'
+BVMES:	DEFB	'This program will only run in the JOYCE emulator',cr,lf,'$'
+SCBPB:	DEFW	3Ah
+
+	END

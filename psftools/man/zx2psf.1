@@ -1,0 +1,128 @@
+.\" -*- nroff -*-
+.\"
+.\" zx2psf.1: zx2psf man page
+.\" Copyright (c) 2005, 2007 John Elliott
+.\"
+.\"
+.\"
+.\" psftools: Manipulate console fonts in the .PSF format
+.\" Copyright (C) 2005, 2007  John Elliott
+.\"
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2 of the License, or
+.\" (at your option) any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program; if not, write to the Free Software
+.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+.\"
+.TH zx2psf 1 "11 April, 2008" "Version 1.0.7" "PSF Tools"
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH NAME
+zx2psf - convert a Spectrum font to PSF format
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH SYNOPSIS
+.PD 0
+.B zx2psf
+.RI [ "--rom" ]
+.RI [ "--sna" ]
+.RI [ "--mode=bare" ]
+.RI [ "--mode=merge1" ]
+.RI [ "--mode=latin1" ]
+.RI [ "--mode=synth1" ]
+.RI [ "--graphics=none" ]
+.RI [ "--graphics=block" ]
+.RI [ "--graphics=udg" ]
+.RI [ "--psf1" ]
+.RI [ "--psf2" ]
+.RI [ INPUTFILE 
+.RI [ OUTPUTFILE ]]
+.P
+.PD 1
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH DESCRIPTION
+zx2psf converts a Spectrum font (either a +3DOS file, a TAP file with one
+member, or a raw memory dump) to PSF format.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH OPTIONS
+.TP
+.B --rom
+The file is a Spectrum ROM image; extract the embedded font.
+.TP
+.B --sna
+The file is a Spectrum SNA snapshot image; if it contains a font, extract it.
+This depends on the CHARS system variable having been set up so that the 
+game outputs using the ROM routines; if the program in the snapshot uses 
+some other form of output, it may leave CHARS alone or set it to a random 
+value. For example, the font in the game 
+.I 2112
+cannot be found using this method.
+.TP
+.B --mode=bare
+The Spectrum font is copied as-is. Characters outside the range defined
+by the Spectrum are set to blank.
+.TP
+.B --mode=latin1
+The Spectrum font is copied as-is. Characters outside the range defined
+by the Spectrum are set to those in LAT1-01.PSF (which is based on 
+ISO-8859-1, but with extra character shapes).
+.TP
+.B --mode=merge1
+As latin1 above, but the pound sign, up arrow and copyright characters are
+moved to their correct positions for ISO Latin-1.
+.TP
+.B --mode=synth1
+As merge1, except that the Latin-1 characters are mostly generated from the 
+Spectrum characters rather than being copied from LAT1-08.PSF. If this option
+is used the font will require manual editing afterwards to make it look better.
+.TP
+.B --graphics=none
+The graphics characters 128-159 will be blank (--mode=bare) or those
+from LAT1-08.PSF (other modes).
+.TP
+.B --graphics=block
+Characters 128-143 will be the Spectrum block graphics. 144-159 will be blank
+(--mode=bare) or those from LAT1-08.PSF (other modes).
+.TP
+.B --graphics=udg
+Characters 128-143 will be the Spectrum block graphics. If the --sna option
+was present, characters 144-159 will be the first 16 user-defined graphics;
+otherwise they will be copies of "A" to "P". If --mode=bare is set, characters
+160-164 will be the last five UDGs (if the --sna option is present) or copies
+of "Q" to "U" (otherwise).
+.TP
+.B --psf1  Output in the PSF1 format.
+.TP
+.B --psf2  Output in the PSF2 format (default).
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH BUGS
+The whole Latin-1 thing is ugly. Fortunately zx2psf always puts a 
+correct Unicode directory on the resulting file, so Unicode-aware
+utilities should always be able to find the correct character.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH SEE ALSO
+psf2zx(1)
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH AUTHOR
+John Elliott <jce@seasip.demon.co.uk>.
+.PP

@@ -1,0 +1,31 @@
+TO BE DONE:
+
+* Onscreen keyboard.
+
+
+* Crash in PCW16 setup routine. Very odd.
+
+* Fix the UI font. We need 'tick' and ' ' instead of 'filled bullet' and 
+ 'hollow bullet'. And the black rectangle is too big.
+
+* On OS X:
+	-- xanne: Menu key does not operate, requiring full-screen program
+	  to be killed. SDL problem; SDL reports it as 'unknown key' with
+	  scancode 110.
+	-- Not real Mac OS X programs; no icons, bundles...
+
+* GSX palette funnies on the Windows version; seems to need the GSX palette
+ to be set explicitly.
+
+* Builtin debugger.
+
+// What do these ones mean?
+// * File chooser: 
+//   > Distinguish between DSK and printer file choosers
+// 
+// * Then get the DSK menu working as it should. 
+
+* Pictures in the menus.
+
+* Add scrollbar to scrolling lists.
+* Sort lists of files.

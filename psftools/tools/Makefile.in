@@ -1,0 +1,722 @@
+# Makefile.in generated automatically by automake 1.4-p6 from Makefile.am
+
+# Copyright (C) 1994, 1995-8, 1999, 2001 Free Software Foundation, Inc.
+# This Makefile.in is free software; the Free Software Foundation
+# gives unlimited permission to copy and/or distribute it,
+# with or without modifications, as long as this notice is preserved.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY, to the extent permitted by law; without
+# even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+# PARTICULAR PURPOSE.
+
+
+SHELL = @SHELL@
+
+srcdir = @srcdir@
+top_srcdir = @top_srcdir@
+VPATH = @srcdir@
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+
+bindir = @bindir@
+sbindir = @sbindir@
+libexecdir = @libexecdir@
+datadir = @datadir@
+sysconfdir = @sysconfdir@
+sharedstatedir = @sharedstatedir@
+localstatedir = @localstatedir@
+libdir = @libdir@
+infodir = @infodir@
+mandir = @mandir@
+includedir = @includedir@
+oldincludedir = /usr/include
+
+DESTDIR =
+
+pkgdatadir = $(datadir)/@PACKAGE@
+pkglibdir = $(libdir)/@PACKAGE@
+pkgincludedir = $(includedir)/@PACKAGE@
+
+top_builddir = ..
+
+ACLOCAL = @ACLOCAL@
+AUTOCONF = @AUTOCONF@
+AUTOMAKE = @AUTOMAKE@
+AUTOHEADER = @AUTOHEADER@
+
+INSTALL = @INSTALL@
+INSTALL_PROGRAM = @INSTALL_PROGRAM@ $(AM_INSTALL_PROGRAM_FLAGS)
+INSTALL_DATA = @INSTALL_DATA@
+INSTALL_SCRIPT = @INSTALL_SCRIPT@
+transform = @program_transform_name@
+
+NORMAL_INSTALL = :
+PRE_INSTALL = :
+POST_INSTALL = :
+NORMAL_UNINSTALL = :
+PRE_UNINSTALL = :
+POST_UNINSTALL = :
+build_alias = @build_alias@
+build_triplet = @build@
+host_alias = @host_alias@
+host_triplet = @host@
+target_alias = @target_alias@
+target_triplet = @target@
+AS = @AS@
+CC = @CC@
+DLLTOOL = @DLLTOOL@
+ECHO = @ECHO@
+EXEEXT = @EXEEXT@
+HAVE_LIB = @HAVE_LIB@
+LIB = @LIB@
+LIBTOOL = @LIBTOOL@
+LN_S = @LN_S@
+LTLIB = @LTLIB@
+MAKEINFO = @MAKEINFO@
+OBJDUMP = @OBJDUMP@
+OBJEXT = @OBJEXT@
+PACKAGE = @PACKAGE@
+RANLIB = @RANLIB@
+STRIP = @STRIP@
+VERSION = @VERSION@
+
+INCLUDES = -I$(top_srcdir)/include
+LDADD = ../lib/libpsf.la
+
+bin_PROGRAMS = psf2bbc psf2bsd psf2inc psf2pbms psf2raw psf2wof psf2xbm psf2zx 	     psfs2cpi psf2txt psf2wyse 	     psfxform psfmerge psfjoin 	     bbc2psf mda2psf raw2psf zx2psf psf2bdf wof2psf txt2psf wyse2psf 	     psfpages page2cp2 	     cpi2psf cpicomp cpidcomp
+
+noinst_PROGRAMS = cpitest
+EXTRA_DIST = lat1-08.psf loadpsf.c load_pc.c ldshell.c 
+
+cpitest_SOURCES = cpitest.c cpi.h cpialloc.c cpiload.c cpisave.c cpidump.c
+cpicomp_SOURCES = cpicomp.c cnvshell.c cnvshell.inc cnvshell.h 		cpi.h cpialloc.c cpiload.c cpisave.c cpicrush.c cpidump.c
+
+cpidcomp_SOURCES = cpidcomp.c cnvshell.c cnvshell.inc cnvshell.h 		cpi.h cpialloc.c cpiload.c cpisave.c cpibloat.c
+
+cpi2psf_SOURCES = cpi2psf.c cnvshell.c cnvshell.h cnvshell.inc cpi.h 		cpialloc.c cpiload.c cpicrush.c
+
+psfpages_SOURCES = psfpages.c
+page2cp2_SOURCES = page2cp2.c 
+psfmerge_SOURCES = psfmerge.c cnvmulti.h cnvmulti.c cnvshell.inc
+psfxform_SOURCES = psfxform.c cnvshell.c cnvshell.inc cnvshell.h
+psfjoin_SOURCES = psfjoin.c cnvmulti.h cnvmulti.c cnvshell.inc
+psf2bbc_SOURCES = psf2bbc.c cnvshell.c cnvshell.inc cnvshell.h
+psf2bsd_SOURCES = psf2bsd.c cnvshell.c cnvshell.h
+psf2inc_SOURCES = psf2inc.c cnvshell.c cnvshell.h
+psf2pbms_SOURCES = psf2pbms.c cnvshell.c cnvshell.inc cnvshell.h
+psf2raw_SOURCES = psf2raw.c cnvshell.c cnvshell.inc cnvshell.h
+psf2xbm_SOURCES = psf2xbm.c cnvshell.c cnvshell.inc cnvshell.h
+psf2txt_SOURCES = psf2txt.c cnvshell.c cnvshell.inc cnvshell.h
+psf2wyse_SOURCES = psf2wyse.c cnvshell.c cnvshell.inc cnvshell.h
+bbc2psf_SOURCES = bbc2psf.c cnvshell.c cnvshell.inc cnvshell.h
+txt2psf_SOURCES = txt2psf.c cnvshell.c cnvshell.inc cnvshell.h
+wyse2psf_SOURCES = wyse2psf.c cnvshell.c cnvshell.inc cnvshell.h
+psf2bdf_SOURCES = psf2bdf.c cnvshell.c cnvshell.inc cnvshell.h
+psf2zx_SOURCES = psf2zx.c cnvshell.c cnvshell.inc cnvshell.h zxflib.c zxflib.h
+psfs2cpi_SOURCES = psfs2cpi.c cnvmulti.c cnvshell.inc cnvmulti.h 		 cpi.h cpialloc.c cpiload.c cpisave.c cpicrush.c cpibloat.c
+
+mda2psf_SOURCES = mda2psf.c cnvshell.c cnvshell.inc cnvshell.h
+raw2psf_SOURCES = raw2psf.c cnvshell.c cnvshell.inc cnvshell.h
+wof2psf_SOURCES = wof2psf.c cnvshell.c cnvshell.inc cnvshell.h
+psf2wof_SOURCES = psf2wof.c cnvshell.c cnvshell.inc cnvshell.h
+zx2psf_SOURCES = zx2psf.c cnvshell.c cnvshell.inc cnvshell.h zxflib.c zxflib.h
+
+CLEANFILES = latin1.inc
+mkinstalldirs = $(SHELL) $(top_srcdir)/config/mkinstalldirs
+CONFIG_HEADER = ../config.h
+CONFIG_CLEAN_FILES = 
+bin_PROGRAMS =  psf2bbc$(EXEEXT) psf2bsd$(EXEEXT) psf2inc$(EXEEXT) \
+psf2pbms$(EXEEXT) psf2raw$(EXEEXT) psf2wof$(EXEEXT) psf2xbm$(EXEEXT) \
+psf2zx$(EXEEXT) psfs2cpi$(EXEEXT) psf2txt$(EXEEXT) psf2wyse$(EXEEXT) \
+psfxform$(EXEEXT) psfmerge$(EXEEXT) psfjoin$(EXEEXT) bbc2psf$(EXEEXT) \
+mda2psf$(EXEEXT) raw2psf$(EXEEXT) zx2psf$(EXEEXT) psf2bdf$(EXEEXT) \
+wof2psf$(EXEEXT) txt2psf$(EXEEXT) wyse2psf$(EXEEXT) psfpages$(EXEEXT) \
+page2cp2$(EXEEXT) cpi2psf$(EXEEXT) cpicomp$(EXEEXT) cpidcomp$(EXEEXT)
+noinst_PROGRAMS =  cpitest$(EXEEXT)
+PROGRAMS =  $(bin_PROGRAMS) $(noinst_PROGRAMS)
+
+
+DEFS = @DEFS@ -I. -I$(srcdir) -I..
+CPPFLAGS = @CPPFLAGS@
+LDFLAGS = @LDFLAGS@
+LIBS = @LIBS@
+psf2bbc_OBJECTS =  psf2bbc.$(OBJEXT) cnvshell.$(OBJEXT)
+psf2bbc_LDADD = $(LDADD)
+psf2bbc_DEPENDENCIES =  ../lib/libpsf.la
+psf2bbc_LDFLAGS = 
+psf2bsd_OBJECTS =  psf2bsd.$(OBJEXT) cnvshell.$(OBJEXT)
+psf2bsd_LDADD = $(LDADD)
+psf2bsd_DEPENDENCIES =  ../lib/libpsf.la
+psf2bsd_LDFLAGS = 
+psf2inc_OBJECTS =  psf2inc.$(OBJEXT) cnvshell.$(OBJEXT)
+psf2inc_LDADD = $(LDADD)
+psf2inc_DEPENDENCIES =  ../lib/libpsf.la
+psf2inc_LDFLAGS = 
+psf2pbms_OBJECTS =  psf2pbms.$(OBJEXT) cnvshell.$(OBJEXT)
+psf2pbms_LDADD = $(LDADD)
+psf2pbms_DEPENDENCIES =  ../lib/libpsf.la
+psf2pbms_LDFLAGS = 
+psf2raw_OBJECTS =  psf2raw.$(OBJEXT) cnvshell.$(OBJEXT)
+psf2raw_LDADD = $(LDADD)
+psf2raw_DEPENDENCIES =  ../lib/libpsf.la
+psf2raw_LDFLAGS = 
+psf2wof_OBJECTS =  psf2wof.$(OBJEXT) cnvshell.$(OBJEXT)
+psf2wof_LDADD = $(LDADD)
+psf2wof_DEPENDENCIES =  ../lib/libpsf.la
+psf2wof_LDFLAGS = 
+psf2xbm_OBJECTS =  psf2xbm.$(OBJEXT) cnvshell.$(OBJEXT)
+psf2xbm_LDADD = $(LDADD)
+psf2xbm_DEPENDENCIES =  ../lib/libpsf.la
+psf2xbm_LDFLAGS = 
+psf2zx_OBJECTS =  psf2zx.$(OBJEXT) cnvshell.$(OBJEXT) zxflib.$(OBJEXT)
+psf2zx_LDADD = $(LDADD)
+psf2zx_DEPENDENCIES =  ../lib/libpsf.la
+psf2zx_LDFLAGS = 
+psfs2cpi_OBJECTS =  psfs2cpi.$(OBJEXT) cnvmulti.$(OBJEXT) \
+cpialloc.$(OBJEXT) cpiload.$(OBJEXT) cpisave.$(OBJEXT) \
+cpicrush.$(OBJEXT) cpibloat.$(OBJEXT)
+psfs2cpi_LDADD = $(LDADD)
+psfs2cpi_DEPENDENCIES =  ../lib/libpsf.la
+psfs2cpi_LDFLAGS = 
+psf2txt_OBJECTS =  psf2txt.$(OBJEXT) cnvshell.$(OBJEXT)
+psf2txt_LDADD = $(LDADD)
+psf2txt_DEPENDENCIES =  ../lib/libpsf.la
+psf2txt_LDFLAGS = 
+psf2wyse_OBJECTS =  psf2wyse.$(OBJEXT) cnvshell.$(OBJEXT)
+psf2wyse_LDADD = $(LDADD)
+psf2wyse_DEPENDENCIES =  ../lib/libpsf.la
+psf2wyse_LDFLAGS = 
+psfxform_OBJECTS =  psfxform.$(OBJEXT) cnvshell.$(OBJEXT)
+psfxform_LDADD = $(LDADD)
+psfxform_DEPENDENCIES =  ../lib/libpsf.la
+psfxform_LDFLAGS = 
+psfmerge_OBJECTS =  psfmerge.$(OBJEXT) cnvmulti.$(OBJEXT)
+psfmerge_LDADD = $(LDADD)
+psfmerge_DEPENDENCIES =  ../lib/libpsf.la
+psfmerge_LDFLAGS = 
+psfjoin_OBJECTS =  psfjoin.$(OBJEXT) cnvmulti.$(OBJEXT)
+psfjoin_LDADD = $(LDADD)
+psfjoin_DEPENDENCIES =  ../lib/libpsf.la
+psfjoin_LDFLAGS = 
+bbc2psf_OBJECTS =  bbc2psf.$(OBJEXT) cnvshell.$(OBJEXT)
+bbc2psf_LDADD = $(LDADD)
+bbc2psf_DEPENDENCIES =  ../lib/libpsf.la
+bbc2psf_LDFLAGS = 
+mda2psf_OBJECTS =  mda2psf.$(OBJEXT) cnvshell.$(OBJEXT)
+mda2psf_LDADD = $(LDADD)
+mda2psf_DEPENDENCIES =  ../lib/libpsf.la
+mda2psf_LDFLAGS = 
+raw2psf_OBJECTS =  raw2psf.$(OBJEXT) cnvshell.$(OBJEXT)
+raw2psf_LDADD = $(LDADD)
+raw2psf_DEPENDENCIES =  ../lib/libpsf.la
+raw2psf_LDFLAGS = 
+zx2psf_OBJECTS =  zx2psf.$(OBJEXT) cnvshell.$(OBJEXT) zxflib.$(OBJEXT)
+zx2psf_LDADD = $(LDADD)
+zx2psf_DEPENDENCIES =  ../lib/libpsf.la
+zx2psf_LDFLAGS = 
+psf2bdf_OBJECTS =  psf2bdf.$(OBJEXT) cnvshell.$(OBJEXT)
+psf2bdf_LDADD = $(LDADD)
+psf2bdf_DEPENDENCIES =  ../lib/libpsf.la
+psf2bdf_LDFLAGS = 
+wof2psf_OBJECTS =  wof2psf.$(OBJEXT) cnvshell.$(OBJEXT)
+wof2psf_LDADD = $(LDADD)
+wof2psf_DEPENDENCIES =  ../lib/libpsf.la
+wof2psf_LDFLAGS = 
+txt2psf_OBJECTS =  txt2psf.$(OBJEXT) cnvshell.$(OBJEXT)
+txt2psf_LDADD = $(LDADD)
+txt2psf_DEPENDENCIES =  ../lib/libpsf.la
+txt2psf_LDFLAGS = 
+wyse2psf_OBJECTS =  wyse2psf.$(OBJEXT) cnvshell.$(OBJEXT)
+wyse2psf_LDADD = $(LDADD)
+wyse2psf_DEPENDENCIES =  ../lib/libpsf.la
+wyse2psf_LDFLAGS = 
+psfpages_OBJECTS =  psfpages.$(OBJEXT)
+psfpages_LDADD = $(LDADD)
+psfpages_DEPENDENCIES =  ../lib/libpsf.la
+psfpages_LDFLAGS = 
+page2cp2_OBJECTS =  page2cp2.$(OBJEXT)
+page2cp2_LDADD = $(LDADD)
+page2cp2_DEPENDENCIES =  ../lib/libpsf.la
+page2cp2_LDFLAGS = 
+cpi2psf_OBJECTS =  cpi2psf.$(OBJEXT) cnvshell.$(OBJEXT) \
+cpialloc.$(OBJEXT) cpiload.$(OBJEXT) cpicrush.$(OBJEXT)
+cpi2psf_LDADD = $(LDADD)
+cpi2psf_DEPENDENCIES =  ../lib/libpsf.la
+cpi2psf_LDFLAGS = 
+cpicomp_OBJECTS =  cpicomp.$(OBJEXT) cnvshell.$(OBJEXT) \
+cpialloc.$(OBJEXT) cpiload.$(OBJEXT) cpisave.$(OBJEXT) \
+cpicrush.$(OBJEXT) cpidump.$(OBJEXT)
+cpicomp_LDADD = $(LDADD)
+cpicomp_DEPENDENCIES =  ../lib/libpsf.la
+cpicomp_LDFLAGS = 
+cpidcomp_OBJECTS =  cpidcomp.$(OBJEXT) cnvshell.$(OBJEXT) \
+cpialloc.$(OBJEXT) cpiload.$(OBJEXT) cpisave.$(OBJEXT) \
+cpibloat.$(OBJEXT)
+cpidcomp_LDADD = $(LDADD)
+cpidcomp_DEPENDENCIES =  ../lib/libpsf.la
+cpidcomp_LDFLAGS = 
+cpitest_OBJECTS =  cpitest.$(OBJEXT) cpialloc.$(OBJEXT) \
+cpiload.$(OBJEXT) cpisave.$(OBJEXT) cpidump.$(OBJEXT)
+cpitest_LDADD = $(LDADD)
+cpitest_DEPENDENCIES =  ../lib/libpsf.la
+cpitest_LDFLAGS = 
+CFLAGS = @CFLAGS@
+COMPILE = $(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
+LTCOMPILE = $(LIBTOOL) --mode=compile $(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
+CCLD = $(CC)
+LINK = $(LIBTOOL) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(LDFLAGS) -o $@
+DIST_COMMON =  Makefile.am Makefile.in TODO
+
+
+DISTFILES = $(DIST_COMMON) $(SOURCES) $(HEADERS) $(TEXINFOS) $(EXTRA_DIST)
+
+TAR = gtar
+GZIP_ENV = --best
+SOURCES = $(psf2bbc_SOURCES) $(psf2bsd_SOURCES) $(psf2inc_SOURCES) $(psf2pbms_SOURCES) $(psf2raw_SOURCES) $(psf2wof_SOURCES) $(psf2xbm_SOURCES) $(psf2zx_SOURCES) $(psfs2cpi_SOURCES) $(psf2txt_SOURCES) $(psf2wyse_SOURCES) $(psfxform_SOURCES) $(psfmerge_SOURCES) $(psfjoin_SOURCES) $(bbc2psf_SOURCES) $(mda2psf_SOURCES) $(raw2psf_SOURCES) $(zx2psf_SOURCES) $(psf2bdf_SOURCES) $(wof2psf_SOURCES) $(txt2psf_SOURCES) $(wyse2psf_SOURCES) $(psfpages_SOURCES) $(page2cp2_SOURCES) $(cpi2psf_SOURCES) $(cpicomp_SOURCES) $(cpidcomp_SOURCES) $(cpitest_SOURCES)
+OBJECTS = $(psf2bbc_OBJECTS) $(psf2bsd_OBJECTS) $(psf2inc_OBJECTS) $(psf2pbms_OBJECTS) $(psf2raw_OBJECTS) $(psf2wof_OBJECTS) $(psf2xbm_OBJECTS) $(psf2zx_OBJECTS) $(psfs2cpi_OBJECTS) $(psf2txt_OBJECTS) $(psf2wyse_OBJECTS) $(psfxform_OBJECTS) $(psfmerge_OBJECTS) $(psfjoin_OBJECTS) $(bbc2psf_OBJECTS) $(mda2psf_OBJECTS) $(raw2psf_OBJECTS) $(zx2psf_OBJECTS) $(psf2bdf_OBJECTS) $(wof2psf_OBJECTS) $(txt2psf_OBJECTS) $(wyse2psf_OBJECTS) $(psfpages_OBJECTS) $(page2cp2_OBJECTS) $(cpi2psf_OBJECTS) $(cpicomp_OBJECTS) $(cpidcomp_OBJECTS) $(cpitest_OBJECTS)
+
+all: all-redirect
+.SUFFIXES:
+.SUFFIXES: .S .c .lo .o .obj .s
+$(srcdir)/Makefile.in: Makefile.am $(top_srcdir)/configure.in $(ACLOCAL_M4) 
+	cd $(top_srcdir) && $(AUTOMAKE) --foreign --include-deps tools/Makefile
+
+Makefile: $(srcdir)/Makefile.in  $(top_builddir)/config.status
+	cd $(top_builddir) \
+	  && CONFIG_FILES=$(subdir)/$@ CONFIG_HEADERS= $(SHELL) ./config.status
+
+
+mostlyclean-binPROGRAMS:
+
+clean-binPROGRAMS:
+	-test -z "$(bin_PROGRAMS)" || rm -f $(bin_PROGRAMS)
+
+distclean-binPROGRAMS:
+
+maintainer-clean-binPROGRAMS:
+
+install-binPROGRAMS: $(bin_PROGRAMS)
+	@$(NORMAL_INSTALL)
+	$(mkinstalldirs) $(DESTDIR)$(bindir)
+	@list='$(bin_PROGRAMS)'; for p in $$list; do \
+	  if test -f $$p; then \
+	    echo " $(LIBTOOL)  --mode=install $(INSTALL_PROGRAM) $$p $(DESTDIR)$(bindir)/`echo $$p|sed 's/$(EXEEXT)$$//'|sed '$(transform)'|sed 's/$$/$(EXEEXT)/'`"; \
+	    $(LIBTOOL)  --mode=install $(INSTALL_PROGRAM) $$p $(DESTDIR)$(bindir)/`echo $$p|sed 's/$(EXEEXT)$$//'|sed '$(transform)'|sed 's/$$/$(EXEEXT)/'`; \
+	  else :; fi; \
+	done
+
+uninstall-binPROGRAMS:
+	@$(NORMAL_UNINSTALL)
+	list='$(bin_PROGRAMS)'; for p in $$list; do \
+	  rm -f $(DESTDIR)$(bindir)/`echo $$p|sed 's/$(EXEEXT)$$//'|sed '$(transform)'|sed 's/$$/$(EXEEXT)/'`; \
+	done
+
+mostlyclean-noinstPROGRAMS:
+
+clean-noinstPROGRAMS:
+	-test -z "$(noinst_PROGRAMS)" || rm -f $(noinst_PROGRAMS)
+
+distclean-noinstPROGRAMS:
+
+maintainer-clean-noinstPROGRAMS:
+
+.c.o:
+	$(COMPILE) -c $<
+
+# FIXME: We should only use cygpath when building on Windows,
+# and only if it is available.
+.c.obj:
+	$(COMPILE) -c `cygpath -w $<`
+
+.s.o:
+	$(COMPILE) -c $<
+
+.S.o:
+	$(COMPILE) -c $<
+
+mostlyclean-compile:
+	-rm -f *.o core *.core
+	-rm -f *.$(OBJEXT)
+
+clean-compile:
+
+distclean-compile:
+	-rm -f *.tab.c
+
+maintainer-clean-compile:
+
+.c.lo:
+	$(LIBTOOL) --mode=compile $(COMPILE) -c $<
+
+.s.lo:
+	$(LIBTOOL) --mode=compile $(COMPILE) -c $<
+
+.S.lo:
+	$(LIBTOOL) --mode=compile $(COMPILE) -c $<
+
+mostlyclean-libtool:
+	-rm -f *.lo
+
+clean-libtool:
+	-rm -rf .libs _libs
+
+distclean-libtool:
+
+maintainer-clean-libtool:
+
+psf2bbc$(EXEEXT): $(psf2bbc_OBJECTS) $(psf2bbc_DEPENDENCIES)
+	@rm -f psf2bbc$(EXEEXT)
+	$(LINK) $(psf2bbc_LDFLAGS) $(psf2bbc_OBJECTS) $(psf2bbc_LDADD) $(LIBS)
+
+psf2bsd$(EXEEXT): $(psf2bsd_OBJECTS) $(psf2bsd_DEPENDENCIES)
+	@rm -f psf2bsd$(EXEEXT)
+	$(LINK) $(psf2bsd_LDFLAGS) $(psf2bsd_OBJECTS) $(psf2bsd_LDADD) $(LIBS)
+
+psf2inc$(EXEEXT): $(psf2inc_OBJECTS) $(psf2inc_DEPENDENCIES)
+	@rm -f psf2inc$(EXEEXT)
+	$(LINK) $(psf2inc_LDFLAGS) $(psf2inc_OBJECTS) $(psf2inc_LDADD) $(LIBS)
+
+psf2pbms$(EXEEXT): $(psf2pbms_OBJECTS) $(psf2pbms_DEPENDENCIES)
+	@rm -f psf2pbms$(EXEEXT)
+	$(LINK) $(psf2pbms_LDFLAGS) $(psf2pbms_OBJECTS) $(psf2pbms_LDADD) $(LIBS)
+
+psf2raw$(EXEEXT): $(psf2raw_OBJECTS) $(psf2raw_DEPENDENCIES)
+	@rm -f psf2raw$(EXEEXT)
+	$(LINK) $(psf2raw_LDFLAGS) $(psf2raw_OBJECTS) $(psf2raw_LDADD) $(LIBS)
+
+psf2wof$(EXEEXT): $(psf2wof_OBJECTS) $(psf2wof_DEPENDENCIES)
+	@rm -f psf2wof$(EXEEXT)
+	$(LINK) $(psf2wof_LDFLAGS) $(psf2wof_OBJECTS) $(psf2wof_LDADD) $(LIBS)
+
+psf2xbm$(EXEEXT): $(psf2xbm_OBJECTS) $(psf2xbm_DEPENDENCIES)
+	@rm -f psf2xbm$(EXEEXT)
+	$(LINK) $(psf2xbm_LDFLAGS) $(psf2xbm_OBJECTS) $(psf2xbm_LDADD) $(LIBS)
+
+psf2zx$(EXEEXT): $(psf2zx_OBJECTS) $(psf2zx_DEPENDENCIES)
+	@rm -f psf2zx$(EXEEXT)
+	$(LINK) $(psf2zx_LDFLAGS) $(psf2zx_OBJECTS) $(psf2zx_LDADD) $(LIBS)
+
+psfs2cpi$(EXEEXT): $(psfs2cpi_OBJECTS) $(psfs2cpi_DEPENDENCIES)
+	@rm -f psfs2cpi$(EXEEXT)
+	$(LINK) $(psfs2cpi_LDFLAGS) $(psfs2cpi_OBJECTS) $(psfs2cpi_LDADD) $(LIBS)
+
+psf2txt$(EXEEXT): $(psf2txt_OBJECTS) $(psf2txt_DEPENDENCIES)
+	@rm -f psf2txt$(EXEEXT)
+	$(LINK) $(psf2txt_LDFLAGS) $(psf2txt_OBJECTS) $(psf2txt_LDADD) $(LIBS)
+
+psf2wyse$(EXEEXT): $(psf2wyse_OBJECTS) $(psf2wyse_DEPENDENCIES)
+	@rm -f psf2wyse$(EXEEXT)
+	$(LINK) $(psf2wyse_LDFLAGS) $(psf2wyse_OBJECTS) $(psf2wyse_LDADD) $(LIBS)
+
+psfxform$(EXEEXT): $(psfxform_OBJECTS) $(psfxform_DEPENDENCIES)
+	@rm -f psfxform$(EXEEXT)
+	$(LINK) $(psfxform_LDFLAGS) $(psfxform_OBJECTS) $(psfxform_LDADD) $(LIBS)
+
+psfmerge$(EXEEXT): $(psfmerge_OBJECTS) $(psfmerge_DEPENDENCIES)
+	@rm -f psfmerge$(EXEEXT)
+	$(LINK) $(psfmerge_LDFLAGS) $(psfmerge_OBJECTS) $(psfmerge_LDADD) $(LIBS)
+
+psfjoin$(EXEEXT): $(psfjoin_OBJECTS) $(psfjoin_DEPENDENCIES)
+	@rm -f psfjoin$(EXEEXT)
+	$(LINK) $(psfjoin_LDFLAGS) $(psfjoin_OBJECTS) $(psfjoin_LDADD) $(LIBS)
+
+bbc2psf$(EXEEXT): $(bbc2psf_OBJECTS) $(bbc2psf_DEPENDENCIES)
+	@rm -f bbc2psf$(EXEEXT)
+	$(LINK) $(bbc2psf_LDFLAGS) $(bbc2psf_OBJECTS) $(bbc2psf_LDADD) $(LIBS)
+
+mda2psf$(EXEEXT): $(mda2psf_OBJECTS) $(mda2psf_DEPENDENCIES)
+	@rm -f mda2psf$(EXEEXT)
+	$(LINK) $(mda2psf_LDFLAGS) $(mda2psf_OBJECTS) $(mda2psf_LDADD) $(LIBS)
+
+raw2psf$(EXEEXT): $(raw2psf_OBJECTS) $(raw2psf_DEPENDENCIES)
+	@rm -f raw2psf$(EXEEXT)
+	$(LINK) $(raw2psf_LDFLAGS) $(raw2psf_OBJECTS) $(raw2psf_LDADD) $(LIBS)
+
+zx2psf$(EXEEXT): $(zx2psf_OBJECTS) $(zx2psf_DEPENDENCIES)
+	@rm -f zx2psf$(EXEEXT)
+	$(LINK) $(zx2psf_LDFLAGS) $(zx2psf_OBJECTS) $(zx2psf_LDADD) $(LIBS)
+
+psf2bdf$(EXEEXT): $(psf2bdf_OBJECTS) $(psf2bdf_DEPENDENCIES)
+	@rm -f psf2bdf$(EXEEXT)
+	$(LINK) $(psf2bdf_LDFLAGS) $(psf2bdf_OBJECTS) $(psf2bdf_LDADD) $(LIBS)
+
+wof2psf$(EXEEXT): $(wof2psf_OBJECTS) $(wof2psf_DEPENDENCIES)
+	@rm -f wof2psf$(EXEEXT)
+	$(LINK) $(wof2psf_LDFLAGS) $(wof2psf_OBJECTS) $(wof2psf_LDADD) $(LIBS)
+
+txt2psf$(EXEEXT): $(txt2psf_OBJECTS) $(txt2psf_DEPENDENCIES)
+	@rm -f txt2psf$(EXEEXT)
+	$(LINK) $(txt2psf_LDFLAGS) $(txt2psf_OBJECTS) $(txt2psf_LDADD) $(LIBS)
+
+wyse2psf$(EXEEXT): $(wyse2psf_OBJECTS) $(wyse2psf_DEPENDENCIES)
+	@rm -f wyse2psf$(EXEEXT)
+	$(LINK) $(wyse2psf_LDFLAGS) $(wyse2psf_OBJECTS) $(wyse2psf_LDADD) $(LIBS)
+
+psfpages$(EXEEXT): $(psfpages_OBJECTS) $(psfpages_DEPENDENCIES)
+	@rm -f psfpages$(EXEEXT)
+	$(LINK) $(psfpages_LDFLAGS) $(psfpages_OBJECTS) $(psfpages_LDADD) $(LIBS)
+
+page2cp2$(EXEEXT): $(page2cp2_OBJECTS) $(page2cp2_DEPENDENCIES)
+	@rm -f page2cp2$(EXEEXT)
+	$(LINK) $(page2cp2_LDFLAGS) $(page2cp2_OBJECTS) $(page2cp2_LDADD) $(LIBS)
+
+cpi2psf$(EXEEXT): $(cpi2psf_OBJECTS) $(cpi2psf_DEPENDENCIES)
+	@rm -f cpi2psf$(EXEEXT)
+	$(LINK) $(cpi2psf_LDFLAGS) $(cpi2psf_OBJECTS) $(cpi2psf_LDADD) $(LIBS)
+
+cpicomp$(EXEEXT): $(cpicomp_OBJECTS) $(cpicomp_DEPENDENCIES)
+	@rm -f cpicomp$(EXEEXT)
+	$(LINK) $(cpicomp_LDFLAGS) $(cpicomp_OBJECTS) $(cpicomp_LDADD) $(LIBS)
+
+cpidcomp$(EXEEXT): $(cpidcomp_OBJECTS) $(cpidcomp_DEPENDENCIES)
+	@rm -f cpidcomp$(EXEEXT)
+	$(LINK) $(cpidcomp_LDFLAGS) $(cpidcomp_OBJECTS) $(cpidcomp_LDADD) $(LIBS)
+
+cpitest$(EXEEXT): $(cpitest_OBJECTS) $(cpitest_DEPENDENCIES)
+	@rm -f cpitest$(EXEEXT)
+	$(LINK) $(cpitest_LDFLAGS) $(cpitest_OBJECTS) $(cpitest_LDADD) $(LIBS)
+
+tags: TAGS
+
+ID: $(HEADERS) $(SOURCES) $(LISP)
+	list='$(SOURCES) $(HEADERS)'; \
+	unique=`for i in $$list; do echo $$i; done | \
+	  awk '    { files[$$0] = 1; } \
+	       END { for (i in files) print i; }'`; \
+	here=`pwd` && cd $(srcdir) \
+	  && mkid -f$$here/ID $$unique $(LISP)
+
+TAGS:  $(HEADERS) $(SOURCES)  $(TAGS_DEPENDENCIES) $(LISP)
+	tags=; \
+	here=`pwd`; \
+	list='$(SOURCES) $(HEADERS)'; \
+	unique=`for i in $$list; do echo $$i; done | \
+	  awk '    { files[$$0] = 1; } \
+	       END { for (i in files) print i; }'`; \
+	test -z "$(ETAGS_ARGS)$$unique$(LISP)$$tags" \
+	  || (cd $(srcdir) && etags $(ETAGS_ARGS) $$tags  $$unique $(LISP) -o $$here/TAGS)
+
+mostlyclean-tags:
+
+clean-tags:
+
+distclean-tags:
+	-rm -f TAGS ID
+
+maintainer-clean-tags:
+
+distdir = $(top_builddir)/$(PACKAGE)-$(VERSION)/$(subdir)
+
+subdir = tools
+
+distdir: $(DISTFILES)
+	@for file in $(DISTFILES); do \
+	  d=$(srcdir); \
+	  if test -d $$d/$$file; then \
+	    cp -pr $$d/$$file $(distdir)/$$file; \
+	  else \
+	    test -f $(distdir)/$$file \
+	    || ln $$d/$$file $(distdir)/$$file 2> /dev/null \
+	    || cp -p $$d/$$file $(distdir)/$$file || :; \
+	  fi; \
+	done
+bbc2psf.o: bbc2psf.c cnvshell.h ../config.h ../include/psflib.h \
+	../include/psfutils.h
+bsd2psf.o: bsd2psf.c cnvshell.h ../config.h ../include/psflib.h \
+	../include/psfutils.h
+chr2psf.o: chr2psf.c cnvshell.h ../include/psflib.h \
+	../include/psfutils.h
+cnvmulti.o: cnvmulti.c cnvmulti.h ../config.h cnvshell.inc
+cnvshell.o: cnvshell.c cnvshell.h ../config.h cnvshell.inc
+cp2page.o: cp2page.c ../config.h ../include/psflib.h \
+	../include/psfutils.h
+cpi2psf.o: cpi2psf.c cnvshell.h ../config.h ../include/psflib.h \
+	../include/psfutils.h cpi.h
+cpialloc.o: cpialloc.c cpi.h
+cpibloat.o: cpibloat.c cpi.h
+cpicomp.o: cpicomp.c ../config.h cnvshell.h cpi.h
+cpicrush.o: cpicrush.c cpi.h
+cpidcomp.o: cpidcomp.c ../config.h cnvshell.h cpi.h
+cpidump.o: cpidump.c cpi.h
+cpiload.o: cpiload.c cpi.h
+cpisave.o: cpisave.c cpi.h
+cpitest.o: cpitest.c cpi.h
+crc32.o: crc32.c crc32.h mswfnt.h ../include/psfutils.h \
+	../include/psflib.h
+fnt2fon.o: fnt2fon.c cnvshell.h ../include/psflib.h \
+	../include/psfutils.h mswfnt.h
+fnt2psf.o: fnt2psf.c cnvshell.h ../include/psflib.h \
+	../include/psfutils.h mswfnt.h
+fnts2fon.o: fnts2fon.c cnvshell.h ../include/psflib.h \
+	../include/psfutils.h mswfnt.h
+fon2fnts.o: fon2fnts.c ../include/winres/mz.h \
+	../include/winres/rstypes.h ../include/winres/rsmacro.h \
+	../include/winres/resdir.h ../include/winres/ne.h \
+	../include/winres/resstruct16.h ../include/winres/pe.h
+mda2psf.o: mda2psf.c cnvshell.h ../config.h ../include/psflib.h \
+	../include/psfutils.h
+mswfntr.o: mswfntr.c mswfnt.h ../include/psflib.h ../include/psfutils.h
+mswfntw.o: mswfntw.c mswfnt.h ../include/psflib.h ../include/psfutils.h
+mz.o: mz.c mz.h rstypes.h rsmacro.h resdir.h ne.h resstruct16.h pe.h
+ne.o: ne.c mz.h rstypes.h rsmacro.h resdir.h ne.h resstruct16.h
+neresdir.o: neresdir.c mz.h rstypes.h rsmacro.h resdir.h ne.h \
+	resstruct16.h
+neresdirentry.o: neresdirentry.c mz.h rstypes.h rsmacro.h resdir.h ne.h \
+	resstruct16.h
+neresentry.o: neresentry.c mz.h rstypes.h rsmacro.h resdir.h ne.h \
+	resstruct16.h
+neressubdir.o: neressubdir.c mz.h rstypes.h rsmacro.h resdir.h ne.h \
+	resstruct16.h
+nerootdir.o: nerootdir.c mz.h rstypes.h rsmacro.h resdir.h ne.h \
+	resstruct16.h
+nerootentry.o: nerootentry.c mz.h rstypes.h rsmacro.h resdir.h ne.h \
+	resstruct16.h
+nesubdir.o: nesubdir.c mz.h rstypes.h rsmacro.h resdir.h ne.h \
+	resstruct16.h
+nesubentry.o: nesubentry.c mz.h rstypes.h rsmacro.h resdir.h ne.h \
+	resstruct16.h
+page2cp2.o: page2cp2.c ../config.h ../include/psflib.h \
+	../include/psfutils.h
+pe.o: pe.c pe.h rstypes.h rsmacro.h resdir.h mz.h
+peresdir.o: peresdir.c pe.h rstypes.h rsmacro.h resdir.h mz.h
+peresentry.o: peresentry.c pe.h rstypes.h rsmacro.h resdir.h mz.h
+psf2bbc.o: psf2bbc.c cnvshell.h ../config.h ../include/psflib.h \
+	../include/psfutils.h
+psf2bdf.o: psf2bdf.c cnvshell.h ../config.h ../include/psflib.h \
+	../include/psfutils.h
+psf2bsd.o: psf2bsd.c cnvshell.h ../config.h ../include/psflib.h \
+	../include/psfutils.h
+psf2fnt.o: psf2fnt.c cnvshell.h ../include/psflib.h \
+	../include/psfutils.h mswfnt.h
+psf2inc.o: psf2inc.c cnvshell.h ../config.h ../include/psflib.h \
+	../include/psfutils.h
+psf2pbms.o: psf2pbms.c cnvshell.h ../config.h ../include/psflib.h \
+	../include/psfutils.h
+psf2pnms.o: psf2pnms.c cnvshell.h ../include/psflib.h \
+	../include/psfutils.h
+psf2raw.o: psf2raw.c cnvshell.h ../config.h ../include/psflib.h \
+	../include/psfutils.h
+psf2txt.o: psf2txt.c cnvshell.h ../config.h ../include/psflib.h \
+	../include/psfutils.h
+psf2wof.o: psf2wof.c cnvshell.h ../config.h ../include/psflib.h \
+	../include/psfutils.h
+psf2wyse.o: psf2wyse.c cnvshell.h ../config.h ../include/psflib.h \
+	../include/psfutils.h
+psf2xbm.o: psf2xbm.c cnvshell.h ../config.h ../include/psflib.h \
+	../include/psfutils.h
+psf2zx.o: psf2zx.c cnvshell.h ../config.h ../include/psflib.h \
+	../include/psfutils.h zxflib.h
+psfjoin.o: psfjoin.c cnvmulti.h ../config.h ../include/psflib.h \
+	../include/psfutils.h
+psfmerge.o: psfmerge.c cnvmulti.h ../config.h ../include/psflib.h \
+	../include/psfutils.h
+psfpages.o: psfpages.c ../include/psflib.h ../include/psfutils.h
+psfremap.o: psfremap.c cnvshell.h ../include/psflib.h \
+	../include/psfutils.h
+psfs2cpi.o: psfs2cpi.c cnvmulti.h ../config.h ../include/psflib.h \
+	../include/psfutils.h cpi.h
+psfsub.o: psfsub.c cnvshell.h ../include/psflib.h ../include/psfutils.h
+psfxform.o: psfxform.c cnvshell.h ../config.h ../include/psflib.h \
+	../include/psfutils.h
+raw2psf.o: raw2psf.c cnvshell.h ../config.h ../include/psflib.h \
+	../include/psfutils.h
+resdir.o: resdir.c mz.h rstypes.h rsmacro.h resdir.h
+txt2psf.o: txt2psf.c cnvshell.h ../config.h ../include/psflib.h \
+	../include/psfutils.h
+wof2psf.o: wof2psf.c cnvshell.h ../config.h ../include/psflib.h \
+	../include/psfutils.h
+wyse2psf.o: wyse2psf.c cnvshell.h ../config.h ../include/psflib.h \
+	../include/psfutils.h
+zx2psf.o: zx2psf.c cnvshell.h ../config.h ../include/psflib.h \
+	../include/psfutils.h zxflib.h latin1.inc
+zxflib.o: zxflib.c zxflib.h
+
+info-am:
+info: info-am
+dvi-am:
+dvi: dvi-am
+check-am: all-am
+check: check-am
+installcheck-am:
+installcheck: installcheck-am
+install-exec-am: install-binPROGRAMS
+install-exec: install-exec-am
+
+install-data-am:
+install-data: install-data-am
+
+install-am: all-am
+	@$(MAKE) $(AM_MAKEFLAGS) install-exec-am install-data-am
+install: install-am
+uninstall-am: uninstall-binPROGRAMS
+uninstall: uninstall-am
+all-am: Makefile $(PROGRAMS)
+all-redirect: all-am
+install-strip:
+	$(MAKE) $(AM_MAKEFLAGS) AM_INSTALL_PROGRAM_FLAGS=-s install
+installdirs:
+	$(mkinstalldirs)  $(DESTDIR)$(bindir)
+
+
+mostlyclean-generic:
+
+clean-generic:
+	-test -z "$(CLEANFILES)" || rm -f $(CLEANFILES)
+
+distclean-generic:
+	-rm -f Makefile $(CONFIG_CLEAN_FILES)
+	-rm -f config.cache config.log stamp-h stamp-h[0-9]*
+
+maintainer-clean-generic:
+mostlyclean-am:  mostlyclean-binPROGRAMS mostlyclean-noinstPROGRAMS \
+		mostlyclean-compile mostlyclean-libtool \
+		mostlyclean-tags mostlyclean-generic
+
+mostlyclean: mostlyclean-am
+
+clean-am:  clean-binPROGRAMS clean-noinstPROGRAMS clean-compile \
+		clean-libtool clean-tags clean-generic mostlyclean-am
+
+clean: clean-am
+
+distclean-am:  distclean-binPROGRAMS distclean-noinstPROGRAMS \
+		distclean-compile distclean-libtool distclean-tags \
+		distclean-generic clean-am
+	-rm -f libtool
+
+distclean: distclean-am
+
+maintainer-clean-am:  maintainer-clean-binPROGRAMS \
+		maintainer-clean-noinstPROGRAMS \
+		maintainer-clean-compile maintainer-clean-libtool \
+		maintainer-clean-tags maintainer-clean-generic \
+		distclean-am
+	@echo "This command is intended for maintainers to use;"
+	@echo "it deletes files that may require special tools to rebuild."
+
+maintainer-clean: maintainer-clean-am
+
+.PHONY: mostlyclean-binPROGRAMS distclean-binPROGRAMS clean-binPROGRAMS \
+maintainer-clean-binPROGRAMS uninstall-binPROGRAMS install-binPROGRAMS \
+mostlyclean-noinstPROGRAMS distclean-noinstPROGRAMS \
+clean-noinstPROGRAMS maintainer-clean-noinstPROGRAMS \
+mostlyclean-compile distclean-compile clean-compile \
+maintainer-clean-compile mostlyclean-libtool distclean-libtool \
+clean-libtool maintainer-clean-libtool tags mostlyclean-tags \
+distclean-tags clean-tags maintainer-clean-tags distdir info-am info \
+dvi-am dvi check check-am installcheck-am installcheck install-exec-am \
+install-exec install-data-am install-data install-am install \
+uninstall-am uninstall all-redirect all-am all installdirs \
+mostlyclean-generic distclean-generic clean-generic \
+maintainer-clean-generic clean mostlyclean distclean maintainer-clean
+
+
+latin1.inc:	lat1-08.psf psf2inc
+	./psf2inc $< $@
+
+zx2psf:	latin1.inc $(zx2psf_SOURCES)
+
+# Tell versions [3.59,3.63) of GNU make to not export all variables.
+# Otherwise a system limit (for SysV at least) may be exceeded.
+.NOEXPORT:

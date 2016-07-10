@@ -1,0 +1,70 @@
+Redirection tools for JOYCE                     John Elliott, 16 February 1999
+==============================================================================
+
+  The Redirection tools are a set of programs allowing you to use a 
+directory as a CP/M drive. They will work under any version of CP/M, but not
+under LocoScript.
+
+  I recommend that you copy the files onto your start-of-day disc, if there's
+room for them. Start JOYCE with  JOYCE -B=DISKS/UTILS.DSK, and load CP/M. Then
+type:
+
+  PIP A:=B:*.COM[G1]
+
+  The programs on the disc are:
+
+* REDIR.COM   must be loaded to enable the other programs. You can type:
+
+                  REDIR     - to turn redirection on.
+                  REDIR [U] - to turn redirection off.
+
+* MOUNT.COM   will connect a CP/M drive to a DOS directory:
+
+                  MOUNT N:=C:/TEXT/
+
+              makes CP/M able to access the directory C:/TEXT as CP/M drive N:.
+              Under UNIX, where directory names are likely to be lower case, use
+              a command like:
+
+                  A>MOUNT \
+                  MOUNT>L:=/usr/src/linux/
+
+              so that the lower case letters don't get converted to upper case
+              by CP/M.            
+
+* UMOUNT.COM  disconnects a CP/M drive:
+
+                  UMOUNT N:
+
+              will stop drive N: from being a DOS directory. If you find that 
+              MOUNT.COM reports that a drive is already in use, then use UMOUNT 
+              to disconnect it and the MOUNT to reconnect it.
+
+* LSDIR.COM   can be used as an alternative to DIR; it includes subdirectories 
+              in its listing. 
+
+* CHDIR.COM   is used to select a new directory on the current drive. Examples:
+
+                CHDIR TEXT
+                CHDIR ..
+
+               Note: a command like    CHDIR C:\DATA\PCW  is not acceptable. You 
+                    would have to use two commands:
+                                       
+                                       CHDIR DATA
+                                       CHDIR PCW
+
+* MKDIR.COM   is used to create a new subdirectory in the current directory.
+* RMDIR.COM   is used to delete an empty subdirectory in the current directory.
+
+
+General points
+==============
+
+  Most CP/M programs will work with a redirected drive. Disc editors and unerase 
+programs will not.
+
+  Under DRDOS, password protection will work. Under MSDOS, it won't.
+
+  
+

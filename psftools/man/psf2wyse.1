@@ -1,0 +1,103 @@
+.\" -*- nroff -*-
+.\"
+.\" psf2wyse.1: psf2wyse man page
+.\" Copyright (c) 2005, 2007 John Elliott
+.\"
+.\"
+.\"
+.\" psftools: Manipulate console fonts in the .PSF format
+.\" Copyright (C) 2005, 2007  John Elliott
+.\"
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2 of the License, or
+.\" (at your option) any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program; if not, write to the Free Software
+.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+.\"
+.TH psf2wyse 1 "11 April, 2008" "Version 1.0.7" "PSF Tools"
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH NAME
+psf2wyse - convert a PC Screen Font file to a Wyse-60 soft font
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH SYNOPSIS
+.PD 0
+.B psf2wyse
+.RI [ "--bank=BANK" ]
+.RI [ "--dest=DEST" ]
+.RI [ "--height=HEIGHT" ]
+.RI [ "--first=FIRST" ]
+.RI [ "--last=LAST" ]
+.RI [ "--nulls=COUNT" ]
+.RI [ INPUTFILE 
+.RI [ OUTPUTFILE ]]
+.P
+.PD 1
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH DESCRIPTION
+.LP 
+psf2wyse converts a font in the .PSF format to a soft-font suitable for use
+with Wyse-60 and compatible terminals. The resulting soft-font can be saved
+as a text file, or just sent straight to the terminal.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH OPTIONS
+.TP
+.B --bank=BANK
+The Wyse-60 has four banks of 128 characters each, numbered 0 to 3. By default
+the first two contain the 16-pixel font used in 25-line modes, and the second
+two contain the 9-pixel font used in 43-line modes. This option sets the 
+first bank to load into; note that psf2wyse will load into subsequent banks 
+if there are more characters in the font than will fit into one.
+.TP
+.B --dest=DEST
+Specifies the first character to populate in the destination bank. By default 
+this is zero.
+.TP 
+.B --first=FIRST
+Starts generating the font at character FIRST.
+.TP 
+.B --last=LAST
+Finishes generating the font after doing character LAST.
+.TP 
+.B --height=HEIGHT
+Sets the height of the characters which will be sent to the terminal. By 
+default this is 16, whatever the height of the font being converted; on a 
+Wyse-60, attempts to define characters at other heights appear to be ignored.
+.TP 
+.B --nulls=COUNT
+After sending the definition for a character, send COUNT null bytes. This 
+appears to be necessary to make sure the terminal doesn't miss the start of a 
+character while it's still processing the previous character. By default 
+COUNT is 8.
+
+.\"------------------------------------------------------------------
+.\"
+.SH BUGS
+The terminal screen tends to flicker like crazy while characters not in the 
+current bank are being defined.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH SEE ALSO
+pat2sf(1), sf2pat(1), wyse2psf(1)
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH AUTHOR
+John Elliott <jce@seasip.demon.co.uk>.
+.PP

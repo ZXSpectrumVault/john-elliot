@@ -1,0 +1,75 @@
+.\" -*- nroff -*-
+.\"
+.\" cpidcomp.1: cpidcomp man page
+.\" Copyright (c) 2005, 2007 John Elliott
+.\"
+.\"
+.\"
+.\" psftools: Manipulate console fonts in the .PSF format
+.\" Copyright (C) 2005, 2007  John Elliott
+.\"
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2 of the License, or
+.\" (at your option) any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program; if not, write to the Free Software
+.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+.\"
+.TH cpidcomp 1 "11 April, 2008" "Version 1.0.7" "PSF Tools"
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH NAME
+cpidcomp - compress a CPI codepage by converting it to DRFONT format
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH SYNOPSIS
+.PD 0
+.B cpidcomp
+.RI [ --nointer ]
+.RI [ --nt ]
+.RI [ INPUTFILE 
+.RI [ OUTPUTFILE ]]
+.P
+.PD 1
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH DESCRIPTION
+cpidcomp converts codepage from the efficient but DRDOS-specific DRFONT
+format to the more wasteful FONT or FONT.NT format.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH OPTIONS
+.B --nointer
+Normally CPI files are saved interleaved, with the data for each 
+codepage following immediately after the header. With this option,
+all the headers are saved followed by all the data. Some utilities
+will not handle this layout very well.
+.B --nt
+Save in the FONT.NT format used by Windows NT rather than the FONT
+format used by MSDOS.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.\".SH BUGS
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH SEE ALSO
+cpicomp(1)
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH AUTHOR
+John Elliott <jce@seasip.demon.co.uk>.
+.PP

@@ -1,0 +1,112 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;   JOYCE/ANNE v2.1.0: PCW emulator                                           ;
+;                                                                             ;
+;   Copyright (C) 1998-1999, John Elliott <jce@seasip.demon.co.uk>            ;
+;                                                                             ;
+;    This program is free software; you can redistribute it and/or modify     ;
+;    it under the terms of the GNU Library General Public License as          ;
+;    published by the Free Software Foundation; either version 2 of the       ;
+;    License, or(at your option) any later version.                           ;
+;                                                                             ;
+;    This program is distributed in the hope that it will be useful,          ;
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of           ;
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            ;
+;    GNU Library General Public License for more details.                     ;
+;                                                                             ;
+;    You should have received a copy of the GNU Library General Public        ;
+;    License along with this program; if not, write to the Free Software      ;
+;    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.                ;
+;                                                                             ;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+;VGA.FID - VGA driver for JOYCE 1.20+
+;
+;(v1.20) Queries capability bitmap before loading.
+;
+	include	org.inc
+	include	ver.inc
+
+SVC_C_HOOK EQU	$+0FE01h
+
+	JP	FIDEMS
+
+	DEFB	1Ah,1Ah,1Ah,1Ah,1Ah,1Ah,1Ah,1Ah
+	DEFB	'FID'
+	DEFW	version
+	DEFW	0,0,0,0,0,0,0,0
+FIDOPT:	DEFW	0
+
+FIDEMS:	LD	A,D		;Check PCW FID environment
+	OR	A
+	JP	NZ,BADENV	;A is now zero, so
+	DEFB	0EDh,0FEh	;this will get the version
+	INC	A
+	JP	NZ,VERERR
+	LD	A,H
+	CP	2		;v2.x or higher?
+	JR	NC,ISOK
+	LD	A,L		;< v1.10?
+	CP	20h
+	JP	C,VERERR
+ISOK:	LD	A,11
+	LD	C,6		;Query capabilities
+	DEFB	0EDh,0FEh
+	BIT	0,L
+	JP	Z,VERERR
+	LD	DE,JBLOCK
+	LD	HL,DEVENT
+	CALL	SVC_C_HOOK
+	LD	D,A
+	JR	NC,FIDERR ;Hook failed
+	LD	E,B
+	SCF
+	LD	D,0
+FIDERR:	LD	BC,(FIDOPT)
+	LD	A,0Bh
+	LD	C,5
+	LD	HL,MSGBUF
+	DEFB	0EDh, 0FEh
+	AND	A
+	RET	Z
+	SCF
+	RET
+
+VERERR:	LD	HL,MSGBUF
+	AND	A
+	RET
+
+JBLOCK:	JP	RETNC	;INIT
+	JP	RETNC	;ISTAT
+	JP	RETNC	;INPUT
+	JP	RETC 	;OSTAT
+	JP	OPCHAR	;OUTPUT
+	JP	RETC 	;MSTAT
+	JP	OPMSG	;MESSAGE
+;
+RETNC:	XOR	A
+	RET
+;
+RETC:	SCF
+	RET
+
+OPCHAR:	LD	E,C
+	LD	C,2
+OPCMN:	LD	A,0Bh
+	DEFB	0EDh, 0FEh
+	RET
+;
+OPMSG:	LD	E,C
+	LD	C,3
+	JR	OPCMN
+
+BADENV:	LD	D,3
+	JR	FIDERR	;$-40
+
+DEVENT:	DEFB	'VGA   ',2,0
+MSGBUF:	DEFB	'VGA.FID requires the JOYCE emulator (v1.20+) and an 800x600 screen to run.'
+	DEFB	0Dh,0Ah,0FFh
+	DEFS	MSGBUF + 93 - $
+	END
+
+
+

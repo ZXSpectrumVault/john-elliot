@@ -1,0 +1,72 @@
+LAR(1)									LAR(1)
+
+
+
+NAME
+       lar - library archiver
+
+SYNOPSIS
+       lar function library [files]...
+
+
+DESCRIPTION
+       lar is a Unix program to manipulate CP/M LU format libraries. The orig-
+       inal CP/M library program LU is the product of Gary P. Novosielski. The
+       primary	 use   of  lar	is  to	combine	 several  files	 together  for
+       upload/download to a personal computer.
+
+
+FUNCTION LETTERS
+       One of the following letters must be used:
+
+
+       u      - Update, add files to library
+
+       t      - Table of contents
+
+       e      - Extract files from library
+
+       p      - Print files in library to stdout
+
+       d      - Delete files in library
+
+       r      - Reorganise library (remove gaps caused by file deletion)
+
+
+       Other keys:
+
+       v      - Verbose
+
+       l      - Directory listing will be in the  format  used	by  mc(1)  for
+	      extended filesystems.
+
+
+LEGAL
+       This  program  is  public  domain  software,  no	 warranty  intended or
+       implied.
+
+
+HISTORY
+       This version of lar has been rewritten to match version 5  of  the  LBR
+       format definition, and supports date stamps, CRCs and exact file sizes.
+
+
+BUGS/MISFEATURES
+       The biggest problem is text files, the programs tries  to  detect  text
+       files  vs.  binaries by checking for non-Ascii (8th bit set) chars.  If
+       the file is text then it will throw away	 Control-Z  chars  which  CP/M
+       puts on the end.	 All files in library are padded with Control-Z at the
+       end to the CP/M sector size if necessary.
+
+       No effort is made to handle the difference between CP/M and Unix end of
+       line  chars.   CP/M  uses Cr/Lf and Unix just uses Lf.  The solution is
+       just to use the Unix command sed when necessary.
+
+
+
+	* Unix is a trademark of Bell Labs.
+	** CP/M is a trademark of Digital Research.
+
+
+
+				11 January 2003				LAR(1)

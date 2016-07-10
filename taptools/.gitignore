@@ -1,0 +1,56 @@
+# Object files
+*.o
+*.ko
+*.obj
+*.elf
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Libraries
+*.lib
+*.a
+*.la
+*.lo
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Executables
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+
+# Debug files
+*.dSYM/
+
+# Autoconf
+.deps/
+config.h
+config.status
+Makefile
+stamp-h1
+*.log
+
+# Binaries
+bin2bas
+dsk2tap
+mkibmtap
+mkmgtfs
+mkp3fs
+sna2dsk
+sna2tap
+specform
+tap2dsk
+tapcat
+tapget
+tapls
+tapsplit
+unspecform

@@ -1,0 +1,7 @@
+What's new in JOYCE 2.27:
+
+	* Added validity / buffer overflow checks to parameters passed to 
+	 JDOS from Z80 code.
+	* Added optional confirmation of host file access from JOYCE 
+	 [Both with thanks to Alan Cox]
+

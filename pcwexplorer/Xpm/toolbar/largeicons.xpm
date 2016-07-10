@@ -1,0 +1,23 @@
+/* XPM */
+static char * largeicons_xpm[] = {
+"16 16 4 1",
+" 	c none",
+".	c #000000000000",
+"X	c #00000000FFFF",
+"o	c #FFFFFFFFFFFF",
+"                ",
+" .............. ",
+" .XXXXXXXXXXXX. ",
+" .oooooooooooo. ",
+" .oo.....ooooo. ",
+" .oo.ooo..oooo. ",
+" .oo.ooo...ooo. ",
+" .oo.ooooo.ooo. ",
+" .oo.ooooo.ooo. ",
+" .oo.ooooo.ooo. ",
+" .oo.......ooo. ",
+" .oooooooooooo. ",
+" .ooo.....oooo. ",
+" .oooooooooooo. ",
+" .............. ",
+"                "};

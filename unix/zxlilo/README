@@ -1,0 +1,30 @@
+ZXLILO v1.0.0                                      22 July 2005, John Elliott
+=============================================================================
+
+  ZXLILO generates menu screens for the Linux bootloader LILO which look
+something like the Spectrum 128 opening menu. 
+
+  To use:
+
+1. Install the latest LILO (version 22.7 at the time of writing). It is 
+preferable to build LILO from source; vendor-supplied LILOes may have their
+own incompatible methods of displaying menu screens. 
+
+2. Compile and run ZXLILO. Syntax is:
+
+	./zxlilo {number} {bitmap}
+
+  where {number} is the number of entries for your menu, and {bitmap} is
+  the name of the output file. If you omit {bitmap} the file will be saved
+  as zxlilo.bmp; if you omit {number} as well, the bitmap will be generated
+  with room for 5 entries.
+
+3. Become root.
+
+4. Copy the output file (zxlilo.bmp or whatever you called it) to /boot.
+
+5. Edit /etc/lilo.conf. Remove any "message=" line and replace it with
+  "bitmap=/boot/zxlilo.bmp" (or whatever you called your bitmap).
+
+6. Run LILO and check that it didn't report any errors.
+
