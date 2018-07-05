@@ -41,16 +41,28 @@ char *herc_loadfont (psf_byte far *buffer, int count, int width, int height,
 char *ega_loadfont (psf_byte far *buffer, int count, int height, int map);
 char *conv_loadfont(psf_byte far *buffer, int count, int height, int map);
 char *apricot_loadfont(psf_byte far *buffer, int count, int width, int height,
-		int map);
+		int slot);
+char *wang_loadfont(psf_byte far *buffer, int count, int width, int height, 
+		int slot);
 static char *apricot_pc_loadfont(psf_byte far *buffer, int count, 
 		int width, int height, int map);
 static char *apricot_f_loadfont(psf_byte far *buffer, int count, 
 		int height, int map);
+static char *wang_mono_loadfont(psf_byte far *buffer, int count, int width, 
+		int height);
+static char *wang_colour_loadfont(psf_byte far *buffer, int count, int width,
+		int height);
+/*
+static char *wang_cgdc_loadfont(psf_byte far *buffer, int count, int width, 
+		int height);
+*/
+static int wang_active_display_type(void);
 
 static int convertible = 0;
 static int ega = 0;
 static int herc = 0;
 static int apricot = 0;
+static int wang = 0;
 
 static int herc_probe(void);
 
@@ -70,6 +82,39 @@ char *video_probe(void)
 		apricot = 1 + ptr[1];
 		return NULL;
 	}
+	/* Check for Wang type PCs, to which the same caveat applies. 
+	 * Unfortunately, I don't think there's a fixed signature for a 
+	 * Wang BIOS in the same way that there is for an Apricot BIOS, so
+	 * the method is a little more arbitrary: see if there's a jump 
+	 * at 0040:0000, and check that the segment of the INT 7E handler 
+	 * is 0040h. */
+	ptr = MK_FP(0, 0);
+	if (ptr[0x400] == 0xEB && ptr[0x401] == 2 && ptr[0x404] == 0xFA &&
+	    ptr[0x1FA] == 0x40 && ptr[0x1FB] == 0x00)
+	{
+		/* Now detect video type */
+		int slot;
+
+		for (wang = 0, slot = 1; slot < 15; slot++)
+		{
+			switch(inportb(0x10FE + 256 * slot) & 0x7F)
+			{
+				case 0x10: wang |= 1; break;
+				case 0x11:
+				case 0x15: wang |= 2; break;
+// The CGDC display class is not supported yet
+				case 0x13:
+				case 0x17: /* wang |= 4; */ break;
+			}
+		}
+		if (!wang)
+		{
+			return "Wang MS-DOS detected, but no suitable "
+				"displays found.";
+		}
+		return NULL;
+	} 
+
 
 	/* Check for IBM Convertible */
 	rg.h.ah = 0xC0;
@@ -82,6 +127,31 @@ char *video_probe(void)
 			convertible = 1;
 			return 0;
 		}
+		if (ptr[2] == 0xFC)	/* AT-class */
+		{
+			/* Check for Compaq portable III / 386 */
+			union REGS rg;
+
+			ptr = MK_FP(0xF000, 0xFFEA);
+			if (ptr[0] == 'C' && ptr[1] == 'O' && ptr[2] == 'M'
+			&&  ptr[3] == 'P' && ptr[4] == 'A' && ptr[5] == 'Q')
+			{
+/* Get Compaq environment */
+				rg.x.ax = 0xbf03;
+				rg.x.bx = 0;
+				rg.x.cx = 0;
+				rg.x.dx = 0;
+				int86(0x10, &rg, &rg);
+/* If Compaq environment present and internal monitor is a 640x400 flat panel,
+ * this is presumed to be a Compaq Portable III / 386 */
+				if (rg.x.bx != 0 && rg.h.dh == 4)
+				{
+					convertible = 2;
+					return 0;
+				}
+			}
+		}
+
 	}
 	/* Check for EGA/VGA */
 	rg.h.ah = 0x12;
@@ -92,18 +162,19 @@ char *video_probe(void)
 		ega = 1;
 		return 0;
 	}
-	/* Check for Hercules Plus here! */
+	/* Check for Hercules Plus */
 	if (herc_probe())
 	{
 		herc = 1;
 		return 0;
-	}	
+	}
 	      //1...5...10...15...20...25...30...35...40...45...50...55
 	return "No supported video hardware detected. Must be one of:\n"
 	       "* EGA/VGA\n"
 	       "* IBM Convertible\n"
 	       "* Hercules Plus\n"
-	       "* Apricot PC, Xi or F-Series\n";
+	       "* Apricot PC, Xi or F-Series\n"
+	       "* Wang Professional Computer\n";
 }
 
 char *valid_font(PSF_FILE *psf)
@@ -153,11 +224,30 @@ char *valid_font(PSF_FILE *psf)
 			}
 		}
 	}
+	else 	if (wang)
+	{
+		if (wang & 2)	/* Do we have a mono display? */
+		{
+			if (psf->psf_width > 10 || psf->psf_height > 12)
+			{
+				return "Hardware does not support fonts "
+					"larger than 10x12 pixels.";
+			}
+		}
+		else	/* No, colour only */
+		{
+			if (psf->psf_width > 8 || psf->psf_height > 8)
+			{
+				return "Hardware does not support fonts "
+					"larger than 8x8 pixels.";
+			}
+		}
+	}
 	else
 	{
 		if (psf->psf_width > 8) return "Hardware does not support "
 			"fonts wider than 8 pixels.";
-		if (convertible && psf->psf_height != 8)
+		if (convertible == 1 && psf->psf_height != 8)
 			return "Convertible only supports fonts 8 pixels high.";
 	}
 	return NULL;
@@ -205,6 +295,7 @@ static char *load_set(unsigned char far *data, int count,
 	char *s;
 
 	if (apricot) s = apricot_loadfont( data, count, width, height, slot);
+	else if (wang) s = wang_loadfont ( data, count, width, height, slot);
 	else if (convertible) s = conv_loadfont( data, count, height, slot);
 	else if (ega && slot < 8) s = ega_loadfont( data, count, height, slot);
 	else if (herc) s = herc_loadfont( data, count, width, height, slot);
@@ -349,6 +440,177 @@ char *apricot_loadfont(psf_byte far *buffer, int count, int width, int height,
 		height, map);
 	return apricot_f_loadfont(buffer, count, height, map);	
 }
+
+
+char *wang_loadfont(psf_byte far *buffer, int count, int width, int height,
+		int slot)
+{
+	switch (wang)
+	{
+		case 1: /* Colour only */
+			if (slot == 0) return wang_colour_loadfont(buffer, count, width, height);
+			return NULL;
+		case 2: /* Mono only */
+			if (slot == 0) return wang_mono_loadfont(buffer, count, width, height);
+			return NULL;
+
+/* When CGDC is present, we need to handle these cases as well. */
+#if 0
+		case 4: /* CGDC only */
+		case 5: /* CGDC and colour */
+		case 6: /* CGDC and mono */
+		case 7: /* All three */
+		case 3:	/* Mono & colour */
+#endif
+		default:
+			switch (slot)
+			{
+				case 0: /* Load into active display */
+				if (wang_active_display_type() < 2) /* colour card? */
+					return wang_colour_loadfont(buffer, count, width, height);
+				else 	return wang_mono_loadfont(buffer, count, width, height);
+				case 1:	/* Load into inactive display */	
+				if (wang_active_display_type() < 2) /* colour card? */
+					return wang_mono_loadfont(buffer, count, width, height);
+				else 	return wang_colour_loadfont(buffer, count, width, height);
+			}	/* end switch(slot) */
+	}	/* end switch(wang) */
+	return NULL;
+}
+
+/* See which display is active, and what type it is */
+static int wang_active_display_type(void)
+{
+	union REGS rg;
+	struct SREGS sg;
+	unsigned short far *ptr;
+	unsigned char far *scr;
+	unsigned card;
+
+	rg.x.ax = 1;
+	int86x(0x88, &rg, &rg, &sg);	/* ES:BX -> BIOS config table */
+	rg.x.bx += 8;			/* -> video cards section */
+	ptr = MK_FP(sg.es, rg.x.bx);	/* ptr[0] = count of video cards, */
+					/* ptr[1], [2] etc -> descriptors */
+	for (card = 1; card <= ptr[0]; card++)
+	{
+		scr = MK_FP(sg.es, ptr[card]);
+		if (scr[0] & 0x80)	/* Active display? */
+		{
+			return (scr[0] & 0x70) >> 4;
+		}
+	}
+	return 0;
+}
+
+
+static char *wang_mono_loadfont(psf_byte far *buffer, int count, int width, 
+		int height)
+{
+	unsigned card, slot;
+	unsigned wb;
+	int y0;
+	union REGS rg;
+	struct SREGS sg;
+	unsigned short far *ptr;
+	unsigned char far *scr;
+	unsigned short bits;
+	unsigned short far *font = MK_FP(0xF200, 0);
+	int n, m;
+
+	if (count > 256) count = 256;
+
+	y0 = (12 - height) / 2;
+	wb = (width + 7) / 8;
+	if (y0 < 0) y0 = 0;
+
+	/* Find the BIOS data segment */
+	rg.x.ax = 1;
+	int86x(0x88, &rg, &rg, &sg);	/* ES:BX -> BIOS config table */
+	rg.x.bx += 8;			/* -> video cards section */
+	ptr = MK_FP(sg.es, rg.x.bx);	/* ptr[0] = count of video cards, */
+					/* ptr[1], [2] etc -> descriptors */
+	for (card = 1; card <= ptr[0]; card++)
+	{
+		scr = MK_FP(sg.es, ptr[card]);
+
+/* I do hope that having the slot number at offset 0x13 and the device class
+ * at offset 0x14 are contracts rather than implementation details. */
+	
+		/* Is this card a class 0x11 or 0x15? */	
+		if (scr[0x14] != 0x11 && scr[0x14] != 0x15) continue;
+		
+		/* Page the card in */
+		slot = (scr[0x13] * 256);
+		di();
+		outportb(slot | 0x10, (scr[8] & 0x0C) | 1);	
+
+		/* Load the font */
+		for (n = 0; n < count; n++)
+		{
+			for (m = 0; m < y0; m++)
+			{
+				font[16 * n + m] = 0;
+			}
+			for (m = 0; m < height; m++)
+			{
+				if (wb == 1) bits = buffer[n * height + m];
+				else
+				{
+					bits = buffer[n * height * wb + wb * m];
+					bits = bits << 2;
+					bits |= (buffer[n * height * wb + wb*m + 1] >> 6) & 3;
+				}
+				if ((m + y0) < 12)
+				{
+					font[16 * n + m + y0] = bits;
+				}
+			}
+			for (; m < 16; m++)
+			{
+				font[16 * n + m + y0] = 0;
+			}
+		}
+
+		/* Page the card out */
+		outportb(slot | 0x10, (scr[8] & 0x0C) );	
+		ei();
+	}
+	return NULL;
+}
+
+static char *wang_colour_loadfont(psf_byte far *buffer, int count, int width,
+		int height)
+{
+	union REGS rg;
+	struct SREGS sg;
+	unsigned short far *ptr;
+	unsigned char far *font;
+	unsigned n, m, wb;
+
+	/* Find the BIOS data segment */
+	rg.x.ax = 1;
+	int86x(0x88, &rg, &rg, &sg);	/* ES:BX -> BIOS config table */
+
+	if (count > 256) count = 256;
+	/* I have no idea if this is value is a contract or just some handy
+	 * piece of BIOS internals. But the address of the colour screen font
+	 * doesn't seem to be exposed anywhere else. */
+	ptr = MK_FP(sg.es, 6);
+	font = MK_FP(ptr[0], 0);
+
+	wb = (width + 7) / 8;
+	for (n = 0; n < count; n++)
+	{
+		for (m = 0; m < 8; m++)
+		{
+			if (m < height) font[n * 8 + m] = buffer[n * wb * height + m * wb];
+			else		font[n * 8 + m] = 0;
+		}
+	}
+	return NULL;
+}
+
 
 #if HERC_CUSTOM
 static psf_byte h_params[] = 

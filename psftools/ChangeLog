@@ -1,3 +1,30 @@
+2017-03-17 John Elliott
+
+	* cpi2psf: Was unable to parse LCD.CPI from Toshiba MS-DOS 3.30, 
+		 which is slightly out of spec.
+	* Updated GEM codepage now that there's a Unicode dingbat for 'bell'.
+	 (U+1F514).
+
+2012-01-81 John Elliott
+
+	* loadpsf: Support for Wang PC colour and mono video cards. Does
+		  not support 'CGDC' or 'IBM emulation' card types.
+
+2010-11-14 John Elliott
+
+	* Updated build scripts to a more recent autoconf / automake.
+
+2009-05-03 John Elliott
+
+	* loadpsf: Added support for Compaq Portable plasma displays.
+
+2008-06-21 John Elliott
+
+	* psftools-1.0.8 released.
+	* psfs2mda: Created new utility to build an MDA character ROM image.
+	* mda2psf: Added a --compaq option to match the --compaq option in
+		psfs2mda(1).
+
 2008-04-11 John Elliott
 
 	* psftools-1.0.7 released.

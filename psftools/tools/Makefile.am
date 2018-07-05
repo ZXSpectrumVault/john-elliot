@@ -1,16 +1,18 @@
 ## Process this file with automake to produce Makefile.in
 
-INCLUDES=-I$(top_srcdir)/include
+AM_CPPFLAGS=-I$(top_srcdir)/include
 LDADD=../lib/libpsf.la
 
 bin_PROGRAMS=psf2bbc psf2bsd psf2inc psf2pbms psf2raw psf2wof psf2xbm psf2zx \
-	     psfs2cpi psf2txt psf2wyse \
+	     psfs2cpi psfs2mda psf2txt psf2wyse \
 	     psfxform psfmerge psfjoin \
 	     bbc2psf mda2psf raw2psf zx2psf psf2bdf wof2psf txt2psf wyse2psf \
 	     psfpages page2cp2 \
 	     cpi2psf cpicomp cpidcomp
 noinst_PROGRAMS=cpitest
 EXTRA_DIST=lat1-08.psf loadpsf.c load_pc.c ldshell.c 
+
+BUILT_SOURCES=latin1.inc
 
 cpitest_SOURCES=cpitest.c cpi.h cpialloc.c cpiload.c cpisave.c cpidump.c
 cpicomp_SOURCES=cpicomp.c cnvshell.c cnvshell.inc cnvshell.h \
@@ -39,17 +41,16 @@ psf2bdf_SOURCES=psf2bdf.c cnvshell.c cnvshell.inc cnvshell.h
 psf2zx_SOURCES=psf2zx.c cnvshell.c cnvshell.inc cnvshell.h zxflib.c zxflib.h
 psfs2cpi_SOURCES=psfs2cpi.c cnvmulti.c cnvshell.inc cnvmulti.h \
 		 cpi.h cpialloc.c cpiload.c cpisave.c cpicrush.c cpibloat.c
+psfs2mda_SOURCES=psfs2mda.c cnvmulti.c cnvshell.inc cnvmulti.h 
 mda2psf_SOURCES=mda2psf.c cnvshell.c cnvshell.inc cnvshell.h
 raw2psf_SOURCES=raw2psf.c cnvshell.c cnvshell.inc cnvshell.h
 wof2psf_SOURCES=wof2psf.c cnvshell.c cnvshell.inc cnvshell.h
 psf2wof_SOURCES=psf2wof.c cnvshell.c cnvshell.inc cnvshell.h
-zx2psf_SOURCES=zx2psf.c cnvshell.c cnvshell.inc cnvshell.h zxflib.c zxflib.h
+zx2psf_SOURCES=zx2psf.c cnvshell.c cnvshell.inc cnvshell.h zxflib.c zxflib.h \
+		latin1.inc
 
-latin1.inc:	lat1-08.psf psf2inc
+latin1.inc:	lat1-08.psf
+	$(MAKE) $(AM_MAKEFLAGS) psf2inc
 	./psf2inc $< $@
-
-zx2psf:	latin1.inc $(zx2psf_SOURCES)
-
-CLEANFILES = latin1.inc
 
 

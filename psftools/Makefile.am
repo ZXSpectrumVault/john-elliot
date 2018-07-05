@@ -10,5 +10,7 @@ EXTRA_DIST= $(srcdir)/config/* $(srcdir)/unimaps/mappings.tar.gz \
 	    $(srcdir)/NEWS $(srcdir)/ChangeLog $(srcdir)/COPYING \
 	    $(srcdir)/INSTALL 
 
+ACLOCAL_AMFLAGS= -I m4
+
 install-man:
 	cd man && make install-man

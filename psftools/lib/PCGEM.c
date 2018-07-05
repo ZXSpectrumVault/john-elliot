@@ -10,69 +10,69 @@
 static psf_dword values[] = {
 0xffff, 0xfffd, 0xffff, 0x21e7, 0xffff, 0x21e9, 0xffff, 0x21e8, 
 0xffff, 0x21e6, 0xffff, 0x25fc, 0xffff, 0x27b7, 0xffff, 0x25c6, 
-0xffff, 0x2713, 0xffff, 0x231a, 0xffff, 0x237e, 0xffff, 0x266a, 
-0xffff, 0x25b4, 0xffff, 0x25be, 0xffff, 0x25b8, 0xffff, 0x25c2, 
-0xffff, 0x25b6, 0xffff, 0x25c0, 0xffff, 0x29d3, 0xffff, 0x2582, 
-0xffff, 0x2761, 0x1ffff, 0x00b6, 0xffff, 0x00a7, 0xffff, 0x2195, 
-0xffff, 0x21a8, 0xffff, 0x2191, 0xffff, 0x2193, 0xffff, 0x2192, 
-0xffff, 0x2190, 0xffff, 0x221f, 0xffff, 0x2194, 0xffff, 0x25b2, 
-0xffff, 0x25bc, 0xffff, 0x0020, 0xffff, 0x0021, 0xffff, 0x0022, 
-0xffff, 0x0023, 0xffff, 0x0024, 0xffff, 0x0025, 0xffff, 0x0026, 
-0xffff, 0x0027, 0xffff, 0x0028, 0xffff, 0x0029, 0xffff, 0x002a, 
-0xffff, 0x002b, 0xffff, 0x002c, 0xffff, 0x002d, 0xffff, 0x002e, 
-0xffff, 0x002f, 0xffff, 0x0030, 0xffff, 0x0031, 0xffff, 0x0032, 
-0xffff, 0x0033, 0xffff, 0x0034, 0xffff, 0x0035, 0xffff, 0x0036, 
-0xffff, 0x0037, 0xffff, 0x0038, 0xffff, 0x0039, 0xffff, 0x003a, 
-0xffff, 0x003b, 0xffff, 0x003c, 0xffff, 0x003d, 0xffff, 0x003e, 
-0xffff, 0x003f, 0xffff, 0x0040, 0xffff, 0x0041, 0xffff, 0x0042, 
-0xffff, 0x0043, 0xffff, 0x0044, 0xffff, 0x0045, 0xffff, 0x0046, 
-0xffff, 0x0047, 0xffff, 0x0048, 0xffff, 0x0049, 0xffff, 0x004a, 
-0xffff, 0x004b, 0xffff, 0x004c, 0xffff, 0x004d, 0xffff, 0x004e, 
-0xffff, 0x004f, 0xffff, 0x0050, 0xffff, 0x0051, 0xffff, 0x0052, 
-0xffff, 0x0053, 0xffff, 0x0054, 0xffff, 0x0055, 0xffff, 0x0056, 
-0xffff, 0x0057, 0xffff, 0x0058, 0xffff, 0x0059, 0xffff, 0x005a, 
-0xffff, 0x005b, 0xffff, 0x005c, 0xffff, 0x005d, 0xffff, 0x005e, 
-0xffff, 0x005f, 0xffff, 0x0060, 0xffff, 0x0061, 0xffff, 0x0062, 
-0xffff, 0x0063, 0xffff, 0x0064, 0xffff, 0x0065, 0xffff, 0x0066, 
-0xffff, 0x0067, 0xffff, 0x0068, 0xffff, 0x0069, 0xffff, 0x006a, 
-0xffff, 0x006b, 0xffff, 0x006c, 0xffff, 0x006d, 0xffff, 0x006e, 
-0xffff, 0x006f, 0xffff, 0x0070, 0xffff, 0x0071, 0xffff, 0x0072, 
-0xffff, 0x0073, 0xffff, 0x0074, 0xffff, 0x0075, 0xffff, 0x0076, 
-0xffff, 0x0077, 0xffff, 0x0078, 0xffff, 0x0079, 0xffff, 0x007a, 
-0xffff, 0x007b, 0xffff, 0x007c, 0xffff, 0x007d, 0xffff, 0x007e, 
-0xffff, 0x2302, 0xffff, 0x00c7, 0xffff, 0x00fc, 0xffff, 0x00e9, 
-0xffff, 0x00e2, 0xffff, 0x00e4, 0xffff, 0x00e0, 0xffff, 0x00e5, 
-0xffff, 0x00e7, 0xffff, 0x00ea, 0xffff, 0x00eb, 0xffff, 0x00e8, 
-0xffff, 0x00ef, 0xffff, 0x00ee, 0xffff, 0x00ec, 0xffff, 0x00c4, 
-0xffff, 0x00c5, 0xffff, 0x00c9, 0xffff, 0x00e6, 0xffff, 0x00c6, 
-0xffff, 0x00f4, 0xffff, 0x00f6, 0xffff, 0x00f2, 0xffff, 0x00fb, 
-0xffff, 0x00f9, 0xffff, 0x00ff, 0xffff, 0x00d6, 0xffff, 0x00dc, 
-0xffff, 0x00d8, 0xffff, 0x00a3, 0xffff, 0x00f8, 0xffff, 0x00a4, 
-0xffff, 0x0192, 0xffff, 0x00e1, 0xffff, 0x00ed, 0xffff, 0x00f3, 
-0xffff, 0x00fa, 0xffff, 0x00f1, 0xffff, 0x00d1, 0xffff, 0x00aa, 
-0xffff, 0x00ba, 0xffff, 0x00bf, 0xffff, 0x201c, 0xffff, 0x201d, 
-0xffff, 0x2039, 0xffff, 0x203a, 0xffff, 0x00a1, 0xffff, 0x00ab, 
-0xffff, 0x00bb, 0xffff, 0x00e3, 0xffff, 0x00f4, 0xffff, 0x00a5, 
-0xffff, 0x00a2, 0xffff, 0x0153, 0xffff, 0x0152, 0xffff, 0x00c0, 
-0xffff, 0x00c3, 0xffff, 0x00d5, 0xffff, 0x00a7, 0xffff, 0x2021, 
-0xffff, 0x2020, 0xffff, 0x00b6, 0xffff, 0x00a9, 0xffff, 0x00ae, 
-0xffff, 0x2122, 0xffff, 0x201e, 0xffff, 0x2026, 0xffff, 0x2030, 
-0xffff, 0x2022, 0xffff, 0x2013, 0xffff, 0x2014, 0xffff, 0x00b0, 
-0xffff, 0x00e1, 0xffff, 0x00c2, 0xffff, 0x00c8, 0xffff, 0x00ca, 
-0xffff, 0x00cb, 0xffff, 0x00cc, 0xffff, 0x00cd, 0xffff, 0x00ce, 
-0xffff, 0x00cf, 0xffff, 0x00d2, 0xffff, 0x00d3, 0xffff, 0x00d4, 
-0xffff, 0x0160, 0xffff, 0x0161, 0xffff, 0x00d9, 0xffff, 0x00da, 
-0xffff, 0x00db, 0xffff, 0x0178, 0xffff, 0x00df, 0xffff, 0xfdda, 
-0xffff, 0xfddb, 0xffff, 0xfddc, 0xffff, 0xfddd, 0xffff, 0xfdde, 
-0xffff, 0xfddf, 0xffff, 0x03b1, 0xffff, 0x00df, 0xffff, 0x0393, 
-0xffff, 0x03c0, 0xffff, 0x03a3, 0xffff, 0x03c3, 0xffff, 0x00b5, 
-0xffff, 0x03c4, 0xffff, 0x03a6, 0xffff, 0x0398, 0xffff, 0x03a9, 
-0xffff, 0x03b4, 0xffff, 0x221e, 0xffff, 0x03c6, 0xffff, 0x03b5, 
-0xffff, 0x2229, 0xffff, 0x2261, 0xffff, 0x00b1, 0xffff, 0x2265, 
-0xffff, 0x2264, 0xffff, 0x2320, 0xffff, 0x2321, 0xffff, 0x00f7, 
-0xffff, 0x2248, 0xffff, 0x00b0, 0xffff, 0x2219, 0xffff, 0x00b7, 
-0xffff, 0x221a, 0xffff, 0x207f, 0xffff, 0x00b2, 0xffff, 0x25a0, 
-0xffff, 0x2205, 0xffff, };
+0xffff, 0x2713, 0xffff, 0x231a, 0x1ffff, 0x25f7, 0x1f552, 0xffff, 
+0x1f514, 0xffff, 0x266a, 0xffff, 0x25b4, 0xffff, 0x25be, 0xffff, 
+0x25b8, 0xffff, 0x25c2, 0xffff, 0x25b6, 0xffff, 0x25c0, 0xffff, 
+0x29d3, 0xffff, 0x2582, 0xffff, 0x2761, 0x1ffff, 0x00b6, 0xffff, 
+0x00a7, 0xffff, 0x2195, 0xffff, 0x21a8, 0xffff, 0x2191, 0xffff, 
+0x2193, 0xffff, 0x2192, 0xffff, 0x2190, 0xffff, 0x221f, 0xffff, 
+0x2194, 0xffff, 0x25b2, 0xffff, 0x25bc, 0xffff, 0x0020, 0xffff, 
+0x0021, 0xffff, 0x0022, 0xffff, 0x0023, 0xffff, 0x0024, 0xffff, 
+0x0025, 0xffff, 0x0026, 0xffff, 0x0027, 0xffff, 0x0028, 0xffff, 
+0x0029, 0xffff, 0x002a, 0xffff, 0x002b, 0xffff, 0x002c, 0xffff, 
+0x002d, 0xffff, 0x002e, 0xffff, 0x002f, 0xffff, 0x0030, 0xffff, 
+0x0031, 0xffff, 0x0032, 0xffff, 0x0033, 0xffff, 0x0034, 0xffff, 
+0x0035, 0xffff, 0x0036, 0xffff, 0x0037, 0xffff, 0x0038, 0xffff, 
+0x0039, 0xffff, 0x003a, 0xffff, 0x003b, 0xffff, 0x003c, 0xffff, 
+0x003d, 0xffff, 0x003e, 0xffff, 0x003f, 0xffff, 0x0040, 0xffff, 
+0x0041, 0xffff, 0x0042, 0xffff, 0x0043, 0xffff, 0x0044, 0xffff, 
+0x0045, 0xffff, 0x0046, 0xffff, 0x0047, 0xffff, 0x0048, 0xffff, 
+0x0049, 0xffff, 0x004a, 0xffff, 0x004b, 0xffff, 0x004c, 0xffff, 
+0x004d, 0xffff, 0x004e, 0xffff, 0x004f, 0xffff, 0x0050, 0xffff, 
+0x0051, 0xffff, 0x0052, 0xffff, 0x0053, 0xffff, 0x0054, 0xffff, 
+0x0055, 0xffff, 0x0056, 0xffff, 0x0057, 0xffff, 0x0058, 0xffff, 
+0x0059, 0xffff, 0x005a, 0xffff, 0x005b, 0xffff, 0x005c, 0xffff, 
+0x005d, 0xffff, 0x005e, 0xffff, 0x005f, 0xffff, 0x0060, 0xffff, 
+0x0061, 0xffff, 0x0062, 0xffff, 0x0063, 0xffff, 0x0064, 0xffff, 
+0x0065, 0xffff, 0x0066, 0xffff, 0x0067, 0xffff, 0x0068, 0xffff, 
+0x0069, 0xffff, 0x006a, 0xffff, 0x006b, 0xffff, 0x006c, 0xffff, 
+0x006d, 0xffff, 0x006e, 0xffff, 0x006f, 0xffff, 0x0070, 0xffff, 
+0x0071, 0xffff, 0x0072, 0xffff, 0x0073, 0xffff, 0x0074, 0xffff, 
+0x0075, 0xffff, 0x0076, 0xffff, 0x0077, 0xffff, 0x0078, 0xffff, 
+0x0079, 0xffff, 0x007a, 0xffff, 0x007b, 0xffff, 0x007c, 0xffff, 
+0x007d, 0xffff, 0x007e, 0xffff, 0x2302, 0xffff, 0x00c7, 0xffff, 
+0x00fc, 0xffff, 0x00e9, 0xffff, 0x00e2, 0xffff, 0x00e4, 0xffff, 
+0x00e0, 0xffff, 0x00e5, 0xffff, 0x00e7, 0xffff, 0x00ea, 0xffff, 
+0x00eb, 0xffff, 0x00e8, 0xffff, 0x00ef, 0xffff, 0x00ee, 0xffff, 
+0x00ec, 0xffff, 0x00c4, 0xffff, 0x00c5, 0xffff, 0x00c9, 0xffff, 
+0x00e6, 0xffff, 0x00c6, 0xffff, 0x00f4, 0xffff, 0x00f6, 0xffff, 
+0x00f2, 0xffff, 0x00fb, 0xffff, 0x00f9, 0xffff, 0x00ff, 0xffff, 
+0x00d6, 0xffff, 0x00dc, 0xffff, 0x00d8, 0xffff, 0x00a3, 0xffff, 
+0x00f8, 0xffff, 0x00a4, 0xffff, 0x0192, 0xffff, 0x00e1, 0xffff, 
+0x00ed, 0xffff, 0x00f3, 0xffff, 0x00fa, 0xffff, 0x00f1, 0xffff, 
+0x00d1, 0xffff, 0x00aa, 0xffff, 0x00ba, 0xffff, 0x00bf, 0xffff, 
+0x201c, 0xffff, 0x201d, 0xffff, 0x2039, 0xffff, 0x203a, 0xffff, 
+0x00a1, 0xffff, 0x00ab, 0xffff, 0x00bb, 0xffff, 0x00e3, 0xffff, 
+0x00f4, 0xffff, 0x00a5, 0xffff, 0x00a2, 0xffff, 0x0153, 0xffff, 
+0x0152, 0xffff, 0x00c0, 0xffff, 0x00c3, 0xffff, 0x00d5, 0xffff, 
+0x00a7, 0xffff, 0x2021, 0xffff, 0x2020, 0xffff, 0x00b6, 0xffff, 
+0x00a9, 0xffff, 0x00ae, 0xffff, 0x2122, 0xffff, 0x201e, 0xffff, 
+0x2026, 0xffff, 0x2030, 0xffff, 0x2022, 0xffff, 0x2013, 0xffff, 
+0x2014, 0xffff, 0x00b0, 0xffff, 0x00e1, 0xffff, 0x00c2, 0xffff, 
+0x00c8, 0xffff, 0x00ca, 0xffff, 0x00cb, 0xffff, 0x00cc, 0xffff, 
+0x00cd, 0xffff, 0x00ce, 0xffff, 0x00cf, 0xffff, 0x00d2, 0xffff, 
+0x00d3, 0xffff, 0x00d4, 0xffff, 0x0160, 0xffff, 0x0161, 0xffff, 
+0x00d9, 0xffff, 0x00da, 0xffff, 0x00db, 0xffff, 0x0178, 0xffff, 
+0x00df, 0xffff, 0xfdda, 0xffff, 0xfddb, 0xffff, 0xfddc, 0xffff, 
+0xfddd, 0xffff, 0xfdde, 0xffff, 0xfddf, 0xffff, 0x03b1, 0xffff, 
+0x00df, 0xffff, 0x0393, 0xffff, 0x03c0, 0xffff, 0x03a3, 0xffff, 
+0x03c3, 0xffff, 0x00b5, 0xffff, 0x03c4, 0xffff, 0x03a6, 0xffff, 
+0x0398, 0xffff, 0x03a9, 0xffff, 0x03b4, 0xffff, 0x221e, 0xffff, 
+0x03c6, 0xffff, 0x03b5, 0xffff, 0x2229, 0xffff, 0x2261, 0xffff, 
+0x00b1, 0xffff, 0x2265, 0xffff, 0x2264, 0xffff, 0x2320, 0xffff, 
+0x2321, 0xffff, 0x00f7, 0xffff, 0x2248, 0xffff, 0x00b0, 0xffff, 
+0x2219, 0xffff, 0x00b7, 0xffff, 0x221a, 0xffff, 0x207f, 0xffff, 
+0x00b2, 0xffff, 0x25a0, 0xffff, 0x2205, 0xffff, };
 
 struct psf_mapping m_PCGEM = { "PCGEM", {
 &values[1], /* 0   Unknown char */
@@ -85,250 +85,250 @@ struct psf_mapping m_PCGEM = { "PCGEM", {
 &values[15], /* 7   Maximise symbol -> black diamond  */
 &values[17], /* 8   Check mark  */
 &values[19], /* 9   Watch  */
-&values[21], /* 10   Bell. The Unicode symbol is actually a circuit symbol rather */
-&values[23], /* 11   Eighth note  */
-&values[25], /* 12   Up small triangle  */
-&values[27], /* 13   Down small triangle  */
-&values[29], /* 14   Right small triangle  */
-&values[31], /* 15   Left small triangle  */
-&values[33], /* 16   Right triangle  */
-&values[35], /* 17   Left triangle  */
-&values[37], /* 18   Bowtie  */
-&values[39], /* 19   Black one-quarter block  */
-&values[41], /* 20   Duplicate of Pilcrow -> curvy Pilcrow.  */
-&values[45], /* 21   Duplicate of Section  */
-&values[47], /* 22   Up-and-down arrow  */
-&values[49], /* 23   Up-and-down arrow with base  */
-&values[51], /* 24   Up arrow  */
-&values[53], /* 25   Down arrow  */
-&values[55], /* 26   Right arrow  */
-&values[57], /* 27   Left arrow  */
-&values[59], /* 28   Right angle  */
-&values[61], /* 29   Left/right arrow  */
-&values[63], /* 30   Up triangle  */
-&values[65], /* 31   Down triangle  */
-&values[67], /* 32  */
-&values[69], /* 33  */
-&values[71], /* 34  */
-&values[73], /* 35  */
-&values[75], /* 36  */
-&values[77], /* 37  */
-&values[79], /* 38  */
-&values[81], /* 39  */
-&values[83], /* 40  */
-&values[85], /* 41  */
-&values[87], /* 42  */
-&values[89], /* 43  */
-&values[91], /* 44  */
-&values[93], /* 45  */
-&values[95], /* 46  */
-&values[97], /* 47  */
-&values[99], /* 48  */
-&values[101], /* 49  */
-&values[103], /* 50  */
-&values[105], /* 51  */
-&values[107], /* 52  */
-&values[109], /* 53  */
-&values[111], /* 54  */
-&values[113], /* 55  */
-&values[115], /* 56  */
-&values[117], /* 57  */
-&values[119], /* 58  */
-&values[121], /* 59  */
-&values[123], /* 60  */
-&values[125], /* 61  */
-&values[127], /* 62  */
-&values[129], /* 63  */
-&values[131], /* 64  */
-&values[133], /* 65  */
-&values[135], /* 66  */
-&values[137], /* 67  */
-&values[139], /* 68  */
-&values[141], /* 69  */
-&values[143], /* 70  */
-&values[145], /* 71  */
-&values[147], /* 72  */
-&values[149], /* 73  */
-&values[151], /* 74  */
-&values[153], /* 75  */
-&values[155], /* 76  */
-&values[157], /* 77  */
-&values[159], /* 78  */
-&values[161], /* 79  */
-&values[163], /* 80  */
-&values[165], /* 81  */
-&values[167], /* 82  */
-&values[169], /* 83  */
-&values[171], /* 84  */
-&values[173], /* 85  */
-&values[175], /* 86  */
-&values[177], /* 87  */
-&values[179], /* 88  */
-&values[181], /* 89  */
-&values[183], /* 90  */
-&values[185], /* 91  */
-&values[187], /* 92  */
-&values[189], /* 93  */
-&values[191], /* 94  */
-&values[193], /* 95  */
-&values[195], /* 96  */
-&values[197], /* 97  */
-&values[199], /* 98  */
-&values[201], /* 99  */
-&values[203], /* 100  */
-&values[205], /* 101  */
-&values[207], /* 102  */
-&values[209], /* 103  */
-&values[211], /* 104  */
-&values[213], /* 105  */
-&values[215], /* 106  */
-&values[217], /* 107  */
-&values[219], /* 108  */
-&values[221], /* 109  */
-&values[223], /* 110  */
-&values[225], /* 111  */
-&values[227], /* 112  */
-&values[229], /* 113  */
-&values[231], /* 114  */
-&values[233], /* 115  */
-&values[235], /* 116  */
-&values[237], /* 117  */
-&values[239], /* 118  */
-&values[241], /* 119  */
-&values[243], /* 120  */
-&values[245], /* 121  */
-&values[247], /* 122  */
-&values[249], /* 123  */
-&values[251], /* 124  */
-&values[253], /* 125  */
-&values[255], /* 126  */
-&values[257], /* 127   House */
-&values[259], /* 128  */
-&values[261], /* 129  */
-&values[263], /* 130  */
-&values[265], /* 131  */
-&values[267], /* 132  */
-&values[269], /* 133  */
-&values[271], /* 134  */
-&values[273], /* 135  */
-&values[275], /* 136  */
-&values[277], /* 137  */
-&values[279], /* 138  */
-&values[281], /* 139  */
-&values[283], /* 140  */
-&values[285], /* 141  */
-&values[287], /* 142  */
-&values[289], /* 143  */
-&values[291], /* 144  */
-&values[293], /* 145  */
-&values[295], /* 146  */
-&values[297], /* 147  */
-&values[299], /* 148  */
-&values[301], /* 149  */
-&values[303], /* 150  */
-&values[305], /* 151  */
-&values[307], /* 152  */
-&values[309], /* 153  */
-&values[311], /* 154  */
-&values[313], /* 155  */
-&values[315], /* 156  */
-&values[317], /* 157  */
-&values[319], /* 158  */
-&values[321], /* 159  */
-&values[323], /* 160  */
-&values[325], /* 161  */
-&values[327], /* 162  */
-&values[329], /* 163  */
-&values[331], /* 164  */
-&values[333], /* 165  */
-&values[335], /* 166  */
-&values[337], /* 167  */
-&values[339], /* 168  */
-&values[341], /* 169  */
-&values[343], /* 170  */
-&values[345], /* 171  */
-&values[347], /* 172  */
-&values[349], /* 173  */
-&values[351], /* 174  */
-&values[353], /* 175  */
-&values[355], /* 176  */
-&values[357], /* 177  */
-&values[359], /* 178  */
-&values[361], /* 179  */
-&values[363], /* 180  */
-&values[365], /* 181  */
-&values[367], /* 182  */
-&values[369], /* 183  */
-&values[371], /* 184  */
-&values[373], /* 185  */
-&values[375], /* 186  */
-&values[377], /* 187  */
-&values[379], /* 188  */
-&values[381], /* 189  */
-&values[383], /* 190  */
-&values[385], /* 191  */
-&values[387], /* 192  */
-&values[389], /* 193  */
-&values[391], /* 194  */
-&values[393], /* 195  */
-&values[395], /* 196  */
-&values[397], /* 197  */
-&values[399], /* 198  */
-&values[401], /* 199  */
-&values[403], /* 200  */
-&values[405], /* 201  */
-&values[407], /* 202  */
-&values[409], /* 203  */
-&values[411], /* 204  */
-&values[413], /* 205  */
-&values[415], /* 206  */
-&values[417], /* 207  */
-&values[419], /* 208  */
-&values[421], /* 209  */
-&values[423], /* 210  */
-&values[425], /* 211  */
-&values[427], /* 212  */
-&values[429], /* 213  */
-&values[431], /* 214  */
-&values[433], /* 215  */
-&values[435], /* 216  */
-&values[437], /* 217  The next 6 characters are blank in all known GEM fonts.  */
-&values[439], /* 218  */
-&values[441], /* 219  */
-&values[443], /* 220  */
-&values[445], /* 221  */
-&values[447], /* 222  */
-&values[449], /* 223  */
-&values[451], /* 224  */
-&values[453], /* 225  */
-&values[455], /* 226  */
-&values[457], /* 227  */
-&values[459], /* 228  */
-&values[461], /* 229  */
-&values[463], /* 230  */
-&values[465], /* 231  */
-&values[467], /* 232  */
-&values[469], /* 233  */
-&values[471], /* 234  */
-&values[473], /* 235  */
-&values[475], /* 236  */
-&values[477], /* 237  */
-&values[479], /* 238  */
-&values[481], /* 239  */
-&values[483], /* 240  */
-&values[485], /* 241  */
-&values[487], /* 242  */
-&values[489], /* 243  */
-&values[491], /* 244  */
-&values[493], /* 245  */
-&values[495], /* 246  */
-&values[497], /* 247  */
-&values[499], /* 248  */
-&values[501], /* 249  */
-&values[503], /* 250  */
-&values[505], /* 251  */
-&values[507], /* 252  */
-&values[509], /* 253  */
-&values[511], /* 254  */
-&values[513], /* 255  */
+&values[24], /* 10   Bell.  */
+&values[26], /* 11   Eighth note  */
+&values[28], /* 12   Up small triangle  */
+&values[30], /* 13   Down small triangle  */
+&values[32], /* 14   Right small triangle  */
+&values[34], /* 15   Left small triangle  */
+&values[36], /* 16   Right triangle  */
+&values[38], /* 17   Left triangle  */
+&values[40], /* 18   Bowtie  */
+&values[42], /* 19   Black one-quarter block  */
+&values[44], /* 20   Duplicate of Pilcrow -> curvy Pilcrow.  */
+&values[48], /* 21   Duplicate of Section  */
+&values[50], /* 22   Up-and-down arrow  */
+&values[52], /* 23   Up-and-down arrow with base  */
+&values[54], /* 24   Up arrow  */
+&values[56], /* 25   Down arrow  */
+&values[58], /* 26   Right arrow  */
+&values[60], /* 27   Left arrow  */
+&values[62], /* 28   Right angle  */
+&values[64], /* 29   Left/right arrow  */
+&values[66], /* 30   Up triangle  */
+&values[68], /* 31   Down triangle  */
+&values[70], /* 32  */
+&values[72], /* 33  */
+&values[74], /* 34  */
+&values[76], /* 35  */
+&values[78], /* 36  */
+&values[80], /* 37  */
+&values[82], /* 38  */
+&values[84], /* 39  */
+&values[86], /* 40  */
+&values[88], /* 41  */
+&values[90], /* 42  */
+&values[92], /* 43  */
+&values[94], /* 44  */
+&values[96], /* 45  */
+&values[98], /* 46  */
+&values[100], /* 47  */
+&values[102], /* 48  */
+&values[104], /* 49  */
+&values[106], /* 50  */
+&values[108], /* 51  */
+&values[110], /* 52  */
+&values[112], /* 53  */
+&values[114], /* 54  */
+&values[116], /* 55  */
+&values[118], /* 56  */
+&values[120], /* 57  */
+&values[122], /* 58  */
+&values[124], /* 59  */
+&values[126], /* 60  */
+&values[128], /* 61  */
+&values[130], /* 62  */
+&values[132], /* 63  */
+&values[134], /* 64  */
+&values[136], /* 65  */
+&values[138], /* 66  */
+&values[140], /* 67  */
+&values[142], /* 68  */
+&values[144], /* 69  */
+&values[146], /* 70  */
+&values[148], /* 71  */
+&values[150], /* 72  */
+&values[152], /* 73  */
+&values[154], /* 74  */
+&values[156], /* 75  */
+&values[158], /* 76  */
+&values[160], /* 77  */
+&values[162], /* 78  */
+&values[164], /* 79  */
+&values[166], /* 80  */
+&values[168], /* 81  */
+&values[170], /* 82  */
+&values[172], /* 83  */
+&values[174], /* 84  */
+&values[176], /* 85  */
+&values[178], /* 86  */
+&values[180], /* 87  */
+&values[182], /* 88  */
+&values[184], /* 89  */
+&values[186], /* 90  */
+&values[188], /* 91  */
+&values[190], /* 92  */
+&values[192], /* 93  */
+&values[194], /* 94  */
+&values[196], /* 95  */
+&values[198], /* 96  */
+&values[200], /* 97  */
+&values[202], /* 98  */
+&values[204], /* 99  */
+&values[206], /* 100  */
+&values[208], /* 101  */
+&values[210], /* 102  */
+&values[212], /* 103  */
+&values[214], /* 104  */
+&values[216], /* 105  */
+&values[218], /* 106  */
+&values[220], /* 107  */
+&values[222], /* 108  */
+&values[224], /* 109  */
+&values[226], /* 110  */
+&values[228], /* 111  */
+&values[230], /* 112  */
+&values[232], /* 113  */
+&values[234], /* 114  */
+&values[236], /* 115  */
+&values[238], /* 116  */
+&values[240], /* 117  */
+&values[242], /* 118  */
+&values[244], /* 119  */
+&values[246], /* 120  */
+&values[248], /* 121  */
+&values[250], /* 122  */
+&values[252], /* 123  */
+&values[254], /* 124  */
+&values[256], /* 125  */
+&values[258], /* 126  */
+&values[260], /* 127   House */
+&values[262], /* 128  */
+&values[264], /* 129  */
+&values[266], /* 130  */
+&values[268], /* 131  */
+&values[270], /* 132  */
+&values[272], /* 133  */
+&values[274], /* 134  */
+&values[276], /* 135  */
+&values[278], /* 136  */
+&values[280], /* 137  */
+&values[282], /* 138  */
+&values[284], /* 139  */
+&values[286], /* 140  */
+&values[288], /* 141  */
+&values[290], /* 142  */
+&values[292], /* 143  */
+&values[294], /* 144  */
+&values[296], /* 145  */
+&values[298], /* 146  */
+&values[300], /* 147  */
+&values[302], /* 148  */
+&values[304], /* 149  */
+&values[306], /* 150  */
+&values[308], /* 151  */
+&values[310], /* 152  */
+&values[312], /* 153  */
+&values[314], /* 154  */
+&values[316], /* 155  */
+&values[318], /* 156  */
+&values[320], /* 157  */
+&values[322], /* 158  */
+&values[324], /* 159  */
+&values[326], /* 160  */
+&values[328], /* 161  */
+&values[330], /* 162  */
+&values[332], /* 163  */
+&values[334], /* 164  */
+&values[336], /* 165  */
+&values[338], /* 166  */
+&values[340], /* 167  */
+&values[342], /* 168  */
+&values[344], /* 169  */
+&values[346], /* 170  */
+&values[348], /* 171  */
+&values[350], /* 172  */
+&values[352], /* 173  */
+&values[354], /* 174  */
+&values[356], /* 175  */
+&values[358], /* 176  */
+&values[360], /* 177  */
+&values[362], /* 178  */
+&values[364], /* 179  */
+&values[366], /* 180  */
+&values[368], /* 181  */
+&values[370], /* 182  */
+&values[372], /* 183  */
+&values[374], /* 184  */
+&values[376], /* 185  */
+&values[378], /* 186  */
+&values[380], /* 187  */
+&values[382], /* 188  */
+&values[384], /* 189  */
+&values[386], /* 190  */
+&values[388], /* 191  */
+&values[390], /* 192  */
+&values[392], /* 193  */
+&values[394], /* 194  */
+&values[396], /* 195  */
+&values[398], /* 196  */
+&values[400], /* 197  */
+&values[402], /* 198  */
+&values[404], /* 199  */
+&values[406], /* 200  */
+&values[408], /* 201  */
+&values[410], /* 202  */
+&values[412], /* 203  */
+&values[414], /* 204  */
+&values[416], /* 205  */
+&values[418], /* 206  */
+&values[420], /* 207  */
+&values[422], /* 208  */
+&values[424], /* 209  */
+&values[426], /* 210  */
+&values[428], /* 211  */
+&values[430], /* 212  */
+&values[432], /* 213  */
+&values[434], /* 214  */
+&values[436], /* 215  */
+&values[438], /* 216  */
+&values[440], /* 217  The next 6 characters are blank in all known GEM fonts.  */
+&values[442], /* 218  */
+&values[444], /* 219  */
+&values[446], /* 220  */
+&values[448], /* 221  */
+&values[450], /* 222  */
+&values[452], /* 223  */
+&values[454], /* 224  */
+&values[456], /* 225  */
+&values[458], /* 226  */
+&values[460], /* 227  */
+&values[462], /* 228  */
+&values[464], /* 229  */
+&values[466], /* 230  */
+&values[468], /* 231  */
+&values[470], /* 232  */
+&values[472], /* 233  */
+&values[474], /* 234  */
+&values[476], /* 235  */
+&values[478], /* 236  */
+&values[480], /* 237  */
+&values[482], /* 238  */
+&values[484], /* 239  */
+&values[486], /* 240  */
+&values[488], /* 241  */
+&values[490], /* 242  */
+&values[492], /* 243  */
+&values[494], /* 244  */
+&values[496], /* 245  */
+&values[498], /* 246  */
+&values[500], /* 247  */
+&values[502], /* 248  */
+&values[504], /* 249  */
+&values[506], /* 250  */
+&values[508], /* 251  */
+&values[510], /* 252  */
+&values[512], /* 253  */
+&values[514], /* 254  */
+&values[516], /* 255  */
 }};

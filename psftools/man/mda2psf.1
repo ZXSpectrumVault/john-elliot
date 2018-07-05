@@ -22,7 +22,7 @@
 .\" along with this program; if not, write to the Free Software
 .\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 .\"
-.TH mda2psf 1 "11 April, 2008" "Version 1.0.7" "PSF Tools"
+.TH mda2psf 1 "21 June, 2008" "Version 1.0.8" "PSF Tools"
 .\"
 .\"------------------------------------------------------------------
 .\"
@@ -35,6 +35,7 @@ mda2psf - extract the font from a dump of the IBM PC MDA ROM
 .PD 0
 .B mda2psf
 .RI [ "--codepage=page" ]
+.RI [ "--compaq" ]
 .RI [ INPUTFILE 
 .RI [ OUTPUTFILE ]]
 .P
@@ -43,9 +44,10 @@ mda2psf - extract the font from a dump of the IBM PC MDA ROM
 .\"------------------------------------------------------------------
 .\"
 .SH DESCRIPTION
-mda2psf converts a dump of the IBM Monochrome Display Adapter ROM to 
-PC Screen Font format. raw2psf(1) can handle most ROM dumps, but the 
-MDA requires its own utility.
+mda2psf converts the 14-pixel font in the character ROM used by IBM's MDA and
+CGA video cards to PC Screen Font format. raw2psf(1) can handle most ROM dumps
+(including the two 8-pixel fonts in this ROM), but the 14-pixel font requires
+a specialised utility.
 .\"
 .\"------------------------------------------------------------------
 .\"
@@ -55,6 +57,10 @@ MDA requires its own utility.
 Add a Unicode directory for the specified codepage, which can be 
 identified by number or name. The original MDA ROM used codepage
 437. See psfpages(1) for a list of valid codepage names.
+.TP
+.B --compaq
+Assume the input file is in the format used by the Compaq CGA ROM, not the 
+IBM MDA/CGA ROM.
 .\"
 .\"------------------------------------------------------------------
 .\"
@@ -63,7 +69,7 @@ identified by number or name. The original MDA ROM used codepage
 .\"------------------------------------------------------------------
 .\"
 .SH SEE ALSO
-raw2psf(1), psfpages(1)
+psfs2mda(1), raw2psf(1), psfpages(1)
 .\"
 .\"------------------------------------------------------------------
 .\"

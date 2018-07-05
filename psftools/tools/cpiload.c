@@ -78,7 +78,8 @@ static int load_fontdata(FILE *fp, CP_HEAD *cph, cpi_byte *fonts_head)
 	numfonts      = peek2(fonts_head + 2);
 	cph->font_len = peek2(fonts_head + 4);
 	/* Can't have DRFONT fonts in a FONT CPI */
-	if (fonttype != 1) return CPI_ERR_BADFMT;
+	/* Toshiba LCD.CPI has FONTs of type 0, just to be awkward */
+	if (fonttype != 1 && fonttype != 0) return CPI_ERR_BADFMT;
 /* Load the individual fonts */
 /* Fix for some DRDOS CPIs: printer CPIs report 2 but there is only one font */
 	if (cph->dev_type == 2) numfonts = 1;
