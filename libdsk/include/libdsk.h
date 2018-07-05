@@ -1,7 +1,7 @@
 /***************************************************************************
  *                                                                         *
  *    LIBDSK: General floppy and diskimage access library                  *
- *    Copyright (C) 2001-2016 John Elliott <seasip.webmaster@gmail.com>    *
+ *    Copyright (C) 2001-2015 John Elliott <seasip.webmaster@gmail.com>    *
  *                                                                         *
  *    Modifications to add dsk_dirty()                                     *
  *    (c) 2005 Philip Kendall <pak21-spectrum@srcf.ucam.org>               *
@@ -58,7 +58,7 @@
 extern "C" {
 #endif
 
-#define LIBDSK_VERSION "1.5.0"
+#define LIBDSK_VERSION "1.4.2"
 
 /************************* TYPES ********************************/
 
@@ -496,11 +496,9 @@ LDPUBLIC32 dsk_err_t LDPUBLIC16 dsk_map_delete(unsigned int index);
 #undef TRACE_MALLOCS 
 #ifdef TRACE_MALLOCS
 void *dsk_malloc(size_t size);
-void *dsk_remalloc(void *ptr, size_t size);
 void  dsk_free(void *ptr);
 #else
 #define dsk_malloc malloc
-#define dsk_realloc realloc
 #define dsk_free free
 #endif
 

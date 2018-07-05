@@ -1,5 +1,5 @@
-#LyX 2.0 created this file. For more info see http://www.lyx.org/
-\lyxformat 413
+#LyX 2.1 created this file. For more info see http://www.lyx.org/
+\lyxformat 474
 \begin_document
 \begin_header
 \textclass article
@@ -7,18 +7,18 @@
 \maintain_unincluded_children false
 \language english
 \language_package default
-\inputencoding latin1
+\inputencoding iso8859-1
 \fontencoding global
 \font_roman times
 \font_sans default
 \font_typewriter default
+\font_math auto
 \font_default_family default
 \use_non_tex_fonts false
 \font_sc false
 \font_osf false
 \font_sf_scale 100
 \font_tt_scale 100
-
 \graphics default
 \default_output_format default
 \output_sync 0
@@ -29,15 +29,24 @@
 \use_hyperref false
 \papersize a4paper
 \use_geometry false
-\use_amsmath 1
-\use_esint 0
-\use_mhchem 1
-\use_mathdots 1
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 0
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
 \cite_engine basic
+\cite_engine_type default
+\biblio_style plain
 \use_bibtopic false
 \use_indices false
 \paperorientation portrait
 \suppress_date false
+\justification true
 \use_refstyle 0
 \index Index
 \shortcut idx
@@ -61,7 +70,7 @@
 \begin_body
 
 \begin_layout Title
-LibDsk v1.5.0
+LibDsk v1.4.2 
 \end_layout
 
 \begin_layout Author
@@ -202,11 +211,6 @@ reference "ldwindows"
 The floppy drive (and hard drive partitions) under DOS.
 \end_layout
 
-\begin_layout Itemize
-LDBS: A disc image format still under development.
- See LDBS/ldbs.html for more information.
-\end_layout
-
 \begin_layout Standard
 LibDsk also supports compressed disc images in the following formats: 
 \end_layout
@@ -237,9 +241,7 @@ For full details, see the file ChangeLog.
 \end_layout
 
 \begin_layout Itemize
-Added a new 'ldbs' driver for LDBS-format disc images.
- This format is still under development; please don't distribute LDBS-format
- disc images for now, as the format may change.
+Bugfixes when accessing IMD-format disc images.
 \end_layout
 
 \begin_layout Itemize
@@ -577,19 +579,6 @@ ydsk
 \end_inset
 
 : Disc image format used by the yaze and yaze-ag CP/M emulators.
-\end_layout
-
-\begin_layout Description
-\begin_inset Quotes eld
-\end_inset
-
-ldbs
-\begin_inset Quotes erd
-\end_inset
-
-: LibDsk Block Store.
- This format is still under development; please don't distribute LDBS-format
- disc images for now, as the format may change.
 \end_layout
 
 \begin_layout Section
@@ -1975,7 +1964,7 @@ geom->dg_noskip
 \align center
 \begin_inset Tabular
 <lyxtabular version="3" rows="8" columns="5">
-<features tabularvalignment="middle">
+<features rotate="0" tabularvalignment="middle">
 <column alignment="center" valignment="top" width="0pt">
 <column alignment="center" valignment="top" width="0pt">
 <column alignment="center" valignment="top" width="0pt">
@@ -4392,10 +4381,10 @@ The CopyQM files consist of a header, an optional comment (if indicated
 \begin_layout Standard
 \begin_inset Tabular
 <lyxtabular version="3" rows="22" columns="3">
-<features tabularvalignment="middle">
-<column alignment="center" valignment="top" width="0">
-<column alignment="center" valignment="top" width="0">
-<column alignment="left" valignment="top" width="0">
+<features rotate="0" tabularvalignment="middle">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<column alignment="left" valignment="top">
 <row>
 <cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
 \begin_inset Text
@@ -5153,7 +5142,7 @@ Originally said by Microsoft with respect to Java.
 \begin_layout Standard
 \begin_inset Tabular
 <lyxtabular version="3" rows="5" columns="3">
-<features tabularvalignment="middle">
+<features rotate="0" tabularvalignment="middle">
 <column alignment="center" valignment="top" width="0pt">
 <column alignment="center" valignment="top" width="0pt">
 <column alignment="center" valignment="top" width="0pt">
@@ -5628,10 +5617,10 @@ This contains LibDsk functions not associated with a particular disk image.
 \begin_layout Standard
 \begin_inset Tabular
 <lyxtabular version="3" rows="13" columns="3">
-<features tabularvalignment="middle">
-<column alignment="center" valignment="top" width="0">
-<column alignment="center" valignment="top" width="0">
-<column alignment="center" valignment="top" width="0">
+<features rotate="0" tabularvalignment="middle">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
 <row>
 <cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
 \begin_inset Text

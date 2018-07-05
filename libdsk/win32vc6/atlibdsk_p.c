@@ -2,9 +2,9 @@
 
 
 /* File created by MIDL compiler version 5.01.0164 */
-/* at Wed Dec 16 09:56:36 2015
+/* at Sun Oct 30 00:35:20 2016
  */
-/* Compiler settings for J:\C\LibDsk\win32vc6\atlibdsk.idl:
+/* Compiler settings for J:\C\libdsk-1.4.0\win32vc6\atlibdsk.idl:
     Oicf (OptLev=i2), W1, Zp8, env=Win32, ms_ext, c_ext
     error checks: allocation ref bounds_check enum stub_data 
 */

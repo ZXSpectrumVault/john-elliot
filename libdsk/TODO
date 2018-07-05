@@ -1,14 +1,5 @@
 TO BE DONE in LibDSK 1.3.x:
 
-- LDBS (blockstore): 
-	* Can format a track
-	* Not much else yet
-	* Make cylinder and head members of LDBSDISK_TRACK so we don't
-	 have to pass them around.
-	* xwrite (to finish formatting)
-	* xread
-	* Other CPC-compatible bits
-
 - The cpcemu driver contains a chunk of code to deal with multitrack reads
  and writes. Write some test cases to exercise it, and see if other drivers
  (such as IMD and JV3) can be enhanced to support this.

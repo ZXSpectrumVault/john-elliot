@@ -73,8 +73,7 @@ libdsk_la_SOURCES = dskread.c  dskwrite.c dskcheck.c dskstat.c \
 		   drvmyz80.h drvmyz80.c \
 		   drvydsk.h  drvydsk.c \
 		   drvcfi.h   drvcfi.c \
-		   drvqm.h    drvqm.c \
-		   ldbsdisk.h ldbsdisk.c ldbs.h ldbs.c
+		   drvqm.h    drvqm.c 
 
 JARCLASSES=$(CLASSDPRE)/Drive.class \
 	   $(CLASSDPRE)/DskException.class \

@@ -62,7 +62,6 @@
     &dc_adisk,  /* APRIDISK image */
     &dc_qm,     /* CopyQM */
     &dc_tele,	/* Teledisk */
-    &dc_ldbsdisk, /* LibDsk block store */
     &dc_imd,	/* IMAGEDISK IMD */
 /*  &dc_dskf,	   IBM LoadDskF */
     &dc_ydsk,	/* YAZE YDSK */

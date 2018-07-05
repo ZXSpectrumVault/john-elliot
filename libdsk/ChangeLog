@@ -1,9 +1,12 @@
-2016-03-18 John Elliott
+2016-11-01 John Elliott
 
-	* libdsk-1.5.0 released.
+	* libdsk-1.4.2 released.
 
-	* New driver: LDBS ('LibDsk Block Store'), a new disc image 
-	 format under development. 
+	* Geometry probe: Make the Apricot BPB check more discerning.
+	* IMD: Support IMD files with no comment (header line is followed
+	      immediately by 0x1A).
+	* IMD: Fixed segfault when writing IMD file if number of tracks is not
+		20,40,80 or 160.
 
 2015-12-28 John Elliott
 

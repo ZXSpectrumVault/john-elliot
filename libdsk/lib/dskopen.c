@@ -83,13 +83,12 @@ static dsk_err_t dsk_iopen(DSK_DRIVER **self, const char *filename, int ndrv, CO
 	if (cd) filename = cd->cd_ufilename;
 
 	if (!dc) return DSK_ERR_BADPTR;
-
+	
 	(*self) = dsk_malloc(dc->dc_selfsize);
 	if (!*self) return DSK_ERR_NOMEM;
 	dr_construct(*self, dc);
 
 	err = (dc->dc_open)(*self, filename);
-/*	printf("%s: open %s = %d\n", dc->dc_drvname, filename, err); */
 	if (err == DSK_ERR_OK) 
 	{
 		(*self)->dr_compress = cd;

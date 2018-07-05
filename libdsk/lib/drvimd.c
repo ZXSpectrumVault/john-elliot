@@ -1,7 +1,7 @@
 /***************************************************************************
  *                                                                         *
  *    LIBDSK: General floppy and diskimage access library                  *
- *    Copyright (C) 2001-2  John Elliott <seasip.webmaster@gmail.com>          *
+ *    Copyright (C) 2001-2, 2016  John Elliott <seasip.webmaster@gmail.com>* 
  *                                                                         *
  *    This library is free software; you can redistribute it and/or        *
  *    modify it under the terms of the GNU Library General Public          *
@@ -94,15 +94,19 @@ static void imd_free_track(IMD_TRACK *t)
 	dsk_free(t);
 }
 
-/* For reading strings from the file: Read up to the next occurrence of the
- * specified character c, and return how many bytes that is (including the
- * terminator) */
-static dsk_err_t imd_readto(FILE *fp, char c, int *count)
+/* For reading strings from the file: Read up to the next occurrence of 
+ * either of the specified characters c1 / c2, and return how many bytes 
+ * that is (including the terminator).
+ *
+ * If only interested in one terminating character, pass c2 = c1
+ */
+static dsk_err_t imd_readto(FILE *fp, char c1, char c2, int *count, int *termch)
 {
 	int ch;
 	long pos = ftell(fp);
 	int cnt = 0;
-	
+
+	*termch = EOF;	
 	if (pos < 0)
 	{
 		return DSK_ERR_SYSERR;
@@ -111,7 +115,11 @@ static dsk_err_t imd_readto(FILE *fp, char c, int *count)
 	{
 		++cnt;
 		ch = fgetc(fp);
-		if (ch == EOF || ch == c) break;	
+		if (ch == EOF || ch == c1 || ch == c2) 
+		{
+			*termch = ch;
+			break;
+		}	
 	}
 	if (fseek(fp, pos, SEEK_SET))
 	{
@@ -167,6 +175,7 @@ static dsk_err_t imd_load_track(IMD_DSK_DRIVER *self, dsk_ltrack_t count,
 	dsk_err_t err;
 	int n, c;
 
+/*	printf("Loading track %ld, offset %ld \n", count, ftell(fp)); */
 	if (fread(&tmp.imdt_mode, 1, 4, fp) < 4)
 	{
 		return DSK_ERR_OVERRUN;	/* EOF */
@@ -178,9 +187,9 @@ static dsk_err_t imd_load_track(IMD_DSK_DRIVER *self, dsk_ltrack_t count,
 	}
 	if (c == 0xFF)	tmp.imdt_seclen = 0xFFFF;
 	else		tmp.imdt_seclen = (128 << c);	
-//	printf("Mode %d Cyl %d Head %d Secs %d Size %d\n",
-//		tmp.imdt_mode, tmp.imdt_cylinder, tmp.imdt_head,
-//		tmp.imdt_sectors, tmp.imdt_secsize);
+/*	printf("Mode %d Cyl %d Head %d Secs %d Size %d\n",
+		tmp.imdt_mode, tmp.imdt_cylinder, tmp.imdt_head,
+		tmp.imdt_sectors, tmp.imdt_seclen); */
 
 	err = imd_ensure_trackcount(self, count);
 	if (err) return err;
@@ -193,6 +202,8 @@ static dsk_err_t imd_load_track(IMD_DSK_DRIVER *self, dsk_ltrack_t count,
 	}
 	/* Copy fixed parts */
 	memcpy(trkh, &tmp, sizeof(tmp));
+	/* [1.4.2] But not the sector buffer (so we don't double-free) */
+	trkh->imdt_sec[0] = NULL;
 
 	/* Create a temporary array of sector headers */
 	tmpsec = dsk_malloc(tmp.imdt_sectors * sizeof(IMD_SECTOR));
@@ -291,8 +302,8 @@ static dsk_err_t imd_load_track(IMD_DSK_DRIVER *self, dsk_ltrack_t count,
 		{
 			default: 
 #ifndef WIN16
-				fprintf(stderr, "Unsupported IMD status 0x%02x",
-					tmpsec[n].imds_status);  
+				fprintf(stderr, "Unsupported IMD status "
+					"0x%02x\n", tmpsec[n].imds_status);  
 #endif
 				dsk_free(tmpsec);
 				imd_free_track(trkh);
@@ -355,6 +366,7 @@ dsk_err_t imd_open(DSK_DRIVER *self, const char *filename)
 	int ccmt, n;
 	dsk_ltrack_t count = 0;
 	char *comment;
+	int termch;
 
 	/* Sanity check: Is this meant for our driver? */
 	if (self->dr_class != &dc_imd) return DSK_ERR_BADPTR;
@@ -368,8 +380,10 @@ dsk_err_t imd_open(DSK_DRIVER *self, const char *filename)
 	}
 	if (!fp) return DSK_ERR_NOTME;
 
-	/* Try to check the magic number. Read the first line... */
-	err = imd_readto(fp, '\n', &ccmt);
+	/* Try to check the magic number. Read the first line, which
+ 	 * may terminate with '\n' if a comment follows, or 0x1A 
+	 * otherwise. */
+	err = imd_readto(fp, '\n', 0x1A, &ccmt, &termch);
 	if (err)
 	{
 		fclose(fp);
@@ -384,9 +398,11 @@ dsk_err_t imd_open(DSK_DRIVER *self, const char *filename)
 	if ((int)fread(comment, 1, ccmt, fp) < ccmt)
 	{
 		fclose(fp);
-		return DSK_ERR_NOTME;
+		return DSK_ERR_SYSERR;
 	}
 	comment[ccmt] = 0;
+
+/*	printf("Header='%s' pos=%ld\n", comment, ftell(fp)); */
 
 	/* IMD signature is 4 bytes magic, then the rest of the line is 
 	 * freeform (but probably includes a date stamp) */
@@ -398,28 +414,31 @@ dsk_err_t imd_open(DSK_DRIVER *self, const char *filename)
 	}
 	dsk_free(comment);
 
-	/* Next we have the comment */
-	err = imd_readto(fp, 0x1A, &ccmt);
-	if (err)
+	/* If the header wasn't terminated by 0x1A, then a comment
+	 * follows. */
+	if (termch != 0x1A)
 	{
-		fclose(fp);
-		return DSK_ERR_NOTME;
+		err = imd_readto(fp, 0x1A, 0x1A, &ccmt, &termch);
+		if (err)
+		{
+			fclose(fp);
+			return DSK_ERR_NOTME;
+		}
+		comment = dsk_malloc(1 + ccmt);
+		if (!comment)
+		{
+			fclose(fp);
+			return DSK_ERR_NOMEM;
+		}
+		if ((int)fread(comment, 1, ccmt, fp) < ccmt)
+		{
+			fclose(fp);
+			return DSK_ERR_SYSERR;
+		}	
+		comment[ccmt - 1] = 0;
+		dsk_set_comment(self, comment);
+		dsk_free(comment);
 	}
-	comment = dsk_malloc(1 + ccmt);
-	if (!comment)
-	{
-		fclose(fp);
-		return DSK_ERR_NOMEM;
-	}
-	if ((int)fread(comment, 1, ccmt, fp) < ccmt)
-	{
-		fclose(fp);
-		return DSK_ERR_SYSERR;
-	}	
-	comment[ccmt - 1] = 0;
-	dsk_set_comment(self, comment);
-	dsk_free(comment);
-
 	imdself->imd_dirty = 0;
 	imdself->imd_sec = 0;
 	/* Keep a copy of the filename; when writing back, we will need it */
@@ -647,8 +666,11 @@ dsk_err_t imd_close(DSK_DRIVER *self)
 			}
 			else for (trk = 0; trk < imdself->imd_ntracks; trk++)
 			{
-				err = imd_save_track(imdself, 
-					imdself->imd_tracks[trk], fp);
+				if (imdself->imd_tracks[trk])
+				{	
+					err = imd_save_track(imdself, 
+						imdself->imd_tracks[trk], fp);
+				}
 				if (err) break;
 			}
 			fclose(fp);

@@ -95,18 +95,6 @@ LDPUBLIC32 dsk_err_t LDPUBLIC16 dsk_xtread(DSK_DRIVER *self, const DSK_GEOMETRY 
 	{
 		err = (dc->dc_xtread)(self,geom,buf,cylinder,head,
 				cyl_expected, head_expected);	
-		/* If set to store bytes complemented, flip them as they come
-		 * out. (If we are using the dsk_pread() fallback, the 
-		 * complement will take place in dsk_pread() ) */
-		if (geom->dg_fm & RECMODE_COMPLEMENT)
-		{
-			for (sec = 0; sec < geom->dg_sectors * geom->dg_secsize;
-				sec++)
-			{
-				((char *)buf)[sec] = ~((char *)buf)[sec];
-			}
-		}
-
 		if (err != DSK_ERR_NOTIMPL) return err;
 	}
 

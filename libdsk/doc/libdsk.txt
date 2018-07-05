@@ -1,4 +1,4 @@
-LibDsk v1.5.0
+LibDsk v1.4.0 
 
 John Elliott
 
@@ -68,9 +68,6 @@ formats:
 
   The floppy drive (and hard drive partitions) under DOS.
 
-  LDBS: A disc image format still under development. See 
-  LDBS/ldbs.html for more information.
-
 LibDsk also supports compressed disc images in the following 
 formats: 
 
@@ -86,13 +83,6 @@ formats:
   What's new? 
 
 For full details, see the file ChangeLog.
-
-  Added a new 'ldbs' driver for LDBS-format disc images. This 
-  format is still under development; please don't distribute 
-  LDBS-format disc images for now, as the format may change.
-
-  Added a new 'complement' option to the drive geometry, allowing 
-  for disc image formats where the bytes are stored complemented.
 
   Added a new 'jv3' driver for JV3-format disc images.
 
@@ -192,10 +182,6 @@ The following disc image file formats are supported by LibDsk.
 
   “ydsk”: Disc image format used by the yaze and yaze-ag CP/M 
   emulators.
-
-  “ldbs”: LibDsk Block Store. This format is still under 
-  development; please don't distribute LDBS-format disc images 
-  for now, as the format may change.
 
   Architecture 
 
@@ -305,24 +291,12 @@ typedef struct
 
   dsk_gap_t dg_fmtgap; /* Format gap length */
 
-  int dg_fm; /* This is really a dsk_recmode_t, but is declared 
-  as an int for backward compatibility. It contains the recording 
-  mode and additional flags. To extract the recording mode, use 
-  (dg_fm & RECMODE_MASK):
-
-  RECMODE_MFM MFM (double density) recording mode.
-
-  RECMODE_FM FM (single density) recording mode. Not all PC 
-    floppy controllers support this mode; the National 
-    Semiconductor PC87306 and the Future Domain TMC series SCSI 
-    controllers can at least read FM discs. The BBC Micro used FM 
-    recording for its 100k and 200k DFS formats. The Windows / 
-    DOS floppy drivers do not support FM recording. 
-
-  To extract the flags, use (dg_fm & RECMODE_FLAGMASK). There is 
-  currently one additional flag: RECMODE_COMPLEMENT. If this flag 
-  is set, bytes written on the disc are stored complemented (ie, 
-  XORed with 0xFF). */
+  int dg_fm; /* Set to nonzero to use FM (single density) 
+  recording mode. Not all PC floppy controllers support this 
+  mode; the National Semiconductor PC87306 and the Future Domain 
+  TMC series SCSI controllers can at least read FM discs. The BBC 
+  Micro used FM recording for its 100k and 200k DFS formats. The 
+  Windows / DOS floppy drivers do not support FM recording. */
 
   int dg_nomulti; /* Set to nonzero to disable multitrack mode. 
   This only affects attempts to read normal data from tracks 
@@ -1258,12 +1232,7 @@ members of the DSK_GEOMETRY structure.
 
   fmtgap=VALUE Sets the format gap.
 
-  recmode=FM or MFM Sets the recording mode - FM or MFM. For 
-  backward compatibility, the alternate syntax FM=Y or N is also 
-  supported.
-
-  complement=Y or N Sets the complement flag - Y if the format 
-  stores data complemented.
+  fm=Y or N Sets the recording mode - Y for FM, N for MFM.
 
   multitrack=Y or N Sets multitrack mode.
 
@@ -1294,8 +1263,6 @@ DataRate = SD
 RWGap = 12 
 
 FmtGap = 23
-
-RecMode = MFM
 
 
 
@@ -2192,15 +2159,8 @@ void *buf, dsk_pcyl_t cylinder, dsk_phead_t head, dsk_psect_t
 sector)
 
 Read a sector. Note that sector addresses passed to drivers are 
-always in C/H/S format. This function has the same parameters and 
-return values as dsk_pread(). 
-
-You don't need to check the RECMODE_COMPLEMENT flag in the 
-geometry structure (this applies to all read and write 
-functions). If the flag is set, the LibDsk core will complement 
-the results from the driver before returning them to the caller. 
-Similarly, any buffer passed for a write will already be 
-complemented if appropriate.
+_always_ in C/H/S format. This function has the same parameters 
+and return values as dsk_pread().
 
   dc_write 
 

@@ -575,6 +575,11 @@ LDPUBLIC32 dsk_err_t LDPUBLIC16 dg_aprigeom(DSK_GEOMETRY *self, const unsigned c
 
 	/* Sector size */
 	self->dg_secsize   = bootsect[0x0E] + 256 * bootsect[0x0F];
+	/* [1.4.2] If sector size is not a reasonable value, this
+	 *         could be a non-Apricot disk that happens to have
+	 *         ASCII at the start of the boot sector */
+	if ((self->dg_secsize % 128) || (self->dg_secsize == 0)) 
+		return DSK_ERR_BADFMT;
 	self->dg_secbase   = 1;
 	self->dg_heads     = bootsect[0x16];
 	self->dg_sectors   = bootsect[0x10] + 256 * bootsect[0x11];
