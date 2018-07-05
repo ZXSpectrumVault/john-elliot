@@ -33,7 +33,8 @@
 DRV_CLASS dc_win32 = 
 {
 	sizeof(WIN32_DSK_DRIVER),
-	"floppy",
+	NULL,		/* superclass */
+	"floppy\0",
 	"Win32 floppy driver",
 
 	win32_open,	/* open */

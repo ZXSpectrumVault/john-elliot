@@ -32,7 +32,8 @@
 DRV_CLASS dc_dos16 = 
 {
 	sizeof(DOS16_DSK_DRIVER),
-	"floppy",
+	NULL,		/* superclass */
+	"floppy\0",
 	"PC BIOS floppy driver",
 
 	dos16_open,		/* open */

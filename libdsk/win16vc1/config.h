@@ -14,7 +14,8 @@
 #define HAVE_LIMITS_H 1
 #define HAVE_STRCMPI 1
 #define HAVE_WINDOWS_H 1
-#undef HAVE_WINIOCTL_H  
+#undef HAVE_WINIOCTL_H
+#undef HAVE_UNISTD_H  
 
 /* VC++ 1.5 hides stat() behind underscores */
 #define stat _stat  

@@ -666,7 +666,7 @@ static dsk_err_t write_bytes(int count, unsigned char *c)
 
 static void report(const char *s)
 {
-	fprintf(stderr,"%s\r", s);
+	fprintf(stderr,"%-79.79s\r", s);
 	fflush(stderr);
 }
 

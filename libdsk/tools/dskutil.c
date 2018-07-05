@@ -396,7 +396,7 @@ int check_numeric(char *arg, int *argc, char **argv)
 
 static void report(const char *s)
 {
-        fprintf(stderr, "%s\r", s);
+        fprintf(stderr, "%-79.79s\r", s);
         fflush(stderr);
 }
 
@@ -543,7 +543,11 @@ int do_util(void)
 			if (done) break;
 		}
 	} while (!done);
-	if (indr)  dsk_close(&indr);
+	if (indr)  
+	{
+		if (!e) e = dsk_close(&indr);
+		else	dsk_close(&indr);
+	}
 	if (clipbuf) dsk_free(clipbuf);
 	if (secbuf) dsk_free(secbuf);
 	yank_free();

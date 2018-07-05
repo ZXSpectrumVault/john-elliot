@@ -1,7 +1,7 @@
 /***************************************************************************
  *                                                                         *
  *    LIBDSK: General floppy and diskimage access library                  *
- *    Copyright (C) 2001-2  John Elliott <seasip.webmaster@gmail.com>          *
+ *    Copyright (C) 2001-2,2017  John Elliott <seasip.webmaster@gmail.com> *
  *                                                                         *
  *    This library is free software; you can redistribute it and/or        *
  *    modify it under the terms of the GNU Library General Public          *
@@ -22,11 +22,15 @@
 
 /* This driver shows how a disc image file with an awkward compressed format
  * can be handled - by loading it into memory in drv_open() and writing it
- * back (if changed) in drv_close() */
+ * back (if changed) in drv_close() 
+ *
+ * Rewritten in 1.5.3 to use LDBS as the storage system, which means all 
+ * access can be handed off to dc_ldbsdisk */
 
 #include <stdio.h>
 #include "libdsk.h"
 #include "drvi.h"
+#include "drvldbs.h"
 #include "drvcfi.h"
 
 
@@ -36,47 +40,14 @@
 DRV_CLASS dc_cfi = 
 {
 	sizeof(CFI_DSK_DRIVER),
-	"cfi",
+	&dc_ldbsdisk,	/* superclass */
+	"cfi\0CFI\0",
 	"CFI file driver",
 	cfi_open,	/* open */
 	cfi_creat,	/* create new */
 	cfi_close,	/* close */
-	cfi_read,	/* read sector, working from physical address */
-	cfi_write,	/* write sector, working from physical address */
-	cfi_format,	/* format track, physical */
-	NULL,		/* get geometry */
-	NULL,		/* sector ID */
-	cfi_xseek,	/* seek to track */
-	cfi_status,	/* drive status */
 };
 
-static dsk_err_t cfi_ensure_size(CFI_DSK_DRIVER *self, dsk_ltrack_t trk)
-{
-	/* Ensure the requested track is in range, by starting at 
-	 * max (cfi_ntracks, 1) and doubling repeatedly */
-	dsk_ltrack_t maxtrks = self->cfi_ntracks;
-
-	if (!maxtrks) maxtrks = 1;
-	while (trk >= maxtrks) maxtrks *= 2;
-
-	/* Need to allocate more. */
-	if (maxtrks != self->cfi_ntracks)
-	{
-		/* Create new array of tracks */
-		CFI_TRACK *t = dsk_malloc(maxtrks * sizeof(CFI_TRACK));
-		if (!t) return DSK_ERR_NOMEM;
-		memset(t, 0, maxtrks * sizeof(CFI_TRACK));
-		/* Copy over existing array */
-		memcpy(t, self->cfi_tracks, self->cfi_ntracks * sizeof(CFI_TRACK));
-		dsk_free(self->cfi_tracks);
-		self->cfi_tracks = t;
-		self->cfi_ntracks = maxtrks;
-	}
-	return DSK_ERR_OK;
-}
-
-
-/* Read a little-endian word from the file. Return DSK_ERR_SEEKFAIL if EOF. */
 static dsk_err_t cfi_rdword(FILE *fp, unsigned short *s)
 {
 	int c = fgetc(fp);
@@ -88,111 +59,181 @@ static dsk_err_t cfi_rdword(FILE *fp, unsigned short *s)
 	return DSK_ERR_OK;
 }
 
-void cfi_free_track(CFI_TRACK *ltrk)
-{
-	if (ltrk && ltrk->cfit_data) 
-	{
-		dsk_free(ltrk->cfit_data);
-		ltrk->cfit_data = NULL;
-	}
-}
-
 
 /* Given a compressed buffer, either find its uncompressed length
  * or decompress it */
-static dsk_err_t cfi_size_track(CFI_TRACK *ltrk, unsigned char *buf, 
-				unsigned short blkc, int pass)
+static dsk_err_t cfi_uncompress(unsigned char *cdata, unsigned short clen,
+				unsigned char *udata, size_t *ulen)
 {
-	unsigned char *bufp, *wrp;
+	unsigned char *cdp, *udp;
 	unsigned short blklen;
-	
-	wrp = NULL;	
-	bufp = buf;
-	if (pass)	/* Pass 2: Allocate the data buffer whose */
-	{		/* size we found on pass 1. */
-		ltrk->cfit_data = dsk_malloc(ltrk->cfit_length);
-		if (!ltrk->cfit_data) return DSK_ERR_NOMEM;
-		wrp = ltrk->cfit_data;
-	}
-	else ltrk->cfit_length = 0;	/* Pass 1: Reset total length */
-	while (blkc)
+
+	cdp = cdata;
+	udp = (udata ? udata : NULL);	
+	*ulen = 0;
+
+	while (clen)
 	{
-		blklen =   (*(bufp++)) & 0xFF;
-		blklen |= ((*(bufp++)) << 8) & 0xFF00;
+		/* Get block size & compression */
+		blklen = ldbs_peek2(cdp);
+		cdp += 2;
 
 		if (blklen & 0x8000)	/* Compressed block */
 		{
 	/* There must be at least 3 bytes for this block! */
-			if (blkc < 3) return DSK_ERR_NOTME;
+			if (clen < 3) return DSK_ERR_NOTME;
 			blklen &= 0x7FFF;
-			blkc -= 3;
-			if (pass)
+			clen -= 3;
+			if (udata)
 			{
-				memset(wrp, *bufp, blklen);
-				wrp += blklen;
+				memset(udp, *cdp, blklen);
+				udp += blklen;
 			}
-			else ltrk->cfit_length += blklen;
-			bufp++;
+			*ulen += blklen;
+			cdp++;
 		}
 		else			/* Uncompressed block */
 		{
 	/* There must be room for this block in the buffer! */
-			if (blkc < (2+blklen) || (blklen == 0)) 
+			if (clen < (2+blklen) || (blklen == 0)) 
 			{
 				return DSK_ERR_NOTME;
 			}
-			blkc -= (blklen + 2);
-			if (pass)
+			clen -= (blklen + 2);
+			if (udata)
 			{
-				memcpy(wrp, bufp, blklen);
-				wrp += blklen;
+				memcpy(udp, cdp, blklen);
+				udp += blklen;
 			}
-			else ltrk->cfit_length += blklen;
-			bufp += blklen;
+			*ulen += blklen;
+			cdp += blklen;
 		}
 	}
 	return DSK_ERR_OK;
 }
 
+
+
 static dsk_err_t cfi_load_track(CFI_DSK_DRIVER *self, dsk_ltrack_t trk, FILE *fp)
 {
 	dsk_err_t err;
-	unsigned char *buf;
+	unsigned char *cbuf, *ubuf;
 	unsigned short clen;
-	CFI_TRACK *ltrk;
+	size_t ulen;
+	LDBS_TRACKHEAD *trkh;
+	dsk_psect_t sec, sectors;
+	dsk_pcyl_t cyl;
+	dsk_phead_t head;
+	unsigned char *secdata;
+	unsigned n, allsame;
 	
-	/* Ensure that cfi_tracks is big enough to hold this track */
-	err = cfi_ensure_size(self, trk); 
-	if (err) return err;
-
 	/* Load the track (compressed) length. If EOF, then
 	 * return DSK_ERR_OVERRUN (EOF, but OK really) */
 	err = cfi_rdword(fp, &clen);
 	if (err == DSK_ERR_SEEKFAIL) return DSK_ERR_OVERRUN;
-	/* Compressed length must be at least 3; a block can't be any smaller! */
+	/* Compressed length must be at least 3; a block can't be any 
+	 * smaller! */
 	if (clen < 3) return DSK_ERR_NOTME;
-	buf = dsk_malloc(clen);
-	if (buf == NULL) return DSK_ERR_NOMEM;
+	cbuf = dsk_malloc(clen);
+	if (cbuf == NULL) return DSK_ERR_NOMEM;
 	/* Try to load the track buffer. If that fails, bail out */
-	if (fread(buf, 1, clen, fp) < clen) 
+	if (fread(cbuf, 1, clen, fp) < clen) 
 	{
-		dsk_free(buf);
+		dsk_free(cbuf);
 		return DSK_ERR_NOTME;	
 	}
-	ltrk = &self->cfi_tracks[trk];
-	cfi_free_track(ltrk);
-	/* Pass 1: Determine size of uncompressed data */
-	err = cfi_size_track(ltrk, buf, clen, 0);
-	/* Pass 2: Decompress */
-	if (!err) err = cfi_size_track(ltrk, buf, clen, 1);
-	dsk_free(buf);
-	if (err) 
+
+	/* Determine the size of the track */
+	err = cfi_uncompress(cbuf, clen, NULL, &ulen);
+	if (err)
 	{
-		cfi_free_track(ltrk);
+		dsk_free(cbuf);
 		return err;
 	}
-	return DSK_ERR_OK;
+	/* Allocate space for the uncompressed data */
+	ubuf = dsk_malloc(ulen);
+	if (!ubuf)
+	{
+		dsk_free(cbuf);
+		return DSK_ERR_NOMEM;
+	}
+	/* Decompress track */
+	err = cfi_uncompress(cbuf, clen, ubuf, &ulen);
+	if (err)
+	{
+		dsk_free(ubuf);
+		dsk_free(cbuf);
+		return DSK_ERR_NOMEM;
+	}
+	/* CFI files contain no information about geometry, relying on 
+	 * what (we hope) is a DOS boot sector. */
+	if (trk == 0)
+	{
+		err = dg_bootsecgeom(&self->cfi_geom, ubuf);
+		if (err != DSK_ERR_OK)
+		{
+			sectors = ulen / 512;
+/* Couldn't determine the format. Let's assume something DOS-ish */
+			if   (sectors < 11) 
+				dg_stdformat(&self->cfi_geom, FMT_720K, NULL, NULL);
+			else if (sectors < 17) 	
+				dg_stdformat(&self->cfi_geom, FMT_1200K, NULL, NULL);
+			else	dg_stdformat(&self->cfi_geom, FMT_1440K, NULL, NULL);	
+			self->cfi_geom.dg_sectors = sectors;
+		}
+	}
+	/* Convert track to cylinder/head using deduced geometry */
+	dg_lt2pt(&self->cfi_geom, trk, &cyl, &head);
+
+/* Sectors in this track. Should be the same for all tracks, because 
+ * that's about all CFI can cope with. */
+	sectors = ulen / self->cfi_geom.dg_secsize;
+
+	/* Now create an LDBS track header */
+	trkh = ldbs_trackhead_alloc(self->cfi_geom.dg_sectors);
+	trkh->recmode = self->cfi_geom.dg_fm & RECMODE_MASK;	
+	trkh->gap3    = self->cfi_geom.dg_fmtgap;
+	trkh->filler  = 0xF6;
+	for (sec = 0; sec < sectors; sec++)
+	{
+		secdata = &ubuf[sec * self->cfi_geom.dg_secsize];
+		trkh->sector[sec].id_cyl = cyl;
+		trkh->sector[sec].id_head = head;
+		trkh->sector[sec].id_sec = sec + self->cfi_geom.dg_secbase;
+		trkh->sector[sec].id_psh = dsk_get_psh(self->cfi_geom.dg_secsize);
+		allsame = 1;
+		for (n = 0; n < self->cfi_geom.dg_secsize; n++)
+		{
+			if (secdata[n] != secdata[0]) { allsame = 0; break; }
+		}
+		if (allsame)
+		{
+			trkh->sector[sec].copies = 0;
+			trkh->sector[sec].filler = secdata[0];
+		}
+		else
+		{
+			char secid[4];
+
+			trkh->sector[sec].copies = 1;
+			ldbs_encode_secid(secid, cyl, head, 
+					sec + self->cfi_geom.dg_secbase);	
+			err = ldbs_putblock(self->cfi_super.ld_store, 
+						&trkh->sector[sec].blockid,
+						secid, secdata, 
+						self->cfi_geom.dg_secsize);
+			if (err) break;	
+		}
+	}
+	if (!err) err = ldbs_put_trackhead(self->cfi_super.ld_store, trkh, cyl, head);
+	
+	dsk_free(trkh);
+	dsk_free(ubuf);
+	dsk_free(cbuf);
+
+	return err;
 }
+
 
 static int number_same(unsigned char *c, int tlen)
 {
@@ -212,30 +253,42 @@ static int number_same(unsigned char *c, int tlen)
 }
 
 
-static dsk_err_t cfi_save_track(CFI_DSK_DRIVER *self, dsk_ltrack_t trk, FILE *fp)
+
+static dsk_err_t cfi_save_track(PLDBS ldbs, dsk_pcyl_t cyl, dsk_phead_t head,
+			LDBS_TRACKHEAD *th, void *param)
 {
-	CFI_TRACK *t = &self->cfi_tracks[trk];
-	unsigned tlen, blklen;
-	unsigned char *buf, *rdptr, *rdbase, *wrptr;
+	CFI_DSK_DRIVER *self = param;
+	dsk_err_t err;
+	unsigned blklen;
+	unsigned char *ubuf, *cbuf, *rdptr, *rdbase, *wrptr;
+	size_t ulen;
 	int matched;
-	
-	if (!t->cfit_data) return DSK_ERR_OK;	/* Vacuous track */
+	size_t wrlen;
+
+	if (th->count == 0) return DSK_ERR_OK;	/* Vacuous track */
+
+	err = ldbs_load_track(ldbs, th, (void *)&ubuf, &ulen, 0);
+	if (err) return err;
 
 	/* Compress the track using RLE. */
-	buf = dsk_malloc(t->cfit_length + 4);
-	if (!buf) return DSK_ERR_NOMEM;
+	cbuf = dsk_malloc(4 + ulen);
+	if (!cbuf) 
+	{
+		ldbs_free(ubuf);
+		return DSK_ERR_NOMEM;
+	}
+	/* Load the track into the buffer */
+	memset(cbuf, th->filler, 4 + ulen);
 
-	tlen = t->cfit_length;
-
-	rdptr  = t->cfit_data;	/* -> current byte */
-	rdbase = t->cfit_data;	/* -> start of current uncompressed block */
-	wrptr  = buf + 2;
+	rdptr  = ubuf;	/* -> current byte */
+	rdbase = ubuf;	/* -> start of current uncompressed block */
+	wrptr  = cbuf + 2;
 	blklen = 0;
 	
-	while (tlen)
+	while (ulen)
 	{
 /* Check for a compressible run */
-		matched = number_same(rdptr, tlen);
+		matched = number_same(rdptr, ulen);
 		if (matched > 5)	/* Start of compressed run */
 		{
 			if (blklen) 
@@ -255,14 +308,14 @@ static dsk_err_t cfi_save_track(CFI_DSK_DRIVER *self, dsk_ltrack_t trk, FILE *fp
 			rdptr += matched;
 			rdbase = rdptr;
 			wrptr += 3;
-			tlen -= matched;
+			ulen -= matched;
 		}
 		else
 		{
 /* Not RLEable. */
 			rdptr++;
 			blklen++;
-			tlen--;
+			ulen--;
 		}
 	}
 /* Write the last uncompressed block if there is one */
@@ -273,16 +326,17 @@ static dsk_err_t cfi_save_track(CFI_DSK_DRIVER *self, dsk_ltrack_t trk, FILE *fp
 		memcpy(wrptr + 2, rdbase, blklen);
 		wrptr  += (blklen + 2);
 	}
-	tlen = (wrptr - buf) - 2;
-	buf[0] = (tlen & 0xFF);
-	buf[1] = (tlen >> 8) & 0xFF;
+	ldbs_poke2(cbuf, (unsigned short)((wrptr - cbuf) - 2));
 	
-	if (fwrite(buf, 1, tlen + 2, fp) < (tlen + 2)) 
+	wrlen = wrptr - cbuf;
+	if (fwrite(cbuf, 1, wrlen, self->cfi_fp) < wrlen)
 	{
-		dsk_free(buf);
+		dsk_free(cbuf);
+		ldbs_free(ubuf);
 		return DSK_ERR_SYSERR;
 	}
-	dsk_free(buf);
+	dsk_free(cbuf);
+	ldbs_free(ubuf);
 	return DSK_ERR_OK;
 }
 
@@ -301,27 +355,27 @@ dsk_err_t cfi_open(DSK_DRIVER *self, const char *filename)
 	fp = fopen(filename, "r+b");
 	if (!fp) 
 	{
-		cfiself->cfi_readonly = 1;
+		cfiself->cfi_super.ld_readonly = 1;
 		fp = fopen(filename, "rb");
 	}
 	if (!fp) return DSK_ERR_NOTME;
 
-	cfiself->cfi_dirty = 0;
 	/* Keep a copy of the filename; when writing back, we will need it */
-	cfiself->cfi_filename = dsk_malloc(1 + strlen(filename));
-	if (!cfiself->cfi_filename) return DSK_ERR_NOMEM;
-	strcpy(cfiself->cfi_filename, filename);	
-
-	/* Now to load the tracks. Allow 200; if there are more than
-	 * that, we dynamically grow the array. */
-	cfiself->cfi_ntracks = 200;
-	cfiself->cfi_tracks = dsk_malloc(200 * sizeof(CFI_TRACK));
-	if (!cfiself->cfi_tracks) 
+	cfiself->cfi_filename = dsk_malloc_string(filename);
+	if (!cfiself->cfi_filename) 
 	{
-		dsk_free(cfiself->cfi_filename);
+		fclose(fp);
 		return DSK_ERR_NOMEM;
 	}
-	memset(cfiself->cfi_tracks, 0, 200 * sizeof(CFI_TRACK));
+	/* Initialise the blockstore */
+	err = ldbs_new(&cfiself->cfi_super.ld_store, NULL, LDBS_DSK_TYPE);
+	if (err)
+	{
+		dsk_free(cfiself->cfi_filename);
+		fclose(fp);
+		return err;
+	}
+	/* Now to load the tracks */
 	nt = 0;
 	dsk_report("Loading CFI file into memory");
 	while (!feof(fp))
@@ -332,7 +386,6 @@ dsk_err_t cfi_open(DSK_DRIVER *self, const char *filename)
 		if (err) 
 		{
 			dsk_free(cfiself->cfi_filename);
-			dsk_free(cfiself->cfi_tracks);
 			dsk_report_end();
 			fclose(fp);
 			return err;
@@ -340,35 +393,39 @@ dsk_err_t cfi_open(DSK_DRIVER *self, const char *filename)
 	} 
 	dsk_report_end();
 	fclose(fp);
-	return DSK_ERR_OK;
+	return ldbsdisk_attach(self);
 }
 
 
 dsk_err_t cfi_creat(DSK_DRIVER *self, const char *filename)
 {
 	CFI_DSK_DRIVER *cfiself;
+	dsk_err_t err;
 	FILE *fp;
-	
+
 	/* Sanity check: Is this meant for our driver? */
 	if (self->dr_class != &dc_cfi) return DSK_ERR_BADPTR;
 	cfiself = (CFI_DSK_DRIVER *)self;
 
-	/* See if the file can be created. But don't hold it open. */
+	/* Save the filename, we'll want it when doing output */
+	cfiself->cfi_filename = dsk_malloc_string(filename);
+	if (!cfiself->cfi_filename) return DSK_ERR_NOMEM;
+
+	/* Create a 0-byte file, just to be sure we can */
 	fp = fopen(filename, "wb");
-	cfiself->cfi_readonly = 0;
 	if (!fp) return DSK_ERR_SYSERR;
 	fclose(fp);
-	cfiself->cfi_dirty = 1;
 
-	/* Keep a copy of the filename, for writing back */
-	cfiself->cfi_filename = dsk_malloc(1 + strlen(filename));
-	if (!cfiself->cfi_filename) return DSK_ERR_NOMEM;
-	strcpy(cfiself->cfi_filename, filename);	
-	
-	cfiself->cfi_ntracks = 0;
-	cfiself->cfi_tracks = NULL;
-
-	return DSK_ERR_OK;
+	/* OK, create a new empty blockstore */
+	err = ldbs_new(&cfiself->cfi_super.ld_store, NULL, LDBS_DSK_TYPE);
+	if (err)
+	{
+		dsk_free(cfiself->cfi_filename);
+		return err;
+	}
+	/* Finally, hand the blockstore to the superclass so it can provide
+	 * all the read/write/format methods */
+	return ldbsdisk_attach(self);
 }
 
 
@@ -376,48 +433,60 @@ dsk_err_t cfi_close(DSK_DRIVER *self)
 {
 	CFI_DSK_DRIVER *cfiself;
 	dsk_err_t err = DSK_ERR_OK;
-	dsk_ltrack_t trk;
 
 	if (self->dr_class != &dc_cfi) return DSK_ERR_BADPTR;
 	cfiself = (CFI_DSK_DRIVER *)self;
 
-	if (cfiself->cfi_filename && (cfiself->cfi_dirty))
+	/* Firstly, ensure any pending changes are flushed to the LDBS 
+	 * blockstore. Once this has been done we own the blockstore again 
+	 * and have to close it after we've finished with it. */
+	err = ldbsdisk_detach(self); 
+	if (err)
 	{
-/* When writing back to a CFI, create the file from scratch. */
-		FILE *fp = fopen(cfiself->cfi_filename, "wb");
-		if (!fp) err = DSK_ERR_SYSERR;
-		else
-		{
-			dsk_report("Compressing CFI file");
-			for (trk = 0; trk < cfiself->cfi_ntracks; trk++)
-			{
-				err = cfi_save_track(cfiself, trk, fp);
-				if (err) break;
-			}
-			fclose(fp);
-			dsk_report_end();
-		}
+		dsk_free(cfiself->cfi_filename);
+		ldbs_close(&cfiself->cfi_super.ld_store);
+		return err;
 	}
-/* Free track buffers if we have them */
-	if (cfiself->cfi_tracks)
+
+	/* If this disc image has not been written to, just close it and 
+	 * dispose thereof. */
+	if (!self->dr_dirty)
 	{
-		unsigned int n;
-		for (n = 0; n < cfiself->cfi_ntracks; n++)
-		{
-			cfi_free_track(&cfiself->cfi_tracks[n]);
-		}
-		dsk_free(cfiself->cfi_tracks);
-		cfiself->cfi_tracks = NULL;
-		cfiself->cfi_ntracks = 0;
+		dsk_free(cfiself->cfi_filename);
+		return ldbs_close(&cfiself->cfi_super.ld_store);
+	}
+	/* Trying to save changes but source is read-only */
+	if (cfiself->cfi_super.ld_readonly)
+	{
+		dsk_free(cfiself->cfi_filename);
+		ldbs_close(&cfiself->cfi_super.ld_store);
+		return DSK_ERR_RDONLY;
+	}
+	/* OK, write out a CFI file */
+	cfiself->cfi_fp = fopen(cfiself->cfi_filename, "wb");
+	if (!cfiself->cfi_fp) err = DSK_ERR_SYSERR;
+	else
+	{
+		dsk_report("Compressing CFI file");
+		err = ldbs_all_tracks(cfiself->cfi_super.ld_store,
+					cfi_save_track, SIDES_ALT, cfiself);
+
+		if (fclose(cfiself->cfi_fp)) err = DSK_ERR_SYSERR;
+	
+		dsk_report_end();
 	}
 	if (cfiself->cfi_filename) 
 	{
 		dsk_free(cfiself->cfi_filename);
 		cfiself->cfi_filename = NULL;
 	}
+	if (!err) err = ldbs_close(&cfiself->cfi_super.ld_store);
+	else            ldbs_close(&cfiself->cfi_super.ld_store);
 	return err;
 }
 
+
+#if 0
 static dsk_err_t cfi_find_sector(CFI_DSK_DRIVER *self, const DSK_GEOMETRY *geom,
 				dsk_pcyl_t cylinder, dsk_phead_t head, 
 				dsk_psect_t sector, void **buf)
@@ -581,4 +650,4 @@ dsk_err_t cfi_status(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
 	if (cfiself->cfi_readonly) *result |= DSK_ST3_RO;
 	return DSK_ERR_OK;
 }
-
+#endif

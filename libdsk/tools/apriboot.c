@@ -64,7 +64,7 @@ int help(int argc, char **argv)
 
 static void report(const char *s)
 {
-	fprintf(stderr,"%s\r", s);
+	fprintf(stderr,"%-79.79s\r", s);
 	fflush(stderr);
 }
 
@@ -168,7 +168,10 @@ int do_swapboot(int argc, char *outfile, char *outtyp, char *outcomp,
 		}
 		e = dsk_pwrite(outdr, &dg, buffer, 0, 0, 1);
 	}
-	if (outdr) dsk_close(&outdr);
+	if (outdr) 
+	{
+		if (!e) e = dsk_close(&outdr); else dsk_close(&outdr);
+	}
 	if (e)
 	{
 		fprintf(stderr, "%s: %s\n", outfile, dsk_strerror(e));

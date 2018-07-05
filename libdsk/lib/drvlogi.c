@@ -26,6 +26,7 @@
 
 #include <stdio.h>
 #include "libdsk.h"
+#include "ldbs.h"
 #include "drvi.h"
 #include "drvlogi.h"
 
@@ -36,7 +37,8 @@
 DRV_CLASS dc_logical = 
 {
 	sizeof(LOGICAL_DSK_DRIVER),
-	"logical",
+	NULL,		/* superclass */
+	"logical\0",
 	"Raw file logical sector order",
 	logical_open,	/* open */
 	logical_creat,	/* create new */
@@ -48,6 +50,17 @@ DRV_CLASS dc_logical =
 	NULL,		/* sector ID */
 	logical_xseek,	/* seek to track */
 	logical_status,	/* drive status */
+	NULL, 		/* xread */
+	NULL, 		/* xwrite */
+	NULL, 		/* tread */
+	NULL, 		/* xtread */
+	NULL,		/* option_enum */
+	NULL,		/* option_set */
+	NULL,		/* option_get */
+	NULL,		/* trackids */
+	NULL,		/* rtread */
+	logical_to_ldbs,	/* export as LDBS */
+	logical_from_ldbs	/* import as LDBS */
 };
 
 dsk_err_t logical_open(DSK_DRIVER *self, const char *filename)
@@ -259,4 +272,195 @@ dsk_err_t logical_status(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
 	if (lpxself->lpx_readonly) *result |= DSK_ST3_RO;
 	return DSK_ERR_OK;
 }
+
+
+dsk_err_t logical_to_ldbs(DSK_DRIVER *self, struct ldbs **result, DSK_GEOMETRY *geom)
+{
+	unsigned char bootblock[512];
+	DSK_GEOMETRY bootgeom;
+	LOGICAL_DSK_DRIVER *lpxself;
+	dsk_err_t err;
+	dsk_pcyl_t cyl;
+	dsk_phead_t head;
+	dsk_psect_t sec;
+	unsigned char *secbuf;
+	LDBS_TRACKHEAD *th;
+	int n;
+
+	if (!self || !result || self->dr_class != &dc_logical) return DSK_ERR_BADPTR;
+	lpxself = (LOGICAL_DSK_DRIVER *)self;
+
+	if (lpxself->lpx_readonly) return DSK_ERR_RDONLY;
+	if (geom == NULL)
+	{
+		if (fseek(lpxself->lpx_fp, 0, SEEK_SET)) 
+			return DSK_ERR_SYSERR;
+
+		if (fread(bootblock, 1, 512, lpxself->lpx_fp) < 512)
+		{
+			return DSK_ERR_BADFMT;
+		}
+		err = dg_bootsecgeom(&bootgeom, bootblock);
+		if (err) return err;
+
+		geom = &bootgeom;	
+	}
+	secbuf = dsk_malloc(geom->dg_secsize);
+	if (!secbuf) return DSK_ERR_NOMEM;
+
+	err = ldbs_new(result, NULL, LDBS_DSK_TYPE);
+	if (err)
+	{
+		dsk_free(secbuf);
+		return err;
+	}
+	/* If a geometry was provided, save it in the file */
+	if (geom != &bootgeom)
+	{
+		err = ldbs_put_geometry(*result, geom);
+		if (err)
+		{
+			ldbs_close(result);
+			dsk_free(secbuf);
+			return err;
+		}
+	}
+	for (cyl = 0; cyl < geom->dg_cylinders; cyl++)
+	    for (head = 0; head < geom->dg_heads; head++)
+	{
+		th = ldbs_trackhead_alloc(geom->dg_sectors);
+		if (!th)
+		{
+			dsk_free(secbuf);
+			ldbs_close(result);
+			return DSK_ERR_NOMEM;
+		}
+		for (sec = 0; sec < geom->dg_sectors; sec++)
+		{
+			err = logical_read(self, geom, secbuf, cyl, head, 
+					sec + geom->dg_secbase);
+			if (err)
+			{
+				ldbs_free(th);
+				dsk_free(secbuf);
+				ldbs_close(result);
+				return err;
+			}
+			th->sector[sec].id_cyl  = cyl;
+			th->sector[sec].id_head = head;
+			th->sector[sec].id_sec  = sec + geom->dg_secbase;
+			th->sector[sec].id_psh  = dsk_get_psh(geom->dg_secsize);
+			th->sector[sec].copies = 0;
+			for (n = 1; n < (int)(geom->dg_secsize); n++)
+			{
+				if (secbuf[n] != secbuf[0])
+				{
+					th->sector[sec].copies = 1;
+					break;
+				}
+			}
+			if (!th->sector[sec].copies)
+			{
+				th->sector[sec].filler = secbuf[0];
+			}
+			else
+			{
+				char secid[4];
+			
+				ldbs_encode_secid(secid, cyl, head, 	
+						sec + geom->dg_secbase);
+				err = ldbs_putblock(*result, 
+						&th->sector[sec].blockid,
+							secid, secbuf,
+							geom->dg_secsize);
+				if (err)
+				{
+					ldbs_free(th);
+					dsk_free(secbuf);
+					ldbs_close(result);
+					return err;
+				}
+			}	
+		}	/* End of loop over sectors */
+		err = ldbs_put_trackhead(*result, th, cyl, head);
+		ldbs_free(th);
+		if (err)
+		{
+			dsk_free(secbuf);
+			ldbs_close(result);
+			return err;
+		}
+	}	/* End of loop over cyls / heads */
+	dsk_free(secbuf);	
+	return ldbs_sync(*result);
+}
+
+static dsk_err_t logical_from_ldbs_callback(PLDBS ldbs, dsk_pcyl_t cyl,
+	 dsk_phead_t head, LDBS_SECTOR_ENTRY *se, LDBS_TRACKHEAD *th, 	
+	void *param)
+{
+	LOGICAL_DSK_DRIVER *lpxself = param;
+	dsk_err_t err;
+	size_t len;
+
+	/* Skip cylinders / heads not covered by the geometry */
+	if (cyl  >= lpxself->lpx_export_geom->dg_cylinders ||
+	    head >= lpxself->lpx_export_geom->dg_heads)
+	{
+		return DSK_ERR_OK;
+	}
+
+	len = lpxself->lpx_export_geom->dg_secsize;
+	memset(lpxself->lpx_secbuf, se->filler, len);
+	if (se->copies)
+	{
+		err = ldbs_getblock(ldbs, se->blockid, NULL, 
+				lpxself->lpx_secbuf, &len);
+		if (err != DSK_ERR_OK && err != DSK_ERR_OVERRUN)
+			return err;
+	}
+	return logical_write(&lpxself->lpx_super, lpxself->lpx_export_geom,
+			lpxself->lpx_secbuf, cyl, head, se->id_sec);
+}
+
+
+
+
+dsk_err_t logical_from_ldbs(DSK_DRIVER *self, struct ldbs *source, DSK_GEOMETRY *geom)
+{
+	LOGICAL_DSK_DRIVER *lpxself;
+	long pos;
+	dsk_err_t err;
+
+	if (!self || !source || self->dr_class != &dc_logical) return DSK_ERR_BADPTR;
+
+	lpxself = (LOGICAL_DSK_DRIVER *)self;
+
+	if (!geom)
+	{
+		/* XXX Probe geometry from boot sector */
+		return DSK_ERR_BADFMT;
+	}
+
+	lpxself->lpx_export_geom = geom;
+	/* Erase anything existing in the file */
+	if (fseek(lpxself->lpx_fp, 0, SEEK_SET)) return DSK_ERR_SYSERR;
+
+	for (pos = 0; pos < (long)(lpxself->lpx_filesize); pos++)
+	{
+		if (fputc(0xE5, lpxself->lpx_fp) == EOF) return DSK_ERR_SYSERR;
+	}
+	if (fseek(lpxself->lpx_fp, 0, SEEK_SET)) return DSK_ERR_SYSERR;
+
+	lpxself->lpx_secbuf = dsk_malloc(geom->dg_secsize);
+	if (!lpxself->lpx_secbuf) return DSK_ERR_NOMEM;
+
+	/* And populate with whatever is in the blockstore */	
+	err =  ldbs_all_sectors(source, logical_from_ldbs_callback,
+				geom->dg_sidedness, lpxself);
+	dsk_free(lpxself->lpx_secbuf);
+	return err;
+}
+
+
 

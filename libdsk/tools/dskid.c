@@ -65,7 +65,7 @@ int help(int argc, char **argv)
 
 static void report(const char *s)
 {
-	fprintf(stderr,"%s\r", s);
+	fprintf(stderr,"%-79.79s\r", s);
 	fflush(stderr);
 }
 
@@ -251,7 +251,10 @@ int do_login(int argc, char *outfile, char *outtyp, char *outcomp, int forcehead
 			++opt;
 		}
 	}
-	if (outdr) dsk_close(&outdr);
+	if (outdr) 
+	{
+		if (!e) e = dsk_close(&outdr); else dsk_close(&outdr);
+	}
 	if (e)
 	{
 		fprintf(stderr, "%s: %s\n", outfile, dsk_strerror(e));

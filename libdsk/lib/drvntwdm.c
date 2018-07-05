@@ -36,7 +36,8 @@ static DWORD dwRet;
 DRV_CLASS dc_ntwdm = 
 {
 	sizeof(NTWDM_DSK_DRIVER),
-	"ntwdm",
+	NULL,		/* superclass */
+	"ntwdm\0",
 	"NT WDM floppy driver",
 	&ntwdm_open,	/* open */
 	&ntwdm_creat,	/* create new */

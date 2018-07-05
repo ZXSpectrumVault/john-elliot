@@ -44,7 +44,12 @@ LDPUBLIC32 dsk_err_t LDPUBLIC16 dsk_drive_status(DSK_DRIVER *self, const DSK_GEO
 	if (head)               *status |= DSK_ST3_HEAD1;
 	
 	dc = self->dr_class;
-        if (!dc->dc_status) return DSK_ERR_OK;
+	WALK_VTABLE(dc, dc_status)
+
+        if (!dc->dc_status) 
+	{
+		return DSK_ERR_OK;
+	}
 	err = (dc->dc_status)(self,geom,head,status);	
 	
 	*status |= ro;

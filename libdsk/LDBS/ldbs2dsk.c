@@ -39,6 +39,8 @@ int verbose;
 /* Header of the DSK file being generated */
 unsigned char dsk_header[256];
 
+unsigned char *offset_rec = NULL, *offset_ptr = NULL;
+int any_offset = 0;
 
 
 /* Migrate a track from LDBS to CPCEMU .DSK */
@@ -92,6 +94,14 @@ dsk_err_t migrate_track(PLDBS infile, FILE *fpo, int cyl, int head)
 	trackinfo[0x15] = (unsigned char)ldbs_track->count;
 	trackinfo[0x16] = ldbs_track->gap3;
 	trackinfo[0x17] = ldbs_track->filler;
+
+	if (offset_ptr)
+	{
+		ldbs_poke2(offset_ptr, ldbs_track->total_len);
+		if (ldbs_track->total_len) any_offset = 1;
+		offset_ptr += 2;
+	}
+
 	for (n = 0; n < ldbs_track->count; n++)
 	{
 		trackinfo[0x14]         = ldbs_track->sector[n].id_psh;
@@ -102,18 +112,29 @@ dsk_err_t migrate_track(PLDBS infile, FILE *fpo, int cyl, int head)
 		trackinfo[0x1C + 8 * n] = ldbs_track->sector[n].st1;
 		trackinfo[0x1D + 8 * n] = ldbs_track->sector[n].st2;
 
+		if (offset_ptr)
+		{
+			ldbs_poke2(offset_ptr, ldbs_track->sector[n].offset);
+			if (ldbs_track->sector[n].offset) any_offset = 1;
+			offset_ptr += 2;
+		}
 		secsize = 128 << ldbs_track->sector[n].id_psh;
 		if (ldbs_track->sector[n].copies > 0)
 		{
+			secsize += ldbs_track->sector[n].trail; /* 0.3 */
 			secsize *= ldbs_track->sector[n].copies;
 		}
 		if (dsk_header[0] == 'E')
+		{
 			ldbs_poke2(trackinfo + 0x1E + 8 * n, secsize);
+		}
 	}
 	tilen = 256;
 	if (ldbs_track->count > 29)
 	{
 		tilen = (ldbs_track->count * 8) + 0x18;
+		/* Round up to a multiple of 256 bytes */
+		tilen = (tilen + 255) & (~255);
 	}
 /* Write the Track-Info block */
 	if (fwrite(trackinfo, 1, tilen, fpo) < tilen) 
@@ -185,7 +206,22 @@ dsk_err_t migrate_track(PLDBS infile, FILE *fpo, int cyl, int head)
 	return DSK_ERR_OK;
 }
 
+typedef struct offset_count
+{
+	unsigned long sectors;	/* Total number of sectors on disc */
+	int uses_offsets;
+} OFFSET_COUNT;
 
+dsk_err_t count_sector_callback(PLDBS self, dsk_pcyl_t c, dsk_phead_t h, 
+			LDBS_SECTOR_ENTRY *se, LDBS_TRACKHEAD *th, void *param)
+{
+	OFFSET_COUNT *oc = param;	
+
+	if (th->total_len || se->offset) oc->uses_offsets = 1;
+	++oc->sectors;
+
+	return DSK_ERR_OK;
+}
 
 int convert_file(const char *filename)
 {
@@ -196,6 +232,7 @@ int convert_file(const char *filename)
 	FILE *fpo;
 	PLDBS infile;
 	LDBS_STATS stats;
+	OFFSET_COUNT oc;
 	dsk_pcyl_t c;
 	dsk_phead_t h;
 	dsk_err_t err;
@@ -251,11 +288,21 @@ int convert_file(const char *filename)
 	/* Initialise the .DSK header */
 	memset(dsk_header, 0, sizeof(dsk_header));
 
+	/* Check for presence of offset info; that forces EDSK */
+	memset(&oc, 0, sizeof(oc));
+	err = ldbs_all_sectors(infile, count_sector_callback, SIDES_ALT, &oc);
+	if (err)
+	{
+		ldbs_close(&infile);
+		return err;
+	}
+
 	/* Is this a reasonably regular DSK with the same number of sectors
 	 * in each track and all sectors the same size? */
 	if (stats.max_spt == stats.min_spt &&
 	    stats.max_sector_size == stats.min_sector_size &&
-	    stats.max_spt <= 29)
+	    stats.max_spt <= 29 &&
+	    !oc.uses_offsets)
 	{
 		strcpy((char *)dsk_header, "MV - CPCEMU Disk-File\r\nDisk-Info\r\n");
 		if (verbose) printf("Output format will be .DSK\n");
@@ -297,6 +344,19 @@ int convert_file(const char *filename)
 	dsk_header[0x30] = c;
 	dsk_header[0x31] = h;
 
+	any_offset = 0;
+	offset_rec = NULL;
+	offset_ptr = NULL;
+	if (dsk_header[0] == 'E' && oc.uses_offsets)
+	{
+		offset_rec = ldbs_malloc( 15 + ((c * h + oc.sectors) * 2));
+		if (offset_rec)
+		{
+			memcpy(offset_rec, "Offset-Info\r\n", 14);
+			offset_rec[14] = 0;
+			offset_ptr = offset_rec + 15;
+		}
+	}
 	if (dsk_header[0] != 'E')
 	{
 		/* Fixed-length tracks: 256 byte header + secsize * spt
@@ -324,6 +384,23 @@ int convert_file(const char *filename)
 		}
 		if (err) break;
 	}
+	/* Write the offset record if it exists */
+	if (!err && offset_rec && any_offset)
+	{
+		size_t offset_len = (offset_ptr - offset_rec);
+
+		if (fwrite(offset_rec, 1, offset_len, fpo) < offset_len)
+		{
+			err = DSK_ERR_SYSERR;
+		}
+	}
+	if (offset_rec)
+	{
+		ldbs_free(offset_rec);	
+	}
+	offset_rec = NULL;
+	offset_ptr = NULL;
+
 /* Rewrite the updated header */
 	if (!err)
 	{

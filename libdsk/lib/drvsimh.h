@@ -47,4 +47,8 @@ dsk_err_t simh_xseek(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
                                 dsk_pcyl_t cylinder, dsk_phead_t head);
 dsk_err_t simh_status(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
                       dsk_phead_t head, unsigned char *result);
+/* Convert to LDBS format. */
+dsk_err_t simh_to_ldbs(DSK_DRIVER *self, struct ldbs **result, DSK_GEOMETRY *geom);
 
+/* Convert from LDBS format. */
+dsk_err_t simh_from_ldbs(DSK_DRIVER *self, struct ldbs *source, DSK_GEOMETRY *geom);

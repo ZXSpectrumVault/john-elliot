@@ -42,7 +42,8 @@
 DRV_CLASS dc_dosint25 =
 {
 	sizeof(INT25_DSK_DRIVER),
-	"int25",
+	NULL,		/* superclass */
+	"int25\0",
 	"DOS INT 25/26 driver",
 
 	int25_open,	/* open */

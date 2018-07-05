@@ -26,56 +26,71 @@
 /* Declarations for the CopyQM driver */
 typedef enum
 {
-    QM_DRV_UNKNWN = 0,
-    QM_DRV_525DD = 1,
-    QM_DRV_525HD = 2,
-    QM_DRV_350DD = 3,
-    QM_DRV_350HD = 4,
-    QM_DRV_350ED = 6,
+	QM_DRV_UNKNWN = 0,
+	QM_DRV_525DD = 1,
+	QM_DRV_525HD = 2,
+	QM_DRV_350DD = 3,
+	QM_DRV_350HD = 4,
+	QM_DRV_350ED = 6,
 } qm_drv_t;
 
 typedef struct
 {
-    DSK_DRIVER    qm_super;
-    char*         qm_filename;
-    size_t        qm_h_sector_size;
-    /* Number of total sectors. Not valid if blind */
-    dsk_psect_t   qm_h_nbr_sectors;
-    dsk_psect_t   qm_h_nbr_sec_per_track;
-    dsk_phead_t   qm_h_nbr_heads;
-    int           qm_h_comment_len;
-    /* Density - 1 means HD, 2 means QD */
-    int           qm_h_density;
-    /* Blind transfer or not. */
-    int           qm_h_blind;
-    dsk_pcyl_t    qm_h_used_cyls;
-    dsk_pcyl_t    qm_h_total_cyls;
-    /* Interleave */
-    int           qm_h_interleave;
-    /* Skew. Negative number for skew between sides */
-    int           qm_h_skew;
-    /* Sector number base. */
-    signed char   qm_h_secbase;
-    /* Source drive type */
-    qm_drv_t      qm_h_drive;
-    /* The crc read from the header */
-    unsigned long qm_h_crc;
-    /* The crc calculated while the image is read */
-    unsigned long qm_calc_crc;
-    unsigned int  qm_image_offset;
-    unsigned char* qm_image;
-    /* Fake sector for READ ID command */
-    dsk_psect_t   qm_sector;
+	LDBSDISK_DSK_DRIVER    qm_super;
+	char*         qm_filename;
+
+	/* Fields from the DOS BPB */
+	size_t        qm_h_bpb_sector_size;
+	unsigned      qm_h_bpb_secclus;
+	unsigned      qm_h_bpb_reserved;
+	unsigned      qm_h_bpb_fats;
+	unsigned      qm_h_bpb_rootentries;
+	dsk_lsect_t   qm_h_bpb_total_sectors;
+	unsigned char qm_h_bpb_media_id;
+	unsigned      qm_h_bpb_secfat;
+	unsigned      qm_h_bpb_sectrack;
+	unsigned      qm_h_bpb_heads;
+	unsigned      qm_h_bpb_hidden;
+	int           qm_h_comment_len;
+	/* Density - 1 means HD, 2 means QD */
+	int           qm_h_density;
+	/* Blind transfer or not. */
+	int           qm_h_blind;
+	dsk_pcyl_t    qm_h_used_cyls;
+	dsk_pcyl_t    qm_h_total_cyls;
+	/* Interleave */
+	int           qm_h_interleave;
+	/* Skew. Negative number for skew between sides */
+	int           qm_h_skew;
+	/* Sector number base. */
+	unsigned char qm_h_secbase;
+	/* Source drive type */
+	qm_drv_t      qm_h_drive;
+	/* The crc read from the header */
+	unsigned long qm_h_crc;
+	/* The crc calculated while the image is read */
+	unsigned long qm_calc_crc;
+	unsigned int  qm_image_offset;
+	/* File handle when saving */
+	FILE *        qm_fp;
+	unsigned      qm_density[3];
 } QM_DSK_DRIVER;
 
 /* Constants for the QM header fields */
 
 #define QM_HEADER_SIZE  133
 #define QM_H_BASE         0
-#define QM_H_SECSIZE   0x03
+#define QM_H_SECSIZE   0x03	/* Start DOS BPB -- from here down to 0x14 */
+#define QM_H_SECCLUS   0x05
+#define QM_H_RESERVED  0x06
+#define QM_H_FATS      0x08
+#define QM_H_ROOTENTRIES 0x09
 #define QM_H_SECTOTL   0x0b
+#define QM_H_MEDIA_ID  0x0d
+#define QM_H_SECFAT    0x0e
 #define QM_H_SECPTRK   0x10
 #define QM_H_HEADS     0x12
+#define QM_H_HIDDEN    0x14
 #define QM_H_DESCR     0x1c
 #define QM_H_DSCR_SIZE   60
 #define QM_H_BLIND     0x58

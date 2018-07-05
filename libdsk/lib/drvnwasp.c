@@ -1,7 +1,7 @@
 /***************************************************************************
  *                                                                         *
  *    LIBDSK: General floppy and diskimage access library                  *
- *    Copyright (C) 2001  John Elliott <seasip.webmaster@gmail.com>            *
+ *    Copyright (C) 2001,2017  John Elliott <seasip.webmaster@gmail.com>   *
  *                                                                         *
  *    This library is free software; you can redistribute it and/or        *
  *    modify it under the terms of the GNU Library General Public          *
@@ -31,6 +31,7 @@
 
 #include <stdio.h>
 #include "libdsk.h"
+#include "ldbs.h"
 #include "drvi.h"
 #include "drvnwasp.h"
 
@@ -41,7 +42,8 @@
 DRV_CLASS dc_nwasp = 
 {
 	sizeof(NWASP_DSK_DRIVER),
-	"nanowasp",
+	NULL,		/* superclass */
+	"nanowasp\0nwasp\0",
 	"NanoWasp image file driver",
 	nwasp_open,	/* open */
 	nwasp_creat,	/* create new */
@@ -53,6 +55,17 @@ DRV_CLASS dc_nwasp =
 	NULL,		/* sector ID */
 	nwasp_xseek,	/* seek to track */
 	nwasp_status,	/* drive status */
+	NULL, 		/* xread */
+	NULL, 		/* xwrite */
+	NULL, 		/* tread */
+	NULL, 		/* xtread */
+	NULL,		/* option_enum */
+	NULL,		/* option_set */
+	NULL,		/* option_get */
+	NULL,		/* trackids */
+	NULL,		/* rtread */
+	nwasp_to_ldbs,	/* export as LDBS */
+	nwasp_from_ldbs	/* import as LDBS */
 };
 
 dsk_err_t nwasp_open(DSK_DRIVER *self, const char *filename)
@@ -127,6 +140,9 @@ dsk_err_t nwasp_read(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
 
 	if (!nwself->nw_fp) return DSK_ERR_NOTRDY;
 
+	/* Sectors are always numbered in the 1-10 range */
+	if (sector < 1 || sector > 10) return DSK_ERR_NOADDR;
+
 	/* Convert from physical to logical sector. However, unlike the dg_* 
 	 * functions, this _always_ uses "SIDES_OUTOUT" mapping */
 	offset = 204800L * head + 5120L * cylinder + 512 * skew[sector-1];
@@ -172,6 +188,8 @@ dsk_err_t nwasp_write(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
 
 	if (!nwself->nw_fp) return DSK_ERR_NOTRDY;
 	if (nwself->nw_readonly) return DSK_ERR_RDONLY;
+	/* Sectors are always numbered in the 1-10 range */
+	if (sector < 1 || sector > 10) return DSK_ERR_NOADDR;
 
 	/* Convert from physical to logical sector. However, unlike the dg_* 
 	 * functions, this _always_ uses "SIDES_OUTOUT" mapping */
@@ -282,4 +300,187 @@ dsk_err_t nwasp_getgeom(DSK_DRIVER *self, DSK_GEOMETRY *geom)
         geom->dg_nomulti   = 0;
         return DSK_ERR_OK;
 }
+
+static LDBS_DPB nwasp_dpb = 
+{
+	0x28,	/* SPT */
+	0x04,	/* BSH */
+	0x0F,	/* BLM */
+	0x01,	/* EXM */
+	0xC2,	/* DSM */
+	0x7F,	/* DRM */
+	{ 0xC0, 0x00 },	/* AL0 / AL1 */
+	0x20,	/* CKS */
+	0x02,	/* OFF */
+	0x02,	/* PSH */
+	0x03	/* PHM */	
+};
+
+dsk_err_t nwasp_to_ldbs(DSK_DRIVER *self, struct ldbs **result, DSK_GEOMETRY *geom)
+{
+	dsk_err_t err;
+	dsk_pcyl_t cyl;
+	dsk_phead_t head;
+	dsk_psect_t sec;
+	unsigned char secbuf[512];
+	DSK_GEOMETRY dg;	/* The fixed geometry we'll be using */
+	int n;
+
+        if (!self || !result || self->dr_class != &dc_nwasp) 
+		return DSK_ERR_BADPTR;
+	err = ldbs_new(result, NULL, LDBS_DSK_TYPE);
+	if (err) return err;
+
+	err = nwasp_getgeom(self, &dg);
+	/* Write a fixed geometry record */
+	if (!err) err = ldbs_put_geometry(*result, &dg);
+	/* And a fixed DPB record. */
+	if (!err) err = ldbs_put_dpb(*result, &nwasp_dpb);
+
+	if (err)
+	{
+		ldbs_close(result);
+		return err;
+	}	
+
+	/* Format 40 cylinders, 2 heads, 10 sectors */
+	for (cyl = 0; cyl < 40; cyl++)
+	{
+		for (head = 0; head < 2; head++)
+		{
+			LDBS_TRACKHEAD *trkh = ldbs_trackhead_alloc(10);
+	
+			if (!trkh)
+			{
+				ldbs_close(result);
+				return DSK_ERR_NOMEM;
+			}
+			trkh->datarate = 1;
+			trkh->recmode = 2;
+			trkh->gap3 = 0x17;
+			trkh->filler = 0xE5;
+			for (sec = 0; sec < 10; sec++)
+			{
+/* For each sector in the Nanowasp drive image file, read it in */
+				err = nwasp_read(self, &dg, secbuf, cyl, head, sec + 1);
+				if (err)
+				{
+					ldbs_free(trkh);
+					ldbs_close(result);
+					return err;
+				}
+/* Add it to the track header */
+				trkh->sector[sec].id_cyl = cyl;
+				trkh->sector[sec].id_head = head;
+				trkh->sector[sec].id_sec = sec + 1;
+				trkh->sector[sec].id_psh = 2;
+				trkh->sector[sec].copies = 0;
+				for (n = 1; n < 512; n++)
+					if (secbuf[n] != secbuf[0])
+				{
+					trkh->sector[sec].copies = 1;
+					break;
+				}
+/* And write it out (if it's not blank) */
+				if (!trkh->sector[sec].copies)
+				{
+					trkh->sector[sec].filler = secbuf[0];
+				}
+				else
+				{
+					char id[4];
+					ldbs_encode_secid(id, cyl, head, sec);
+					err = ldbs_putblock(*result, 
+						&trkh->sector[sec].blockid, 
+							id, secbuf, 512);
+					if (err)
+					{
+						ldbs_free(trkh);
+						ldbs_close(result);
+						return err;
+					}
+				}
+			}
+			/* All sectors transferred */
+			err = ldbs_put_trackhead(*result, trkh, cyl, head);
+			ldbs_free(trkh);
+			if (err)
+			{
+				ldbs_close(result);
+				return err;
+			}
+		}
+	}
+	return ldbs_sync(*result);
+}
+
+
+
+static dsk_err_t nwasp_from_ldbs_callback(PLDBS ldbs, dsk_pcyl_t cyl,
+	 dsk_phead_t head, LDBS_SECTOR_ENTRY *se, LDBS_TRACKHEAD *th,
+	 void *param)
+{
+	NWASP_DSK_DRIVER *nwasp_self = param;
+	unsigned char secbuf[512];
+	dsk_err_t err;
+	long offset;
+	size_t len;
+
+	/* Ignore cylinders/heads/sectors that are out of range */
+	if (cyl > 39 || head > 1 || se->id_sec < 1 || se->id_sec > 10)
+	{
+		return DSK_ERR_OK;
+	}
+
+	offset = 204800L * head + 5120L * cyl + 512 * skew[se->id_sec - 1];
+	memset(secbuf, se->filler, 512);
+	/* Load the sector */
+	if (se->copies)
+	{
+		len = 512;
+		err = ldbs_getblock(ldbs, se->blockid, NULL, secbuf, &len);
+		if (err != DSK_ERR_OK && err != DSK_ERR_OVERRUN)
+		{
+			return err;
+		}
+	}
+	err = seekto(nwasp_self, offset);
+
+	/* Write the sector */
+	if (fwrite(secbuf, 1, 512, nwasp_self->nw_fp) < 512) 
+		return DSK_ERR_SYSERR;
+
+	if (offset + 512 > (long)(nwasp_self->nw_filesize))
+	{
+		nwasp_self->nw_filesize = offset + 512;
+	}	
+	return DSK_ERR_OK;
+}
+
+
+/* Convert from LDBS format. */
+dsk_err_t nwasp_from_ldbs(DSK_DRIVER *self, struct ldbs *source, DSK_GEOMETRY *geom)
+{
+	NWASP_DSK_DRIVER *nwasp_self;
+	long pos;
+
+	if (!self || !source || self->dr_class != &dc_nwasp) 
+		return DSK_ERR_BADPTR;
+
+	nwasp_self = (NWASP_DSK_DRIVER *)self;
+	if (nwasp_self->nw_readonly) return DSK_ERR_RDONLY;
+
+	/* Erase anything existing in the file */
+	if (fseek(nwasp_self->nw_fp, 0, SEEK_SET)) return DSK_ERR_SYSERR;
+
+	for (pos = 0; pos < (long)(nwasp_self->nw_filesize); pos++)
+	{
+		if (fputc(0xE5, nwasp_self->nw_fp) == EOF) return DSK_ERR_SYSERR;
+	}
+
+	/* And populate with whatever is in the blockstore */	
+	return ldbs_all_sectors(source, nwasp_from_ldbs_callback,
+				SIDES_ALT, nwasp_self);
+}
+
 

@@ -1,8 +1,46 @@
-TO BE DONE in LibDSK 1.3.x:
+TO BE DONE in LibDSK 1.5.x:
+
+- [CopyQM] Use real CopyQM on real hardware to image some DOS-format
+  floppies so I can see the BPB.
+
+- [CPCEMU] Debug the new LDBS-style driver:
+	* Need to try on a few more test cases. extextdsk tests all seem
+	 to pass; would be nice to try some old-style DSKs too.
+
+- Add an LDBS chapter to the documentation.
+
+- Of the following formats:
+	> Apridisk	converted to LDBS
+	> CFI		converted to LDBS
+	> CPC DSK	converted to LDBS
+	> CPC EDSK	converted to LDBS
+	> DOS16		can't convert
+	> DOS32		can't convert
+	> DSKF		*
+	> IMD		converted to LDBS
+	> INT25		can't convert
+	> JV3		converted to LDBS
+	> LDBS		converted by definition
+	> LINUX		can't convert
+	> LOGI		export & import
+	> MYZ80		export & import
+	> NTWDM		can't convert
+	> NWASP		export & import
+	> POSIX		export & import
+	> QM		converted to LDBS
+	> QRST		converted to LDBS
+	> RCPM		can't convert
+	> SIMH		export & import
+	> TELE		converted to LDBS
+	> WIN16		can't convert
+	> WIN32		can't convert
+	> YDSK		export & import
+
+	
 
 - The cpcemu driver contains a chunk of code to deal with multitrack reads
- and writes. Write some test cases to exercise it, and see if other drivers
- (such as IMD and JV3) can be enhanced to support this.
+ and writes. Write some test cases to exercise it, and check that the LDBS 
+ common driver behaves the same way.
 
 - Partition support.
 	It looks as if the way to do it is to have a filter driver.
@@ -59,7 +97,6 @@ TO BE DONE in LibDSK 1.3.x:
 	dsk_register_driver
 	dsk_register_compression
 	dsk_register_remote
-* Support for TD0 file format.
 
 * Support remoting libdsk...
 	>> May need to write a PCW backend that dances on the controller
@@ -77,8 +114,5 @@ TO BE DONE in LibDSK 1.3.x:
 	>> Default format is pcw720, not pcw180
 	>> Needs to be compilable on other OSes
 	>> Doesn't truncate files.
-
-* The load-all-into-memory strategy in Apridisk won't work on DOS16. Does
- this matter, bearing in mind that the real Apridisk exists on DOS16?
 
 * CopyQM: Compare to real BBC Master 512 disks 2-4.

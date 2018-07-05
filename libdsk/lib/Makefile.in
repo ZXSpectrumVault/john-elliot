@@ -138,14 +138,15 @@ am_libdsk_la_OBJECTS = dskread.lo dskwrite.lo dskcheck.lo dskstat.lo \
 	dsklphys.lo dskfmt.lo dskopen.lo dskpars.lo dskerror.lo \
 	dskseek.lo dsksecid.lo dskgeom.lo dsktread.lo dsksgeom.lo \
 	dskjni.lo dskreprt.lo dskcmt.lo dskretry.lo dskdirty.lo \
-	dsktrkid.lo dskrtrd.lo compress.lo compsq.lo compgz.lo \
-	comptlzh.lo compbz2.lo compdskf.lo crctable.lo crc16.lo \
-	rpccli.lo rpcmap.lo rpcpack.lo rpcserv.lo remote.lo rpctios.lo \
-	rpcfork.lo rpcfossl.lo rpcwin32.lo drvjv3.lo drvlinux.lo \
-	drvntwdm.lo drvwin32.lo drvwin16.lo drvint25.lo drvdos16.lo \
-	drvdos32.lo drvcpcem.lo drvdskf.lo drvimd.lo drvlogi.lo \
-	drvsimh.lo drvposix.lo drvnwasp.lo drvadisk.lo drvrcpm.lo \
-	drvtele.lo drvmyz80.lo drvydsk.lo drvcfi.lo drvqm.lo
+	dsktrkid.lo dskrtrd.lo dskcopy.lo dskiconv.lo compress.lo \
+	compsq.lo compgz.lo comptlzh.lo compbz2.lo compdskf.lo \
+	crctable.lo crc16.lo rpccli.lo rpcmap.lo rpcpack.lo rpcserv.lo \
+	remote.lo rpctios.lo rpcfork.lo rpcfossl.lo rpcwin32.lo \
+	drvjv3.lo drvlinux.lo drvntwdm.lo drvwin32.lo drvwin16.lo \
+	drvint25.lo drvdos16.lo drvdos32.lo drvcpcem.lo drvdskf.lo \
+	drvimd.lo drvlogi.lo drvsimh.lo drvposix.lo drvnwasp.lo \
+	drvadisk.lo drvrcpm.lo drvtele.lo drvmyz80.lo drvydsk.lo \
+	drvcfi.lo drvqm.lo drvqrst.lo drvldbs.lo ldbs.lo
 libdsk_la_OBJECTS = $(am_libdsk_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -373,12 +374,13 @@ EXTRA_DIST = $(CLASSDPRE)/Drive.java \
 # If interfaces have been removed set the right-hand number to 0.
 # 
 #
-libdsk_la_LDFLAGS = -version-info 6:13:3
+libdsk_la_LDFLAGS = -version-info 7:1:3
 libdsk_la_SOURCES = dskread.c  dskwrite.c dskcheck.c dskstat.c \
 		   dsklphys.c dskfmt.c   dskopen.c  dskpars.c \
 		   dskerror.c dskseek.c  dsksecid.c dskgeom.c \
 		   dsktread.c dsksgeom.c dskjni.c   dskreprt.c \
 		   dskcmt.c dskretry.c dskdirty.c dsktrkid.c dskrtrd.c \
+		   dskcopy.c dskiconv.c \
 		   comp.h compi.h compress.h compress.inc compress.c \
 		   compsq.c compsq.h \
 		   compgz.c compgz.h \
@@ -416,7 +418,9 @@ libdsk_la_SOURCES = dskread.c  dskwrite.c dskcheck.c dskstat.c \
 		   drvmyz80.h drvmyz80.c \
 		   drvydsk.h  drvydsk.c \
 		   drvcfi.h   drvcfi.c \
-		   drvqm.h    drvqm.c 
+		   drvqm.h    drvqm.c \
+		   drvqrst.h  drvqrst.c \
+		   drvldbs.h  drvldbs.c ldbs.h ldbs.c
 
 JARCLASSES = $(CLASSDPRE)/Drive.class \
 	   $(CLASSDPRE)/DskException.class \
@@ -536,6 +540,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/drvimd.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/drvint25.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/drvjv3.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/drvldbs.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/drvlinux.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/drvlogi.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/drvmyz80.Plo@am__quote@
@@ -543,6 +548,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/drvnwasp.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/drvposix.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/drvqm.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/drvqrst.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/drvrcpm.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/drvsimh.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/drvtele.Plo@am__quote@
@@ -551,10 +557,12 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/drvydsk.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dskcheck.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dskcmt.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dskcopy.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dskdirty.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dskerror.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dskfmt.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dskgeom.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dskiconv.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dskjni.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dsklphys.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dskopen.Plo@am__quote@
@@ -570,6 +578,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dsktread.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dsktrkid.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dskwrite.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ldbs.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/remote.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rpccli.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rpcfork.Plo@am__quote@

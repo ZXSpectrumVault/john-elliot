@@ -22,12 +22,25 @@
 
 /* Declarations for the Teledisk driver */
 
-/* This structure (for the file header) is based on 
- * <http://www.fpns.net/willy/wteledsk.htm>
+/* This structure (for the file header) is based on:
+ * <http://www.fpns.net/willy/wteledsk.htm> 
+ * <ftp://bitsavers.informatik.uni-stuttgart.de/pdf/sydex/Teledisk_1.05_Sep88.pdf>
+ * <http://www.classiccmp.org/dunfield/img54306/td0notes.txt>
+ *
+ * In LibDsk 1.5.3, rewritten to do a Teledisk -> LDBS conversion and 
+ * hand off to the LDBS driver.
  */
 
 typedef unsigned char tele_byte;
 typedef unsigned short tele_word;
+
+/* The header and comment block of a Teledisk file have quite a bit of 
+ * information that LDBS can't hold or calculate. To hold it, the TELE_HEADER 
+ * will be saved to the blockstore as a 'utel' block. 
+ *
+ * Note: Binary compatibility should not be a problem because all fields 
+ * are single bytes.
+ */
 
 typedef struct
 {
@@ -45,96 +58,26 @@ typedef struct
 				   Bit 7 set if comment present. */
 	tele_byte dosmode;	/* Only allocated sectors backed up? */
 	tele_byte sides;	/* Number of heads */
-	tele_word crc;	
+
 } TELE_HEADER;
 
-typedef struct
-{
-	int year, mon, day;
-	int hour, min, sec;
-	char text[1];
-} TELE_COMMENT;
 
 typedef struct
 {
-	tele_byte sectors;
-	tele_byte cylinder;
-	tele_byte head;
-	tele_byte crc;
-} TELE_TRKHEAD;
-
-typedef struct
-{
-	tele_byte cylinder_id;	/* On-disk sector ID */
-	tele_byte head_id;
-	tele_byte sector_id;
-	size_t sector_len;
-	tele_byte syndrome;	/* Various errors:
-       				 * bit 0: Sector appeared more than once
-				 * bit 1: CRC error
-				 * bit 2: Deleted data
-				 * bit 4: Unallocated sector not saved
-				 * bit 5: Sector ID but no data
-				 * bit 6: Data but no sector ID	*/
-	tele_byte header_crc;
-/* Strictly speaking the last 2 members are the start of the sector data 
- * rather than the end of the sector header. But there's not a lot of 
- * difference - you just have to be sure not to load them if 
- * (syndrome & 0x30). */
-	tele_word compressed_len;
-	tele_byte encoding;
-} TELE_SECHEAD;
-
-typedef struct
-{
-	DSK_DRIVER	tele_super;
+	LDBSDISK_DSK_DRIVER	tele_super;
+	char 		*tele_filename;
 	TELE_HEADER	tele_head;	
 	FILE		*tele_fp;
-	TELE_COMMENT	*tele_comment;
-	/* Fake sector for READ ID command */
-	unsigned int	tele_sector;
-	/* Addresses of track headers */
-	long		tele_track_addr[100][2];
-	TELE_TRKHEAD	tele_trackhead;
-	TELE_SECHEAD	tele_sechead;
+
+	/* Stats used when saving */
+	unsigned tele_fm;	/* Number of FM tracks */
+	unsigned tele_mfm;	/* Number of MFM tracks */
+	unsigned tele_rate[3];	/* Number of tracks at various data rates */
+
 } TELE_DSK_DRIVER;
 
 
 dsk_err_t tele_open(DSK_DRIVER *self, const char *filename);
 dsk_err_t tele_creat(DSK_DRIVER *self, const char *filename);
 dsk_err_t tele_close(DSK_DRIVER *self);
-dsk_err_t tele_read(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
-                              void *buf, dsk_pcyl_t cylinder,
-                              dsk_phead_t head, dsk_psect_t sector);
-dsk_err_t tele_write(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
-                              const void *buf, dsk_pcyl_t cylinder,
-                              dsk_phead_t head, dsk_psect_t sector);
-dsk_err_t tele_format(DSK_DRIVER *self, DSK_GEOMETRY *geom,
-                                dsk_pcyl_t cylinder, dsk_phead_t head,
-                                const DSK_FORMAT *format, unsigned char filler);
-dsk_err_t tele_secid(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
-                                dsk_pcyl_t cylinder, dsk_phead_t head,
-                                DSK_FORMAT *result);
-dsk_err_t tele_xseek(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
-                                dsk_pcyl_t cylinder, dsk_phead_t head);
-dsk_err_t tele_xread(DSK_DRIVER *self, const DSK_GEOMETRY *geom, void *buf,
-                              dsk_pcyl_t cylinder, dsk_phead_t head,
-                              dsk_pcyl_t cyl_expected, dsk_phead_t head_expected,
-                              dsk_psect_t sector, size_t sector_size, int *deleted);
-dsk_err_t tele_xwrite(DSK_DRIVER *self, const DSK_GEOMETRY *geom, const void *buf,
-                              dsk_pcyl_t cylinder, dsk_phead_t head,
-                              dsk_pcyl_t cyl_expected, dsk_phead_t head_expected,
-                              dsk_psect_t sector, size_t sector_size, int deleted);
-dsk_err_t tele_trackids(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
-                            dsk_pcyl_t cylinder, dsk_phead_t head,
-                            dsk_psect_t *count, DSK_FORMAT **result);
-dsk_err_t tele_status(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
-                  dsk_phead_t head, unsigned char *result);
-
-dsk_err_t tele_option_enum(DSK_DRIVER *self, int idx, char **optname);
-
-dsk_err_t tele_option_set(DSK_DRIVER *self, const char *optname, int value);
-dsk_err_t tele_option_get(DSK_DRIVER *self, const char *optname, int *value);
-
-dsk_err_t tele_getgeom(DSK_DRIVER *self, DSK_GEOMETRY *dg);
 

@@ -32,7 +32,11 @@ LDPUBLIC32 dsk_err_t LDPUBLIC16 dsk_pseek(DSK_DRIVER *self, const DSK_GEOMETRY *
 
 	dc = self->dr_class;
 
-        if (!dc->dc_xseek) return DSK_ERR_NOTIMPL;
+	WALK_VTABLE(dc, dc_xseek)
+        if (!dc->dc_xseek) 
+	{
+		return DSK_ERR_NOTIMPL;
+	}
 	return (dc->dc_xseek)(self,geom,cylinder,head);	
 
 }

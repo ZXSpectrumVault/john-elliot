@@ -485,6 +485,10 @@ SOURCE=..\lib\drvimd.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\lib\drvldbs.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\lib\drvlinux.c
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
@@ -535,6 +539,10 @@ SOURCE=..\lib\drvposix.c
 
 SOURCE=..\lib\drvqm.c
 # SUBTRACT CPP /YX /Yc /Yu
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\drvqrst.c
 # End Source File
 # Begin Source File
 
@@ -648,6 +656,10 @@ SOURCE=..\lib\dskgeom.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\lib\dskiconv.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\lib\dskjni.c
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
@@ -720,6 +732,10 @@ SOURCE=..\lib\dsktrkid.c
 
 SOURCE=..\lib\dskwrite.c
 # SUBTRACT CPP /YX /Yc /Yu
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\ldbs.c
 # End Source File
 # Begin Source File
 

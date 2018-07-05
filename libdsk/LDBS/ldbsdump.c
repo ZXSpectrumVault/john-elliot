@@ -168,41 +168,64 @@ void dump_block(FILE *fp, long pos)
 
 
 
-void dump_track(FILE *fp, long pos)
+void dump_track(FILE *fp, long pos, int version)
 {
 	char type[4];
 	size_t n, count, blocklen;
 	unsigned char *trkhead = load_block(fp, pos, type, &blocklen);
+	unsigned se_len, se_offset, th_offset;
 
 	if (!trkhead) return;
-	count = peek2(trkhead);
+	if (version < 2)
+	{
+		th_offset = 2;
+		se_offset = 6;
+		se_len    = 12;
+		count = peek2(trkhead);
+	}
+	else
+	{
+		th_offset = 6;
+		se_offset = peek2(trkhead);
+		se_len    = peek2(trkhead + 2);
+		count     = peek2(trkhead + 4);
+	}
 	printf("%08lx |     Track header (%u entries):\n", pos, (unsigned)count);
-	printf("                   Data rate: %d\n", trkhead[2]);
-	printf("                   Rec mode:  %d\n", trkhead[3]);
-	printf("                   Fmt GAP3:  %d\n", trkhead[4]);
-	printf("                   Filler:    0x%02x\n", trkhead[5]);
+	printf("                   Data rate: %d\n", trkhead[th_offset]);
+	printf("                   Rec mode:  %d\n", trkhead[th_offset+1]);
+	printf("                   Fmt GAP3:  %d\n", trkhead[th_offset+2]);
+	printf("                   Filler:    0x%02x\n", trkhead[th_offset+3]);
+	if (se_offset >= 12)
+		printf("                   Total len: 0x%04x\n", peek2(trkhead + th_offset + 4));
 	for (n = 0; n < count; n++)
 	{
 		printf("                   Cyl 0x%02x Head 0x%02x Sec 0x%02x Size 0x%02x\n", 
-			trkhead[6 + 12*n],
-			trkhead[7 + 12*n],
-			trkhead[8 + 12*n],
-			trkhead[9 + 12*n]);
+			trkhead[se_offset + se_len*n],
+			trkhead[se_offset + 1 + se_len*n],
+			trkhead[se_offset + 2 + se_len*n],
+			trkhead[se_offset + 3 + se_len*n]);
 		printf("                   ST1 0x%02x ST2  0x%02x Copies %d Fill 0x%02x ", 
-			trkhead[10 + 12*n],
-			trkhead[11 + 12*n],
-			trkhead[12 + 12*n],
-			trkhead[13 + 12*n]);
+			trkhead[se_offset + 4 + se_len*n],
+			trkhead[se_offset + 5 + se_len*n],
+			trkhead[se_offset + 6 + se_len*n],
+			trkhead[se_offset + 7 + se_len*n]);
 
-		printf(" @ 0x%08lx\n", peek4(trkhead + 14 + 12*n));
+		printf(" @ 0x%08lx\n", peek4(trkhead + se_offset + 8 + se_len*n));
+		if (se_len >= 16)
+		{
+		    printf("                   Trail 0x%04x Offset 0x%04x\n",
+			peek2(trkhead + se_offset + 12 + se_len * n),
+			peek2(trkhead + se_offset + 14 + se_len * n));
+
+		}
 	}
 
 	for (n = 0; n < count; n++)
 	{
-		if (trkhead[12 + 12*n] &&
-		    peek4(trkhead + 14 + 12*n))
+		if (trkhead[se_offset + 6 + se_len * n] &&
+		    peek4(trkhead + se_offset + 8 + se_len * n))
 		{
-			dump_block(fp, peek4(trkhead + 14 + 12*n));
+			dump_block(fp, peek4(trkhead + se_offset + 8 + se_len*n));
 		}	
 	}
 
@@ -211,7 +234,7 @@ void dump_track(FILE *fp, long pos)
 
 
 
-void dump_disk(FILE *fp, long pos)
+void dump_disk(FILE *fp, long pos, int version)
 {
 	char type[4];
 	size_t n, count, blocklen;
@@ -239,7 +262,7 @@ void dump_disk(FILE *fp, long pos)
 	{
 		if (trackdir[2+8*n] == 'T')
 		{
-			dump_track(fp, peek4(trackdir + 6 + 8 * n));
+			dump_track(fp, peek4(trackdir + 6 + 8 * n), version);
 		}
 		else
 		{
@@ -279,9 +302,11 @@ void dump_file(const char *filename)
 	printf("           Track directory  @ 0x%08lx\n", peek4(header + 16));
 	putchar('\n');
 
-	if (raw == 0 && !memcmp(header + 4, "DSK\1", 4) && peek4(header + 16))
+	if (raw == 0 && peek4(header + 16) &&
+		(!memcmp(header + 4, "DSK\1", 4) ||
+		 !memcmp(header + 4, "DSK\2", 4)))
 	{
-		dump_disk(fp, peek4(header + 16));
+		dump_disk(fp, peek4(header + 16), header[7]);
 	}
 	else
 	{

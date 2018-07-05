@@ -40,53 +40,17 @@
 
 typedef struct
 {
-	DSK_DRIVER	jv3_super;
-	unsigned char   jv3_header[JV3_HEADER_LEN];
-	FILE		*jv3_fp;
-	/* Fake sector for READ ID command */
-	unsigned int	jv3_sector;
-	long		jv3_len;	/* File size */
+	LDBSDISK_DSK_DRIVER	jv3_super;
+	char                   *jv3_filename;
+/* State used while saving */
+	FILE		       *jv3_fp;
+	unsigned char		jv3_header[JV3_HEADER_LEN];	
+	unsigned short		jv3_sector;
+	long 			jv3_headpos;
 } JV3_DSK_DRIVER;
 
 
 dsk_err_t jv3_open(DSK_DRIVER *self, const char *filename);
 dsk_err_t jv3_creat(DSK_DRIVER *self, const char *filename);
 dsk_err_t jv3_close(DSK_DRIVER *self);
-dsk_err_t jv3_read(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
-                              void *buf, dsk_pcyl_t cylinder,
-                              dsk_phead_t head, dsk_psect_t sector);
-
-dsk_err_t jv3_write(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
-                              const void *buf, dsk_pcyl_t cylinder,
-                              dsk_phead_t head, dsk_psect_t sector);
-dsk_err_t jv3_format(DSK_DRIVER *self, DSK_GEOMETRY *geom,
-                                dsk_pcyl_t cylinder, dsk_phead_t head,
-                                const DSK_FORMAT *format, unsigned char filler);
-
-dsk_err_t jv3_secid(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
-                                dsk_pcyl_t cylinder, dsk_phead_t head,
-                                DSK_FORMAT *result);
-dsk_err_t jv3_xseek(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
-                                dsk_pcyl_t cylinder, dsk_phead_t head);
-dsk_err_t jv3_xread(DSK_DRIVER *self, const DSK_GEOMETRY *geom, void *buf,
-                              dsk_pcyl_t cylinder, dsk_phead_t head,
-                              dsk_pcyl_t cyl_expected, dsk_phead_t head_expected,
-                              dsk_psect_t sector, size_t sector_size, int *deleted);
-dsk_err_t jv3_xwrite(DSK_DRIVER *self, const DSK_GEOMETRY *geom, const void *buf,
-                              dsk_pcyl_t cylinder, dsk_phead_t head,
-                              dsk_pcyl_t cyl_expected, dsk_phead_t head_expected,
-                              dsk_psect_t sector, size_t sector_size, int deleted);
-dsk_err_t jv3_trackids(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
-                            dsk_pcyl_t cylinder, dsk_phead_t head,
-                            dsk_psect_t *count, DSK_FORMAT **result);
-
-dsk_err_t jv3_status(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
-                  dsk_phead_t head, unsigned char *result);
-/* No options
-dsk_err_t jv3_option_enum(DSK_DRIVER *self, int idx, char **optname);
-
-dsk_err_t jv3_option_set(DSK_DRIVER *self, const char *optname, int value);
-dsk_err_t jv3_option_get(DSK_DRIVER *self, const char *optname, int *value);
-*/
-dsk_err_t jv3_getgeom(DSK_DRIVER *self, DSK_GEOMETRY *dg);
 

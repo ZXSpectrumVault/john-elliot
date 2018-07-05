@@ -1,7 +1,7 @@
 /***************************************************************************
  *                                                                         *
  *    LIBDSK: General floppy and diskimage access library                  *
- *    Copyright (C) 2001,2008  John Elliott <seasip.webmaster@gmail.com>       *
+ *    Copyright (C) 2001,2008,2017  John Elliott <seasip.webmaster@gmail.com> *
  *                                                                         *
  *    This library is free software; you can redistribute it and/or        *
  *    modify it under the terms of the GNU Library General Public          *
@@ -22,6 +22,7 @@
 
 #include <stdio.h>
 #include "libdsk.h"
+#include "ldbs.h"
 #include "drvi.h"
 #include "drvsimh.h"
 
@@ -51,7 +52,8 @@
 DRV_CLASS dc_simh = 
 {
 	sizeof(SIMH_DSK_DRIVER),
-	"simh",
+	NULL,		/* superclass */
+	"simh\0SIMH\0",
 	"SIMH disc image driver",
 	simh_open,	/* open */
 	simh_creat,	/* create new */
@@ -63,6 +65,17 @@ DRV_CLASS dc_simh =
 	NULL,		/* sector ID */
 	simh_xseek,	/* Seek to track */
 	simh_status,	/* Get drive status */
+	NULL, 		/* xread */
+	NULL, 		/* xwrite */
+	NULL, 		/* tread */
+	NULL, 		/* xtread */
+	NULL,		/* option_enum */
+	NULL,		/* option_set */
+	NULL,		/* option_get */
+	NULL,		/* trackids */
+	NULL,		/* rtread */
+	simh_to_ldbs,	/* export as LDBS */
+	simh_from_ldbs	/* import as LDBS */
 };
 
 
@@ -306,4 +319,207 @@ dsk_err_t simh_status(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
         if (simh_self->simh_readonly) *result |= DSK_ST3_RO;
 	return DSK_ERR_OK;
 }
+
+
+static const LDBS_DPB simh_dpb =
+{
+	32,	/* SPT */
+	4, 	/* BSH (2k blocks) */
+	15, 	/* BLM */
+	0, 	/* EXM */
+	0x1EF,	/* DSM (496 * 2k) */
+	0xFF,	/* DRM */
+	{ 0xF0, 0, }, 	/* AL0 / AL1 */
+	0x040,  /* CKS */
+	6, 	/* OFF */
+	0, 	/* PSH */
+	0 	/* PHM */
+};
+
+
+/* Convert to LDBS format. */
+dsk_err_t simh_to_ldbs(DSK_DRIVER *self, struct ldbs **result, 
+		DSK_GEOMETRY *geom)
+{
+	dsk_err_t err;
+	dsk_pcyl_t cyl;
+	dsk_phead_t head;
+	dsk_psect_t sec;
+	unsigned char secbuf[128];
+	DSK_GEOMETRY dg;	/* The fixed geometry we'll be using */
+	int n;
+
+        if (!self || !result || self->dr_class != &dc_simh) 
+		return DSK_ERR_BADPTR;
+	err = ldbs_new(result, NULL, LDBS_DSK_TYPE);
+	if (err) return err;
+
+	err = simh_getgeom(self, &dg);
+	/* Write a fixed geometry record */
+	if (!err) err = ldbs_put_geometry(*result, &dg);
+	/* And a fixed DPB record */
+	if (!err) err = ldbs_put_dpb(*result, &simh_dpb);
+	if (err)
+	{
+		ldbs_close(result);
+		return err;
+	}	
+
+	/* Format 128 tracks each with 32 sectors */
+	for (cyl = 0; cyl < 127; cyl++)
+	{
+		for (head = 0; head < 2; head++)
+		{
+			LDBS_TRACKHEAD *trkh = ldbs_trackhead_alloc(32);
+	
+			if (!trkh)
+			{
+				ldbs_close(result);
+				return DSK_ERR_NOMEM;
+			}
+			/* To fit 32 * 128 byte sectors on a track, I think
+			 * you need either MFM @ 250kbps or FM @ 500kbps. 	
+			 * Let's go with MFM. */
+			trkh->datarate = 1;
+			trkh->recmode = 2;
+			trkh->gap3 = 0x52;
+			trkh->filler = 0xE5;
+			for (sec = 0; sec < 32; sec++)
+			{
+/* For each sector in the SIMH drive image file, read it in */
+				err = simh_read(self, &dg, secbuf, cyl, head, sec);
+				if (err)
+				{
+					ldbs_free(trkh);
+					ldbs_close(result);
+					return err;
+				}
+/* Add it to the track header */
+				trkh->sector[sec].id_cyl = cyl;
+				trkh->sector[sec].id_head = head;
+				trkh->sector[sec].id_sec = sec;
+				trkh->sector[sec].id_psh = 0;
+				trkh->sector[sec].copies = 0;
+				for (n = 1; n < 128; n++)
+					if (secbuf[n] != secbuf[0])
+				{
+					trkh->sector[sec].copies = 1;
+					break;
+				}
+/* And write it out (if it's not blank) */
+				if (!trkh->sector[sec].copies)
+				{
+					trkh->sector[sec].filler = secbuf[0];
+				}
+				else
+				{
+					char id[4];
+					ldbs_encode_secid(id, cyl, head, sec);
+					err = ldbs_putblock(*result, 
+						&trkh->sector[sec].blockid, 
+							id, secbuf, 128);
+					if (err)
+					{
+						ldbs_free(trkh);
+						ldbs_close(result);
+						return err;
+					}
+				}
+			}
+			/* All sectors transferred */
+			err = ldbs_put_trackhead(*result, trkh, cyl, head);
+			ldbs_free(trkh);
+			if (err)
+			{
+				ldbs_close(result);
+				return err;
+			}
+		}
+	}
+	return ldbs_sync(*result);
+}
+
+static dsk_err_t simh_from_ldbs_callback(PLDBS ldbs, dsk_pcyl_t cyl,
+	 dsk_phead_t head, LDBS_SECTOR_ENTRY *se, LDBS_TRACKHEAD *th,
+	 void *param)
+{
+	SIMH_DSK_DRIVER *simh_self = param;
+	unsigned char secbuf[128];
+	dsk_err_t err;
+	long offset = (4384L * (2 * cyl + head)) + (137 * se->id_sec) + 3;
+	size_t len;
+
+	/* Ignore cylinders/heads/sectors that are out of range */
+	if (cyl > 126 || head > 1 || se->id_sec > 31)
+	{
+		return DSK_ERR_OK;
+	}
+
+	memset(secbuf, se->filler, 128);
+	/* Load the sector */
+	if (se->copies)
+	{
+		len = 128;
+		err = ldbs_getblock(ldbs, se->blockid, NULL, secbuf, &len);
+		if (err != DSK_ERR_OK && err != DSK_ERR_OVERRUN)
+		{
+			return err;
+		}
+	}
+	/* Pad the file out to the right size */
+	if ((long)simh_self->simh_filesize < offset)
+	{
+		if (fseek(simh_self->simh_fp, simh_self->simh_filesize, SEEK_SET)) 
+			return DSK_ERR_SYSERR;
+		while ((long)simh_self->simh_filesize < offset)
+		{
+			if (fputc(0xE5, simh_self->simh_fp) == EOF) 
+				return DSK_ERR_SYSERR;
+			++simh_self->simh_filesize;
+		}
+	}
+	/* Write the sector */
+	if (fseek(simh_self->simh_fp, offset, SEEK_SET) ||
+	    fwrite(secbuf, 1, 128, simh_self->simh_fp) < 128) 
+		return DSK_ERR_SYSERR;
+
+	/* After the sector, write 4 bytes trailer */
+	if (fwrite(trailer, 1, sizeof(trailer), simh_self->simh_fp) < 
+			(int)sizeof(trailer))
+	{
+		return DSK_ERR_NOADDR;
+	}
+
+	if (offset + 132 > (long)simh_self->simh_filesize)
+	{
+		simh_self->simh_filesize = offset + 132;
+	}	
+	return DSK_ERR_OK;
+}
+
+
+/* Convert from LDBS format. */
+dsk_err_t simh_from_ldbs(DSK_DRIVER *self, struct ldbs *source, DSK_GEOMETRY *geom)
+{
+	SIMH_DSK_DRIVER *simh_self;
+	long pos;
+
+	if (!self || !source || self->dr_class != &dc_simh) 
+		return DSK_ERR_BADPTR;
+	simh_self = (SIMH_DSK_DRIVER *)self;
+	if (simh_self->simh_readonly) return DSK_ERR_RDONLY;
+
+	/* Erase anything existing in the file */
+	if (fseek(simh_self->simh_fp, 0, SEEK_SET)) return DSK_ERR_SYSERR;
+
+	for (pos = 0; pos < (long)simh_self->simh_filesize; pos++)
+	{
+		if (fputc(0xE5, simh_self->simh_fp) == EOF) return DSK_ERR_SYSERR;
+	}
+
+	/* And populate with whatever is in the blockstore */	
+	return ldbs_all_sectors(source, simh_from_ldbs_callback,
+				SIDES_ALT, simh_self);
+}
+
 

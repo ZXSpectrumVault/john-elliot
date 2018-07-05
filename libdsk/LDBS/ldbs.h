@@ -1,6 +1,6 @@
 /* LDBS: LibDsk Block Store access functions
  *
- *  Copyright (c) 2016 John Elliott <seasip.webmaster@gmail.com>
+ *  Copyright (c) 2016,17 John Elliott <seasip.webmaster@gmail.com>
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a 
  * copy of this software and associated documentation files (the "Software"),
@@ -20,6 +20,8 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR 
  * OTHER DEALINGS IN THE SOFTWARE. */
 
+#define LDBS_VERSION "0.3"	/* Version of the LDBS spec this library
+				 * implements */
 
 /* Structures and functions to manage a LibDsk Block Store disk image, 
  * or other file based on the LDBS structure.
@@ -91,6 +93,7 @@ typedef unsigned char dsk_gap_t;        /* Gap length */
 # define DSK_ERR_NOMEM    (-7)   /* Null return from malloc */
 # define DSK_ERR_NOADDR   (-15)  /* Missing address mark */
 # define DSK_ERR_OVERRUN  (-21)	 /* Overrun */
+# define DSK_ERR_CORRUPT  (-32)	 /* Disk image is corrupt */
 # define ldbs_malloc malloc
 # define ldbs_realloc realloc
 # define ldbs_free free
@@ -196,6 +199,9 @@ typedef struct ldbs_sector_entry
        			 	 * sector is entirely filled with filler byte */
 	unsigned char filler;	/* Format filler byte */
 	LDBLOCKID blockid;
+	unsigned short trail;	/* [LDBS 0.3] Number of CRC and GAP#3 bytes
+				 *            included in the sector*/
+	unsigned short offset;	/* [LDBS 0.3] Offset of sector within track */
 } LDBS_SECTOR_ENTRY;
 
 /* Variable-size structures for track directory and track header. 
@@ -230,6 +236,8 @@ typedef struct ldbs_trackhead		/* Track header */
 					 *  2 => MFM */
 	dsk_gap_t  gap3;		/* Format GAP3 */
 	unsigned char filler;		/* Format filler byte */
+	unsigned short total_len;	/* Total size of track including
+					 * address marks and gaps */
 	int dirty;			/* Dirty flag, not persisted */
 	LDBS_SECTOR_ENTRY sector[1];
 } LDBS_TRACKHEAD;
@@ -310,7 +318,28 @@ dsk_err_t ldbs_open(PLDBS *result, const char *filename, char type[4],
 dsk_err_t ldbs_close(PLDBS *blockstore);
 
 
-
+/* ldbs_getblockinfo: Get information about a block from the store.
+ *
+ * Enter with: blockid is the block to retrieve
+ *	       type    buffer to be populated with the block type, can be
+ *	       	       NULL if you don't care.
+ *             len     will be populated with the block length, can be NULL
+ *                     if you don't care.
+ *
+ * On success:
+ * 		Populates *len with actual block length
+ * 		Populates type with the block type
+ * 		Returns DSK_ERR_OK
+ *
+ * Other errors:
+ * 		DSK_ERR_BADPTR	'self' pointer is NULL
+ * 		DSK_ERR_BADPARM	blockid is LDBLOCKID_NULL
+ *		DSK_ERR_CORRUPT file is corrupt (block header not where it
+ *				should be)
+ * 		DSK_ERR_SYSERR  I/O error
+ */
+dsk_err_t ldbs_get_blockinfo(PLDBS self, LDBLOCKID blockid, char type[4],
+				size_t *len);
 
 /* ldbs_getblock: Get a block from the store into a user-supplied buffer.
  *
@@ -322,19 +351,27 @@ dsk_err_t ldbs_close(PLDBS *blockstore);
  *             *len    is the maximum size of the receive buffer
  *
  * On success:
- * 		Returns DSK_ERR_OK
  * 		Populates 'data' with the data
  * 		Populates *len with actual block length
  * 		Populates type with the block type
+ * 		Returns DSK_ERR_OK
  *
- * If the buffer is too small or data == NULL:
+ * If data == NULL or *len == 0:
  * 		Populates *len with actual block length
  * 		Populates type with the block type
  *		Returns DSK_ERR_OVERRUN
  *
+ * If *len is nonzero but less than the actual block length:
+ * 		Populates 'data' with data up to *len
+ * 		Populates *len with actual block length
+ * 		Populates type with the block type
+ * 		Returns DSK_ERR_OVERRUN
+ *
  * Other errors:
  * 		DSK_ERR_BADPTR	'self' or 'len' pointer is NULL
- * 		DSK_ERR_NOADDR	blockid is not a valid block ID
+ * 		DSK_ERR_BADPARM	blockid is LDBLOCKID_NULL
+ *		DSK_ERR_CORRUPT file is corrupt (block header not where it
+ *				should be)
  * 		DSK_ERR_SYSERR  I/O error
  */
 dsk_err_t ldbs_getblock(PLDBS self, LDBLOCKID blockid, char type[4],
@@ -360,7 +397,9 @@ dsk_err_t ldbs_getblock(PLDBS self, LDBLOCKID blockid, char type[4],
  *
  * Other errors:
  * 		DSK_ERR_BADPTR	'self' or 'len' pointer is NULL
- * 		DSK_ERR_NOADDR	blockid is not a valid block ID
+ * 		DSK_ERR_BADPARM	blockid is LDBLOCKID_NULL
+ *		DSK_ERR_CORRUPT file is corrupt (block header not where it
+ *				should be)
  * 		DSK_ERR_SYSERR  I/O error
  */
 dsk_err_t ldbs_getblock_a(PLDBS self, LDBLOCKID blockid, char *type,
@@ -391,7 +430,9 @@ dsk_err_t ldbs_getblock_a(PLDBS self, LDBLOCKID blockid, char *type,
  * 				  have changed if the block had to be moved
  * 				  in the file.
  * 		DSK_ERR_BADPTR	'self' or 'data' pointer is NULL
- * 		DSK_ERR_NOADDR	blockid is not a valid block ID
+ * 		DSK_ERR_BADPARM	blockid is LDBLOCKID_NULL
+ *		DSK_ERR_CORRUPT file is corrupt (block header not where it
+ *				should be)
  * 		DSK_ERR_SYSERR  I/O error
  */
 dsk_err_t ldbs_putblock(PLDBS self, LDBLOCKID *blockid, const char *type, 
@@ -405,7 +446,9 @@ dsk_err_t ldbs_putblock(PLDBS self, LDBLOCKID *blockid, const char *type,
  * Results:
  * 		DSK_ERR_OK	Success
  * 		DSK_ERR_BADPTR	'self' pointer is NULL
- * 		DSK_ERR_NOADDR	blockid is not a valid block ID
+ * 		DSK_ERR_BADPARM	blockid is LDBLOCKID_NULL
+ *		DSK_ERR_CORRUPT file is corrupt (block header not where it
+ *				should be)
  * 		DSK_ERR_SYSERR  I/O error
  * 
  */
@@ -448,6 +491,11 @@ dsk_err_t ldbs_getroot(PLDBS self, LDBLOCKID *blockid);
  * 		DSK_ERR_BADPTR	'self' pointer is NULL
  */
 dsk_err_t ldbs_fsck(PLDBS self, FILE *logfile);
+
+/* LDBS 0.2: Ability to empty a blockstore */
+dsk_err_t ldbs_clear(PLDBS self);
+
+
 
 /***************************************************************************/
 /************************* DISK IMAGE FUNCTIONS ****************************/
@@ -498,6 +546,78 @@ int ldbs_decode_secid(const char secid[4], dsk_pcyl_t *cylinder,
 dsk_err_t ldbs_trackdir_copy(PLDBS self, LDBS_TRACKDIR **result);
 
 
+/* ldbs_getblock_d: Look up a block in the directory and load it into
+ *                 a user-defined buffer.
+ *
+ * Enter with: self    is the handle to the blockstore
+ *	       type    is the block type, which will be searched for in the
+ *		       directory.
+ *             data    is the buffer to receive data, can be NULL to retrieve
+ *                     block length only
+ *             *len    is the maximum size of the receive buffer
+ *
+ * On success:
+ * 		Populates 'data' with the data
+ * 		Populates *len with actual block length
+ * 		Populates type with the block type
+ * 		Returns DSK_ERR_OK
+ *
+ * If data == NULL or *len == 0:
+ * 		Populates *len with actual block length
+ * 		Populates type with the block type
+ *		Returns DSK_ERR_OVERRUN
+ *
+ * If *len is nonzero but less than the actual block length:
+ * 		Populates 'data' with data up to *len
+ * 		Populates *len with actual block length
+ * 		Populates type with the block type
+ * 		Returns DSK_ERR_OVERRUN
+ *
+ * Block not found in directory:
+ * 		Populates 'data' with NULL
+ * 		Populates *len with 0
+ * 		Returns DSK_ERR_OK
+ *
+ * Other errors:
+ * 		DSK_ERR_BADPTR	'self' or 'len' pointer is NULL
+ * 		DSK_ERR_CORRUPT	directory entry contains invalid block ID
+ *		DSK_ERR_NOTME   file does not contain a directory
+ * 		DSK_ERR_SYSERR  I/O error
+ */
+dsk_err_t ldbs_getblock_d(PLDBS self, const char type[4],
+				void *data, size_t *len);
+
+/* ldbs_getblock_da: Get a block from the store, allocating memory for it.
+ *
+ * Enter with: self    is the handle to the blockstore
+ *	       type    is the block type, which will be searched for in the
+ *		       directory.
+ *             data    the address of a pointer; this will be allocated if
+ *                     successful
+ *             *len    the address of a size_t that will be set to block length
+ *
+ * On success:
+ * 		Returns DSK_ERR_OK
+ * 		Populates *data with pointer to a buffer containing the data.
+ * 			  The buffer will have been allocated with ldbs_alloc()
+ * 			  Caller must free it with ldbs_free()
+ * 		Populates *len with actual block length
+ *
+ * Type not found in directory:
+ * 		Returns DSK_ERR_OK
+ * 		Populates *data with NULL
+ * 		Populates *len with 0
+ *
+ * 
+ * Other errors:
+ * 		DSK_ERR_BADPTR	'self' or 'len' pointer is NULL
+ * 		DSK_ERR_CORRUPT	directory entry contains invalid block ID
+ *		DSK_ERR_NOTME   file does not contain a directory
+ * 		DSK_ERR_SYSERR  I/O error
+ */
+dsk_err_t ldbs_getblock_da(PLDBS self, const char *type,
+				void **data, size_t *len);
+
 /* ldbs_putblock_d: Write a block (as ldbs_putblock()) and also record its 
  *                  location in the track directory.
  *
@@ -512,8 +632,7 @@ dsk_err_t ldbs_trackdir_copy(PLDBS self, LDBS_TRACKDIR **result);
  * Results:
  * 		DSK_ERR_OK	Success
  * 		DSK_ERR_BADPTR	'self' pointer is NULL
- * 		DSK_ERR_NOADDR	Directory contains invalid block ID (should 
- * 		                not happen unless file is corrupt)
+ * 		DSK_ERR_CORRUPT	Directory contains invalid block ID 
  * 		DSK_ERR_SYSERR  I/O error
  */
 dsk_err_t ldbs_putblock_d(PLDBS self, const char type[4],
@@ -540,6 +659,8 @@ LDBS_TRACKDIR  *ldbs_trackdir_alloc(unsigned entries);
  */
 LDBS_TRACKHEAD *ldbs_trackhead_alloc(unsigned entries);
 
+/* Resize a track header structure */
+LDBS_TRACKHEAD *ldbs_trackhead_realloc(LDBS_TRACKHEAD *p, unsigned short entries);
 
 /* ldbs_trackdir_add: Add / update an entry in the specified track directory
  * 		      structure. 
@@ -593,8 +714,7 @@ dsk_err_t ldbs_trackdir_find(LDBS_TRACKDIR *dir, const char type[4], LDBLOCKID *
  * 				If there is not a creator, *buffer is NULL.
  * 		DSK_ERR_BADPTR	'self' or 'len' pointer is NULL
  * 		DSK_ERR_NOTME   File does not contain a track directory
- * 		DSK_ERR_NOADDR	Directory contains invalid block ID (should 
- * 		                not happen unless file is corrupt)
+ * 		DSK_ERR_CORRUPT	Directory contains invalid block ID 
  * 		DSK_ERR_SYSERR  I/O error
  */
 dsk_err_t ldbs_get_creator(PLDBS self, char **buffer);
@@ -609,13 +729,12 @@ dsk_err_t ldbs_get_creator(PLDBS self, char **buffer);
  * 		DSK_ERR_OK	Success
  * 		DSK_ERR_BADPTR	'self' is null
  * 		DSK_ERR_NOTME   File does not contain a track directory
- * 		DSK_ERR_NOADDR	Directory contains invalid block ID (should 
- * 		                not happen unless file is corrupt)
+ * 		DSK_ERR_CORRUPT	Directory contains invalid block ID 
  * 		DSK_ERR_SYSERR  I/O error
  */
 dsk_err_t ldbs_put_creator(PLDBS self, const char *creator);
 
-/* ldbs_get_creator: Get the disc image's creator record.
+/* ldbs_get_comment: Get the disc image's comment.
  *
  * Enter with: self    is the handle to the blockstore
  * 	       buffer  points to a char * pointer that will receive the data
@@ -625,11 +744,10 @@ dsk_err_t ldbs_put_creator(PLDBS self, const char *creator);
  * 				If there is a creator, *buffer holds it
  * 				as an ASCIIZ string. Caller will need to
  * 				free it with ldbs_free().
- * 				If there is not a creator, *buffer is NULL.
+ * 				If there is not a comment, *buffer is NULL.
  * 		DSK_ERR_BADPTR	'self' or 'len' pointer is NULL
  * 		DSK_ERR_NOTME   File does not contain a track directory
- * 		DSK_ERR_NOADDR	Directory contains invalid block ID (should 
- * 		                not happen unless file is corrupt)
+ * 		DSK_ERR_CORRUPT	Directory contains invalid block ID 
  * 		DSK_ERR_SYSERR  I/O error
  */
 dsk_err_t ldbs_get_comment(PLDBS self, char **buffer);
@@ -638,17 +756,16 @@ dsk_err_t ldbs_get_comment(PLDBS self, char **buffer);
 /* ldbs_put_comment: Write the disc's comment record.
  *
  * Enter with: self    is the handle to the disk image
- *             creator is the ASCII comment string, "" or NULL if none
+ *             comment is the ASCII comment string, "" or NULL if none
  *
  * Results:
  * 		DSK_ERR_OK	Success
  * 		DSK_ERR_BADPTR	'self' is null
  * 		DSK_ERR_NOTME   File does not contain a track directory
- * 		DSK_ERR_NOADDR	Directory contains invalid block ID (should 
- * 		                not happen unless file is corrupt)
+ * 		DSK_ERR_CORRUPT	Directory contains invalid block ID 
  * 		DSK_ERR_SYSERR  I/O error
  */
-dsk_err_t ldbs_put_comment(PLDBS self, const char *creator);
+dsk_err_t ldbs_put_comment(PLDBS self, const char *comment);
 
 /* ldbs_get_dpb: Get the disc image's CP/M DPB.
  *
@@ -664,8 +781,7 @@ dsk_err_t ldbs_put_comment(PLDBS self, const char *creator);
  * 				filled with zeroes.
  * 		DSK_ERR_NOTME   File does not contain a track directory
  * 		DSK_ERR_BADPTR	'self' or 'dpb' pointer is NULL
- * 		DSK_ERR_NOADDR	Directory contains invalid block ID (should 
- * 		                not happen unless file is corrupt)
+ * 		DSK_ERR_CORRUPT	Directory contains invalid block ID
  * 		DSK_ERR_SYSERR  I/O error
  */
 dsk_err_t ldbs_get_dpb(PLDBS self, LDBS_DPB *dpb);
@@ -680,11 +796,10 @@ dsk_err_t ldbs_get_dpb(PLDBS self, LDBS_DPB *dpb);
  * 		DSK_ERR_OK	Success
  * 		DSK_ERR_NOTME   File does not contain a track directory
  * 		DSK_ERR_BADPTR	'self' or 'dpb' pointer is NULL
- * 		DSK_ERR_NOADDR	Directory contains invalid block ID (should 
- * 		                not happen unless file is corrupt)
+ * 		DSK_ERR_CORRUPT	Directory contains invalid block ID 
  * 		DSK_ERR_SYSERR  I/O error
  */
-dsk_err_t ldbs_put_dpb(PLDBS self, LDBS_DPB *dpb);
+dsk_err_t ldbs_put_dpb(PLDBS self, const LDBS_DPB *dpb);
 
 /* ldbs_get_trackhead: Load the header for a track
  *
@@ -703,8 +818,7 @@ dsk_err_t ldbs_put_dpb(PLDBS self, LDBS_DPB *dpb);
  *                              be NULL.
  * 		DSK_ERR_NOTME   File does not contain a track directory
  * 		DSK_ERR_BADPTR	'self' or 'trkh' pointer is NULL
- * 		DSK_ERR_NOADDR	Directory contains invalid block ID (should 
- * 		                not happen unless file is corrupt)
+ * 		DSK_ERR_CORRUPT	Directory contains invalid block ID 
  * 		DSK_ERR_SYSERR  I/O error
  */
 dsk_err_t ldbs_get_trackhead(PLDBS self, LDBS_TRACKHEAD **trkh, 
@@ -722,11 +836,10 @@ dsk_err_t ldbs_get_trackhead(PLDBS self, LDBS_TRACKHEAD **trkh,
  * 		DSK_ERR_OK	Success
  * 		DSK_ERR_NOTME   File does not contain a track directory
  * 		DSK_ERR_BADPTR	'self' pointer is NULL
- * 		DSK_ERR_NOADDR	Directory contains invalid block ID (should 
- * 		                not happen unless file is corrupt)
+ * 		DSK_ERR_CORRUPT	Directory contains invalid block ID 
  * 		DSK_ERR_SYSERR  I/O error
  */
-dsk_err_t ldbs_put_trackhead(PLDBS self, LDBS_TRACKHEAD *trkh,
+dsk_err_t ldbs_put_trackhead(PLDBS self, const LDBS_TRACKHEAD *trkh,
 				dsk_pcyl_t cylinder, dsk_phead_t head);
 
 /* ldbs_get_geometry: Get the disc image's LibDsk geometry, if it has one.
@@ -743,8 +856,7 @@ dsk_err_t ldbs_put_trackhead(PLDBS self, LDBS_TRACKHEAD *trkh,
  * 				filled with zeroes.
  * 		DSK_ERR_NOTME   File does not contain a track directory
  * 		DSK_ERR_BADPTR	'self' or 'dg' pointer is NULL
- * 		DSK_ERR_NOADDR	Directory contains invalid block ID (should 
- * 		                not happen unless file is corrupt)
+ * 		DSK_ERR_CORRUPT	Directory contains invalid block ID 
  * 		DSK_ERR_SYSERR  I/O error
  */
 dsk_err_t ldbs_get_geometry(PLDBS self, DSK_GEOMETRY *dg);
@@ -759,12 +871,11 @@ dsk_err_t ldbs_get_geometry(PLDBS self, DSK_GEOMETRY *dg);
  * 		DSK_ERR_OK	Success
  * 		DSK_ERR_NOTME   File does not contain a track directory
  * 		DSK_ERR_BADPTR	'self' pointer is NULL
- * 		DSK_ERR_NOADDR	Directory contains invalid block ID (should 
- * 		                not happen unless file is corrupt)
+ * 		DSK_ERR_CORRUPT	Directory contains invalid block ID 
  * 		DSK_ERR_SYSERR  I/O error
  */
 
-dsk_err_t ldbs_put_geometry(PLDBS self, DSK_GEOMETRY *dg);
+dsk_err_t ldbs_put_geometry(PLDBS self, const DSK_GEOMETRY *dg);
 
 /* ldbs_max_cyl_head: Get the range of cylinders / heads covered by the 
  * disk image. These will both be 1 higher than the maximum number 
@@ -809,14 +920,16 @@ typedef dsk_err_t (*LDBS_SECTOR_CALLBACK)
 	 dsk_pcyl_t cyl,	/* Physical cylinder where sector is located */
 	 dsk_phead_t head,	/* Physical head where sector is located */
 	 LDBS_SECTOR_ENTRY *se,	/* The sector header for this sector */
+	 LDBS_TRACKHEAD *th,	/* The track header this sector lives in */
 	 void *param);		/* Parameter passed by caller */
 
 
 /* ldbs_all_tracks: Iterate over all tracks in the file, 
- * in cylinder / head order 
+ * in the specified order
  *
  * Enter with: self    is the handle to the blockstore
  * 	       cbk     will be called once for each track
+ *             sides   the order in which tracks will be processed
  *             param   is passed through to cbk
  *
  * Results:
@@ -824,26 +937,28 @@ typedef dsk_err_t (*LDBS_SECTOR_CALLBACK)
  * 		DSK_ERR_BADPTR	'self' pointer is NULL
  *              Other values as returned from the callback function.
  */
-dsk_err_t ldbs_all_tracks(PLDBS self, LDBS_TRACK_CALLBACK cbk, void *param);
+dsk_err_t ldbs_all_tracks(PLDBS self, LDBS_TRACK_CALLBACK cbk, 
+		dsk_sides_t sides, void *param);
 
 /* ldbs_all_sectors: Iterate over all sectors in the file, 
- * in cylinder / head order, and sectors in the order they are in the 
+ * in the specified order, and sectors in the order they are in the 
  * file. Note that if the sectors are interleaved (eg, held in the order
  * 1,6,2,7,3,8,4,9,5 ) that is the order they will be returned in.
  *
  * Enter with: self    is the handle to the blockstore
  * 	       cbk     will be called once for each sector
+ *             sides   the order in which tracks will be processed
  *             param   is passed through to cbk
  *
  * Results:
  * 		DSK_ERR_NOTME   File does not contain a track directory
  * 		DSK_ERR_BADPTR	'self' pointer is NULL
- * 		DSK_ERR_NOADDR	Directory contains invalid block ID (should 
- * 		                not happen unless file is corrupt)
+ * 		DSK_ERR_CORRUPT	Directory contains invalid block ID
  * 		DSK_ERR_SYSERR  I/O error
  *              Other values as returned from the callback function.
  */
-dsk_err_t ldbs_all_sectors(PLDBS self, LDBS_SECTOR_CALLBACK cbk, void *param);
+dsk_err_t ldbs_all_sectors(PLDBS self, LDBS_SECTOR_CALLBACK cbk, 
+			dsk_sides_t sides, void *param);
 
 /* ldbs_get_stats: Get statistics for a disc image. These may be useful to
  *                the calling code to determine how 'regular' the disc 
@@ -857,8 +972,7 @@ dsk_err_t ldbs_all_sectors(PLDBS self, LDBS_SECTOR_CALLBACK cbk, void *param);
  *              DSK_ERR_OK      Stats structure populated
  * 		DSK_ERR_NOTME   File does not contain a track directory
  * 		DSK_ERR_BADPTR	'self' or 'stats' pointer is NULL
- * 		DSK_ERR_NOADDR	Directory contains invalid block ID (should 
- * 		                not happen unless file is corrupt)
+ * 		DSK_ERR_CORRUPT	Directory contains invalid block ID 
  * 		DSK_ERR_SYSERR  I/O error
  */
 typedef struct ldbs_stats
@@ -878,12 +992,42 @@ typedef struct ldbs_stats
 
 dsk_err_t ldbs_get_stats(PLDBS self, LDBS_STATS *stats);
 
+/* LDBS 0.2: Ability to load a whole track in one go. 
+ * Enter with: self    is the handle to the blockstore
+ * 	       trkh    is the track header
+ *             buf     will be populated on return with the buffer
+ *		       containing the sector data
+ *             buflen  will be populated on return with the number of 
+ *	               bytes in the buffer
+ *             sector_size  if nonzero, sectors will be padded/truncated to
+ *                          that size. 
+ *
+ * Results:
+ * 		DSK_ERR_NOMEM   Cannot allocate buffer
+ * 		DSK_ERR_BADPTR	'self', 'buf' or 'buflen' pointer is NULL
+ * 		DSK_ERR_CORRUPT	track header contains an invalid block ID
+ * 		DSK_ERR_SYSERR  I/O error
+ *
+ * If track has no sectors, returns DSK_ERR_OK with *buf = NULL, *buflen = 0
+ */
+dsk_err_t ldbs_load_track(PLDBS self, const LDBS_TRACKHEAD *trkh, void **buf, 
+			size_t *buflen, size_t sector_size);
+
+/* LDBS 0.2: Ability to clone a disk image */
+dsk_err_t ldbs_clone(PLDBS source, PLDBS target);
+
+/* LDBS 0.2: Write back any memory buffers associated with this blockstore */
+dsk_err_t ldbs_sync(PLDBS self);
+
+
+
 /* Magic numbers */
 #define LDBS_HEADER_MAGIC    "LBS\1"
 #define LDBS_BLOCKHEAD_MAGIC "LDB\1"
 
 /* File types */
-#define LDBS_DSK_TYPE        "DSK\1"
+#define LDBS_DSK_TYPE        "DSK\2"
+#define LDBS_DSK_TYPE_V1     "DSK\1"
 
 /* Block types */
 #define LDBS_DIR_TYPE        "DIR\1"
@@ -893,9 +1037,9 @@ dsk_err_t ldbs_get_stats(PLDBS self, LDBS_STATS *stats);
 #define LDBS_CREATOR_TYPE    "CREA"
 
 /* Helper functions to store / retrieve 16- and 32-bit little-endian values */
-void ldbs_poke4(unsigned char *dest, long val);
-long ldbs_peek4(unsigned char *src);
+void ldbs_poke4(unsigned char *dest, unsigned long val);
+unsigned long ldbs_peek4(unsigned char *src);
 
-void ldbs_poke2(unsigned char *dest, short val);
-short ldbs_peek2(unsigned char *src);
+void ldbs_poke2(unsigned char *dest, unsigned short val);
+unsigned short ldbs_peek2(unsigned char *src);
 

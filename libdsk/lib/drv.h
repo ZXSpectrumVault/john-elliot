@@ -20,6 +20,8 @@
  *                                                                         *
  ***************************************************************************/
 
+struct ldbs;	/* To avoid requiring ldbs.h for all drivers */
+
 typedef struct dsk_option
 {
 	struct dsk_option *do_next;
@@ -55,6 +57,7 @@ typedef struct drv_class
 	size_t	dc_selfsize;	/* Size of the DSK_DRIVER subclass to be
 				 * malloced and zeroed before we enter 
 				 * dc_open */
+	struct drv_class *dc_super;	/* Pointer to base class */
 	char   *dc_drvname;	/* Short driver name, as used by eg. the 
 				 * -itype and -otype arguments in DSKTRANS. */
 	char   *dc_description;	/* Human-readable description of driver */
@@ -151,5 +154,18 @@ typedef struct drv_class
 	dsk_err_t (*dc_rtread)(DSK_DRIVER *self, const DSK_GEOMETRY *geom, 
 			void *buf, dsk_pcyl_t cylinder,  dsk_phead_t head, 
 			int reserved, size_t *bufsize);
+	/* Convert to LDBS format. */
+	dsk_err_t (*dc_to_ldbs)(DSK_DRIVER *self, struct ldbs **result, DSK_GEOMETRY *geom);
+
+	/* Convert from LDBS format. */
+	dsk_err_t (*dc_from_ldbs)(DSK_DRIVER *self, struct ldbs *source, DSK_GEOMETRY *geom);
 } DRV_CLASS;
 
+/* Returns true of drv is an instance of dc. That is, either its driver class
+ * or one of that class's superclasses matches dc */
+int drv_instanceof(DSK_DRIVER *drv, DRV_CLASS *dc);
+
+/* If a vtable entry is NULL, go back up the class's superclass chain to 
+ * see if it is implemented in a superclass. */
+#define WALK_VTABLE(xx, func) \
+	 while ( xx->dc_super && ! xx->func) xx =  xx->dc_super;

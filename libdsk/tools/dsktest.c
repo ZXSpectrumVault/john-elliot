@@ -81,7 +81,7 @@ int help(int argc, char **argv)
 
 static void report(const char *s)
 {
-	printf("%s\r", s);
+	printf("%-79.79s\r", s);
 	fflush(stdout);
 }
 
@@ -309,7 +309,7 @@ int do_test(char *outfile, char *outtyp, char *outcomp, int forcehead)
 	}	
 	if (outdr) 
 	{
-		dsk_close(&outdr);
+		e = dsk_close(&outdr);
 		CHECKERR("dsk_close")
 	}
 	printf("Checking dsk_open\n");
@@ -407,7 +407,7 @@ int do_test(char *outfile, char *outtyp, char *outcomp, int forcehead)
 	}
 	if (outdr) 
 	{
-		dsk_close(&outdr);
+		e = dsk_close(&outdr);
 		CHECKERR("dsk_close")
 	}
 	printf("\n");

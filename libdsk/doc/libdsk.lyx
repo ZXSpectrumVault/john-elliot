@@ -70,7 +70,7 @@
 \begin_body
 
 \begin_layout Title
-LibDsk v1.4.2 
+LibDsk v1.5.8
 \end_layout
 
 \begin_layout Author
@@ -187,8 +187,13 @@ JV3-format disc images, used in TRS-80 emulation.
 \end_layout
 
 \begin_layout Itemize
-Disc images created by the Sydex imaging programs Teledisk and CopyQM (read
- only in both cases).
+Compaq Quick Release Sector Transfer (QRST), used for their computers' BIOS
+ setup floppies.
+\end_layout
+
+\begin_layout Itemize
+Disc images created by the Sydex imaging programs Teledisk and CopyQM (Not
+ supported in the 16-bit Windows version).
 \end_layout
 
 \begin_layout Itemize
@@ -209,6 +214,11 @@ reference "ldwindows"
 
 \begin_layout Itemize
 The floppy drive (and hard drive partitions) under DOS.
+\end_layout
+
+\begin_layout Itemize
+LDBS: A disc image format still under development.
+ See LDBS/ldbs.html for more information.
 \end_layout
 
 \begin_layout Standard
@@ -237,11 +247,69 @@ What's new?
 \end_layout
 
 \begin_layout Standard
+
+\series bold
+Important note: 
+\series default
+If you have coded against a version of LibDsk prior to 1.5.3, bear in mind
+ that 1.5.3 is a substantial rewrite.
+ The API for your programs remains the same, but there are differences in
+ implementation that may trip you up.
+ In particular, if you are writing to a disc image file it is very important
+ to check the result of dsk_close() -- there are a lot of drivers which
+ make their changes in memory and don't try to commit them until dsk_close()
+ is called.
+\end_layout
+
+\begin_layout Standard
 For full details, see the file ChangeLog.
 \end_layout
 
 \begin_layout Itemize
-Bugfixes when accessing IMD-format disc images.
+When converting to Teledisk TD0 format, attempt to come up with a plausible
+ value for the drive type (3.5
+\begin_inset Quotes erd
+\end_inset
+
+ / 5.25
+\begin_inset Quotes erd
+\end_inset
+
+).
+\end_layout
+
+\begin_layout Itemize
+The geometry probe has been amended to try and get the correct data rate
+ on disc images that don't include this information as metadata.
+\end_layout
+
+\begin_layout Itemize
+The 'dsk' / 'edsk' driver has been rewritten to support the extensions described
+ at <http://simonowen.com/misc/extextdsk.txt>
+\end_layout
+
+\begin_layout Itemize
+The LDBS file format has been changed to support the above extensions.
+ LDBS files created by LibDsk 1.5.3 and earlier can still be used, but don't
+ support the extensions.
+\end_layout
+
+\begin_layout Itemize
+Added a new 'qrst' driver for Compaq QRST-format disc images.
+\end_layout
+
+\begin_layout Itemize
+Various bugfixes in the IMD driver.
+\end_layout
+
+\begin_layout Itemize
+Added a new 'ldbs' driver for LDBS-format disc images.
+ 
+\end_layout
+
+\begin_layout Itemize
+CopyQM and Teledisk are no longer supported in 16-bit Windows builds, because
+ 16-bit Windows does not provide the sscanf() function to DLLs.
 \end_layout
 
 \begin_layout Itemize
@@ -376,13 +444,37 @@ dd if=/dev/fd0 of=image
 \begin_inset Quotes eld
 \end_inset
 
+rawoo
+\begin_inset Quotes erd
+\end_inset
+
+ : Raw disc image, ordered so that all the tracks on side 0 come first,
+ then all the tracks on side 1.
+\end_layout
+
+\begin_layout Description
+\begin_inset Quotes eld
+\end_inset
+
+rawob
+\begin_inset Quotes erd
+\end_inset
+
+ : Raw disc image, ordered so that all the tracks on side 0 come first,
+ then all the tracks on side 1 in reverse order.
+\end_layout
+
+\begin_layout Description
+\begin_inset Quotes eld
+\end_inset
+
 logical
 \begin_inset Quotes erd
 \end_inset
 
  : Raw disc image in logical filesystem order.
- Previous versions of LibDsk could generate such images (for example, by
- using the now-deprecated 
+ Early versions of LibDsk could generate such images (for example, by using
+ the now-deprecated 
 \family typewriter
 -logical
 \family default
@@ -494,7 +586,6 @@ qm
 \end_inset
 
  : Disc images created by Sydex's CopyQM.
- Write support in this driver is experimental.
 \end_layout
 
 \begin_layout Description
@@ -506,7 +597,6 @@ tele
 \end_inset
 
  : Disc images created by Sydex's TeleDisk.
- This is a read-only driver.
 \end_layout
 
 \begin_layout Description
@@ -556,7 +646,7 @@ rcpmfs
 
 : Reverse CP/M filesystem.
  A directory is made to appear as a CP/M disk.
- This is an experimental system and should be approached with caution.
+ This is a complex system and should be approached with caution.
 \end_layout
 
 \begin_layout Description
@@ -579,6 +669,28 @@ ydsk
 \end_inset
 
 : Disc image format used by the yaze and yaze-ag CP/M emulators.
+\end_layout
+
+\begin_layout Description
+\begin_inset Quotes eld
+\end_inset
+
+qrst
+\begin_inset Quotes erd
+\end_inset
+
+: Compaq Quick Release Sector Transfer.
+\end_layout
+
+\begin_layout Description
+\begin_inset Quotes eld
+\end_inset
+
+ldbs
+\begin_inset Quotes erd
+\end_inset
+
+: LibDsk Block Store.
 \end_layout
 
 \begin_layout Section
@@ -1326,6 +1438,8 @@ dsk_creat()
 \family default
 .
  On return, the drive will have been closed and the pointer set to NULL.
+ It is important to check the result of this function; many drivers don't
+ write their changes back until dsk_close() is called.
 \end_layout
 
 \begin_layout Subsection
@@ -3194,8 +3308,6 @@ dsk_err_t dsk_get_comment(DSK_PDRIVER self, char **comment)
 
 \begin_layout Standard
 Used to get or set the comment (if any) for the current disc.
- Comments are only supported by the ApriDisk format; you can set a comment
- for other file types but it will not be saved.
  The pointer passed or returned may be NULL (meaning 
 \begin_inset Quotes eld
 \end_inset
@@ -3205,6 +3317,7 @@ No comment
 \end_inset
 
 ).
+ The string returned belongs to LibDsk; don't alter or free it.
 \end_layout
 
 \begin_layout Subsection
@@ -3471,6 +3584,32 @@ unsigned char dsk_get_psh(size_t sector_size)
 Converts a sector size into the sector shift used by the uPD765A controller
  (eg: 128 -> 0, 256 -> 1, 512 -> 2 etc.) You should not need to use this.
  The reverse operation is: sectorsize = (128 << psh).
+\end_layout
+
+\begin_layout Subsection
+dsk_copy: Copy an entire disk image
+\end_layout
+
+\begin_layout LyX-Code
+dsk_err_t dsk_copy(DSK_PDRIVER source, DSK_PDRIVER dest, DSK_GEOMETRY *geom);
+ 
+\end_layout
+
+\begin_layout Standard
+This will copy all data possible from one disk image to another.
+ It only works on disc image files; attempts to use it on floppy drives,
+ remote servers and so forth will return DSK_ERR_NOTIMPL.
+ 
+\end_layout
+
+\begin_layout Standard
+The 'geom' parameter is usually left as NULL.
+ Most disk image files contain enough metadata that their structure can
+ be determined unambiguously.
+ Raw files (formats 'raw', 'rawoo', 'rawob' and 'logical') do not.
+ If the source or the target is one of these files, the copy may fail with
+ DSK_ERR_BADFMT.
+ If so, a 'geom' parameter should be passed, describing the layout to use.
 \end_layout
 
 \begin_layout Subsection
@@ -4339,760 +4478,6 @@ FS:CP/M:
 
  options listed above to set up the correct filesystem parameters.
  Or create the .libdsk.ini by other means.
-\end_layout
-
-\begin_layout Section
-\begin_inset CommandInset label
-LatexCommand label
-name "sec:copyqm"
-
-\end_inset
-
-The CopyQM file format
-\end_layout
-
-\begin_layout Subsection
-Introduction
-\end_layout
-
-\begin_layout Standard
-This section describes the file format of files created by CopyQM.
- A lot of the information has been extracted by looking at hex-dumps of
- the files, so there might be some errors in the description.
- 
-\end_layout
-
-\begin_layout Subsection
-Header
-\end_layout
-
-\begin_layout Standard
-The CopyQM files consist of a header, an optional comment (if indicated
- by the header) followed by the tracks of the image encoded with a run length
- encoding scheme.
- The header is 133 bytes long, see table.
- It always starts with {0x43, 0x51, 0x14 }, which can be used for auto-detection
- of the image.
- All numbers have little-endian byte ordering.
- When all bytes in the header are added together in a byte, the result should
- be zero.
-\end_layout
-
-\begin_layout Standard
-\begin_inset Tabular
-<lyxtabular version="3" rows="22" columns="3">
-<features rotate="0" tabularvalignment="middle">
-<column alignment="center" valignment="top">
-<column alignment="center" valignment="top">
-<column alignment="left" valignment="top">
-<row>
-<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-Offset
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-Size
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-Comment
-\end_layout
-
-\end_inset
-</cell>
-</row>
-<row>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-0x00
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-1
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-Always 0x43 ('C')
-\end_layout
-
-\end_inset
-</cell>
-</row>
-<row>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-0x01
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-1
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-Always 0x51 ('Q')
-\end_layout
-
-\end_inset
-</cell>
-</row>
-<row>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-0x02
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-1
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-Always 0x14
-\end_layout
-
-\end_inset
-</cell>
-</row>
-<row>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-0x03
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-2
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-Sector size
-\end_layout
-
-\end_inset
-</cell>
-</row>
-<row>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-0x0b
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-2
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-Total number of sectors.
- (DOS)
-\end_layout
-
-\end_inset
-</cell>
-</row>
-<row>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-0x10
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-2
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-Number of sectors per track
-\end_layout
-
-\end_inset
-</cell>
-</row>
-<row>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-0x12
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-2?
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-Number of heads
-\end_layout
-
-\end_inset
-</cell>
-</row>
-<row>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-0x1c
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-60?
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-Description (e.g.
- 
-\begin_inset Quotes eld
-\end_inset
-
-0K Double-Sided
-\begin_inset Quotes erd
-\end_inset
-
-)
-\end_layout
-
-\end_inset
-</cell>
-</row>
-<row>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-0x58
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-1
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-Type of image.
- 0=DOS, 1=blind, 2=HFS
-\end_layout
-
-\end_inset
-</cell>
-</row>
-<row>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-0x59
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-1
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-Density.
- 0=DD, 1=HD, 2=ED
-\end_layout
-
-\end_inset
-</cell>
-</row>
-<row>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-0x5a
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-1
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-Number of tracks used on image
-\end_layout
-
-\end_inset
-</cell>
-</row>
-<row>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-0x5b
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-1
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-Total number of tracks for image
-\end_layout
-
-\end_inset
-</cell>
-</row>
-<row>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-0x5c
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-4
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-CRC for the used, unpacked tracks
-\end_layout
-
-\end_inset
-</cell>
-</row>
-<row>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-0x60
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-11
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-Volume label (DOS/HFS)
-\end_layout
-
-\end_inset
-</cell>
-</row>
-<row>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-0x6b
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-2
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-Creation time
-\end_layout
-
-\end_inset
-</cell>
-</row>
-<row>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-0x6d
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-2
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-Creation date
-\end_layout
-
-\end_inset
-</cell>
-</row>
-<row>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-0x6f
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-2
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-Length of image comment
-\end_layout
-
-\end_inset
-</cell>
-</row>
-<row>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-0x71
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-1
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-Number of first sector - 1
-\end_layout
-
-\end_inset
-</cell>
-</row>
-<row>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-0x74
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-1
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-Interleave.
- (0 for older versions of CopyQM)
-\end_layout
-
-\end_inset
-</cell>
-</row>
-<row>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-0x75
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-1
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-Skew.
- Normally 0.
- Negative number for alt.
- sides
-\end_layout
-
-\end_inset
-</cell>
-</row>
-<row>
-<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-0x84
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-1
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-Header checksum byte
-\end_layout
-
-\end_inset
-</cell>
-</row>
-</lyxtabular>
-
-\end_inset
-
-
-\end_layout
-
-\begin_layout Subsection
-CRC
-\end_layout
-
-\begin_layout Standard
-The CRC is calculated for the unpacked data for all tracks that are used
- in the image.
- The CRC value is initialized with 0 and then updated using the CRC 32 polynomia
-l 0x104C11DB7, bit reverse algorithm.
- Due to a feature in CopyQM (8 bit register as an index into a 1024 byte
- table) all bytes must have their top two bits removed before added to the
- CRC.
-\end_layout
-
-\begin_layout Subsection
-Image comment
-\end_layout
-
-\begin_layout Standard
-The image comment follows the header.
- It has a variable size found in the header.
- The image comment can contain 
-\backslash
-0-bytes.
-\end_layout
-
-\begin_layout Subsection
-Image data
-\end_layout
-
-\begin_layout Standard
-The image data is run length encoded.
- Each run is preceded by a 16-bit length.
- If the length is negative, the byte after the length is repeated 
-\series bold
--length
-\series default
- times.
- If the length is positive, it is followed by 
-\series bold
-length
-\series default
- bytes of unencoded data.
- It seems like a new run of repeating or differing data is always started
- at each new track.
- Older versions of CopyQM always alternates between runs of differing data
- and repeating data, even if the length of one of them is zero.
 \end_layout
 
 \begin_layout Section
@@ -6541,6 +5926,28 @@ The interface between LibDsk and its drivers is defined by the DRV_CLASS
  various files.
 \end_layout
 
+\begin_layout Standard
+There are two methods of writing a driver.
+ One is to provide all the functions yourself.
+ The other is to write a driver using LDBS as its internal storage format;
+ in that case, you need only provide dc_open(), dc_creat() and dc_close().
+ The latter technique is particularly suited to formats that can't be rewritten
+ in place (so you have to parse the whole file on open and rewrite the whole
+ file on close anyway), and is described in section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:LDBSdrivers"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+Assuming you want to create a full driver that rewrites in-place, proceed
+ as follows:
+\end_layout
+
 \begin_layout Subsection
 The driver header 
 \end_layout
@@ -6634,7 +6041,15 @@ DRV_CLASS dc_posix =
 \end_layout
 
 \begin_layout LyX-Code
-    "raw", 
+    NULL,
+\end_layout
+
+\begin_layout LyX-Code
+    "raw
+\backslash
+0rawalt
+\backslash
+0", 
 \end_layout
 
 \begin_layout LyX-Code
@@ -6658,7 +6073,7 @@ DRV_CLASS dc_posix =
 \end_layout
 
 \begin_layout Standard
-The first three entries in this structure are: 
+The first four entries in this structure are: 
 \end_layout
 
 \begin_layout Itemize
@@ -6666,7 +6081,13 @@ The size of your driver's instance data;
 \end_layout
 
 \begin_layout Itemize
-The driver's name (as passed to 
+The driver's superclass.
+ This should be left as NULL.
+\end_layout
+
+\begin_layout Itemize
+Possible names for the driver (each will be matched against the name passed
+ to 
 \family typewriter
 dsk_open()
 \family default
@@ -6674,7 +6095,10 @@ dsk_open()
 \family typewriter
 dsk_creat()
 \family default
- ) 
+ ).
+ Each possible name, including the last, must be followed by 
+\backslash
+0.
 \end_layout
 
 \begin_layout Itemize
@@ -6976,9 +6400,9 @@ Get the disc geometry.
 
 \begin_layout Enumerate
 Your disc image does not allow a caller to use an arbitrary disc geometry.
- The two drivers which currently do this are the Win32 one, because Windows
+ The drivers which currently do this are the Win32 one, because Windows
  NT decides on the geometry itself and doesn't let programs change it; and
- the MYZ80 one, which has a single fixed geometry.
+ the MYZ80 and SIMH ones, which have a single fixed geometry.
 \end_layout
 
 \begin_layout Enumerate
@@ -6993,6 +6417,7 @@ You want to do an extended geometry probe including a call to the default
  one.
  The internal function dsk_defgetgeom() has been provided for this; it's
  the same as dsk_getgeom() but always uses the standard probe.
+ The LDBS driver does this.
 \end_layout
 
 \begin_layout Standard
@@ -7010,7 +6435,7 @@ dsk_err_t (*dc_secid)(DSK_PDRIVER self, const DSK_GEOMETRY *geom, dsk_pcyl_t
 \end_layout
 
 \begin_layout Standard
-Read the ID of a random sector on a certain track/head, and put it in 
+Read the ID of the next sector on a certain track/head, and put it in 
 \begin_inset Quotes eld
 \end_inset
 
@@ -7019,9 +6444,11 @@ result
 \end_inset
 
 .
- This function is primarily used to test for discs in CPC format (which
- have oddly-numbered physical sectors); if the disc image can't support
- this (eg: the 
+ Ideally you would simulate a rotating disc, so that the IDs are returned
+ in the same order that they were written when the disc was formatted.
+ This function is also used to test for discs in CPC format (which have
+ oddly-numbered physical sectors); if the disc image can't support this
+ (eg: the 
 \begin_inset Quotes eld
 \end_inset
 
@@ -7030,6 +6457,7 @@ raw
 \end_inset
 
  or Win32 drivers) then leave the function pointer NULL.
+ 
 \end_layout
 
 \begin_layout Subsubsection
@@ -7072,8 +6500,9 @@ Read / write sector whose ID may not match its position on disc, or which
  is marked as deleted.
  Only implement this if your disc image emulates sector IDs or your floppy
  driver exposes this level of functionality.
- Currently it is implemented in the Linux, NTWDM, CPCEMU, TeleDisk, IMD
- and JV3 drivers.
+ Currently it is implemented in the Linux, NTWDM and CPCEMU drivers, plus
+ those using LDBS as their internal storage (LDBS itself, DSK, EDSK, ApriDisk,
+ CFI, JV3, CopyQM, QRST, Teledisk).
 \end_layout
 
 \begin_layout Subsubsection
@@ -7246,6 +6675,662 @@ dsk_err_t (*dc_rtread)(DSK_DRIVER *self, const DSK_GEOMETRY *geom, void
 \begin_layout Standard
 For future expansion.
  Leave this function pointer as NULL.
+\end_layout
+
+\begin_layout Subsubsection
+dc_to_ldbs
+\end_layout
+
+\begin_layout LyX-Code
+dsk_err_t (*dc_to_ldbs)(DSK_DRIVER *self, struct ldbs **result, DSK_GEOMETRY
+ *geom);
+\end_layout
+
+\begin_layout Standard
+Export the current disk image file as an LDBS blockstore.
+ If this driver is not for a disk image file, there's no need to implement
+ this function.
+\end_layout
+
+\begin_layout Subsubsection
+dc_from_ldbs
+\end_layout
+
+\begin_layout LyX-Code
+dsk_err_t (*dc_from_ldbs)(DSK_DRIVER *self, struct ldbs *source, DSK_GEOMETRY
+ *geom);
+\end_layout
+
+\begin_layout Standard
+Replace the entire contents of this disk image with the provided LDBS blockstore.
+ If this driver is not for a disk image file, there's no need to implement
+ this function.
+\end_layout
+
+\begin_layout Section
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:LDBSdrivers"
+
+\end_inset
+
+Writing new drivers (derived from LDBS)
+\end_layout
+
+\begin_layout Standard
+The technique when creating an LDBS-based driver is similar to a standalone
+ driver, with a few important differences.
+ A good example file to look at for this is the QRST driver.
+\end_layout
+
+\begin_layout Standard
+An LDBS-based driver will need to make extensive use of the functions in
+ 
+\family typewriter
+lib/ldbs.h
+\family default
+.
+ Currently the best documentation for these functions is in the comments
+ of 
+\family typewriter
+ldbs.h
+\family default
+ itself.
+ 
+\end_layout
+
+\begin_layout Subsection
+The driver header 
+\end_layout
+
+\begin_layout Standard
+As for a standalone driver, create a header, basing it on (for example)
+ 
+\family typewriter
+lib/drvqrst.h
+\family default
+.
+ The first thing in the header (after the LGPL banner) is: 
+\end_layout
+
+\begin_layout LyX-Code
+typedef struct 
+\end_layout
+
+\begin_layout LyX-Code
+{ 
+\end_layout
+
+\begin_layout LyX-Code
+    LDBSDISK_DSK_DRIVER qrst_super;
+\end_layout
+
+\begin_layout LyX-Code
+    char *qrst_filename;
+\end_layout
+
+\begin_layout LyX-Code
+    /* The following variables hold state when saving, and are only
+\end_layout
+
+\begin_layout LyX-Code
+     * used within qrst_close() */         
+\end_layout
+
+\begin_layout LyX-Code
+    size_t qrst_tracklen;         
+\end_layout
+
+\begin_layout LyX-Code
+    unsigned long qrst_bias;         
+\end_layout
+
+\begin_layout LyX-Code
+    unsigned long qrst_checksum; 
+\end_layout
+
+\begin_layout LyX-Code
+} QRST_DSK_DRIVER;
+\end_layout
+
+\begin_layout Standard
+The major difference here is that the first member of the structure is a
+ 
+\family typewriter
+LDBSDISK_DSK_DRIVER
+\family default
+ rather than a plain 
+\family typewriter
+DSK_DRIVER
+\family default
+.
+\end_layout
+
+\begin_layout Subsection
+The driver source file
+\end_layout
+
+\begin_layout Standard
+Secondly, create a .c file for your driver.
+ Again, it's probably easiest to base this on 
+\family typewriter
+lib/drvqrst.
+\family default
+c.
+ At the start of this file, create a DRV_CLASS structure, such as:
+\end_layout
+
+\begin_layout LyX-Code
+DRV_CLASS dc_qrst = 
+\end_layout
+
+\begin_layout LyX-Code
+{ 
+\end_layout
+
+\begin_layout LyX-Code
+    sizeof(QRST_DSK_DRIVER), 
+\end_layout
+
+\begin_layout LyX-Code
+    &dc_ldbsdisk,
+\end_layout
+
+\begin_layout LyX-Code
+    "QRST", 
+\end_layout
+
+\begin_layout LyX-Code
+    "Quick Release Sector Transfer", 
+\end_layout
+
+\begin_layout LyX-Code
+    qrst_open, 
+\end_layout
+
+\begin_layout LyX-Code
+    qrst_creat, 
+\end_layout
+
+\begin_layout LyX-Code
+    qrst_close 
+\end_layout
+
+\begin_layout LyX-Code
+}; 
+\end_layout
+
+\begin_layout Standard
+The first four entries in this structure are: 
+\end_layout
+
+\begin_layout Itemize
+The size of your driver's instance data; 
+\end_layout
+
+\begin_layout Itemize
+The driver's superclass.
+ This needs to be set to 
+\family typewriter
+&dc_ldbsdisk
+\family default
+, rather than NULL as it would be in a standalone driver.
+\end_layout
+
+\begin_layout Itemize
+The driver's name (as passed to 
+\family typewriter
+dsk_open()
+\family default
+ / 
+\family typewriter
+dsk_creat()
+\family default
+ ) 
+\end_layout
+
+\begin_layout Itemize
+The driver's description string.
+ 
+\end_layout
+
+\begin_layout Standard
+The remainder of the structure is composed of function pointers, but you
+ should only need to provide the first three pointers (*_open, *_creat and
+ *_close).
+\end_layout
+
+\begin_layout Standard
+Once you have created this structure, edit: 
+\end_layout
+
+\begin_layout Itemize
+drivers.h.
+ Add a declaration for your DRV_CLASS structure, such as 
+\end_layout
+
+\begin_layout LyX-Code
+extern DRV_CLASS dc_myformat; 
+\end_layout
+
+\begin_layout Itemize
+drivers.inc.
+ Insert a reference to your structure (eg: 
+\begin_inset Quotes eld
+\end_inset
+
+
+\family typewriter
+&dc_myformat,
+\family default
+
+\begin_inset Quotes erd
+\end_inset
+
+) in the list.
+ Note that order is important; the comments in drivers.inc describe how to
+ decide where things go.
+\end_layout
+
+\begin_layout Standard
+Edit 
+\begin_inset Quotes eld
+\end_inset
+
+lib/Makefile.am
+\begin_inset Quotes erd
+\end_inset
+
+.
+ Near the top of this file is a list of drivers and their header files;
+ just add your .c and .h to this list.
+\end_layout
+
+\begin_layout Standard
+If your driver depends on certain system headers (as all the floppy drivers
+ do) then you will need to add checks for these to 
+\begin_inset Quotes eld
+\end_inset
+
+configure.in
+\begin_inset Quotes erd
+\end_inset
+
+ and 
+\begin_inset Quotes eld
+\end_inset
+
+lib/drvi.h
+\begin_inset Quotes erd
+\end_inset
+
+; then run 
+\begin_inset Quotes eld
+\end_inset
+
+autoconf
+\begin_inset Quotes erd
+\end_inset
+
+ to rebuild the configure script.
+\end_layout
+
+\begin_layout Standard
+The function pointers in the DRV_CLASS structure are described in drv.h.
+ The first parameter to all of them (
+\begin_inset Quotes eld
+\end_inset
+
+self
+\begin_inset Quotes erd
+\end_inset
+
+) is declared as a pointer to DSK_DRIVER.
+ In fact, it is a pointer to the first member of your instance data structure.
+ Just cast the pointer to the correct type:
+\end_layout
+
+\begin_layout LyX-Code
+/* Sanity check: Is this meant for our driver? */ 
+\end_layout
+
+\begin_layout LyX-Code
+if (self->dr_class != &dc_qrst) return DSK_ERR_BADPTR; 
+\end_layout
+
+\begin_layout LyX-Code
+qrstself = (QRST_DSK_DRIVER *)self;
+\end_layout
+
+\begin_layout Standard
+and you're in business.
+\end_layout
+
+\begin_layout Subsection
+Driver functions
+\end_layout
+
+\begin_layout Subsubsection
+dc_open
+\end_layout
+
+\begin_layout LyX-Code
+dsk_err_t (*dc_open )(DSK_PDRIVER self, const char *filename)
+\end_layout
+
+\begin_layout Standard
+Open a disc image and load it into an LDBS blockstore.
+ Entered with: 
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Quotes eld
+\end_inset
+
+self
+\begin_inset Quotes erd
+\end_inset
+
+ points to the instance data for this disc image (see above); it will have
+ been initialised to zeroes using memset().
+ 
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Quotes eld
+\end_inset
+
+filename
+\begin_inset Quotes erd
+\end_inset
+
+ is the name of the image to open.
+ 
+\end_layout
+
+\begin_layout Standard
+Return: 
+\end_layout
+
+\begin_layout Description
+DSK_ERR_OK: The driver has successfully opened the image.
+ 
+\end_layout
+
+\begin_layout Description
+DSK_ERR_NOTME: The driver cannot handle this image.
+ Other drivers should be allowed to try to use it.
+ 
+\end_layout
+
+\begin_layout Description
+other: The driver cannot handle this image.
+ No other drivers should be tried (eg: the image was recognised by this
+ driver, but is corrupt).
+\end_layout
+
+\begin_layout Standard
+Once you have established that your driver can open and parse the image
+ it was passed, it should initialise the LDBS blockstore in the superclass,
+ using 
+\family typewriter
+ldbs_new()
+\family default
+:
+\end_layout
+
+\begin_layout LyX-Code
+dsk_err_t ldbs_new(PLDBS *result, const char *filename, const char type[4]);
+\end_layout
+
+\begin_layout Standard
+In this case, the first parameter should point to the blockstore in the
+ superclass.
+ The other two should be NULL and LDBS_DSK_TYPE respectively:
+\end_layout
+
+\begin_layout LyX-Code
+ldbs_new(&qrself->qrst_super.ld_store, NULL, LDBS_DSK_TYPE);
+\end_layout
+
+\begin_layout Standard
+You then need to read in the entire disc image and save it in the blockstore
+ using LDBS functions:
+\end_layout
+
+\begin_layout Itemize
+For each track, use 
+\family typewriter
+ldbs_trackhead_alloc()
+\family default
+ to create a track header structure.
+\end_layout
+
+\begin_layout Itemize
+For each sector in that track, use 
+\family typewriter
+ldbs_encode_secid()
+\family default
+ to generate its block ID, then 
+\family typewriter
+ldbs_putblock()
+\family default
+ to add it to the store.
+ Record the block ID in that sector's entry in the track header.
+\end_layout
+
+\begin_layout Itemize
+Once all the sectors have been added, use 
+\family typewriter
+ldbs_put_trackhead()
+\family default
+ to add the completed track header.
+ 
+\end_layout
+
+\begin_layout Standard
+If the file has a comment, record it using 
+\family typewriter
+ldbs_put_comment() 
+\family default
+rather than
+\family typewriter
+ dsk_set_comment().
+
+\family default
+ If your disc image has a fixed geometry you should convert it to a 
+\family typewriter
+DSK_GEOMETRY
+\family default
+ structure and record it with 
+\family typewriter
+ldbs_put_geometry()
+\family default
+.
+ A few disc image formats contain a CP/M Disk Parameter block; if yours
+ is one you should add that with 
+\family typewriter
+ldbs_put_dpb()
+\family default
+.
+\end_layout
+
+\begin_layout Standard
+Once the blockstore is completely populated, end with 
+\end_layout
+
+\begin_layout LyX-Code
+return ldbsdisk_attach(self); 
+\end_layout
+
+\begin_layout Subsubsection
+dc_creat
+\end_layout
+
+\begin_layout LyX-Code
+dsk_err_t (*dc_creat)(DSK_PDRIVER self, const char *filename)
+\end_layout
+
+\begin_layout Standard
+This should check that the target file can be created, and keep hold of
+ either its filename or file handle.
+ It should then behave as 'open', except that you don't do anything with
+ the blockstore created by 
+\family typewriter
+ldbs_new()
+\family default
+ before calling 
+\family typewriter
+ldbsdisk_attach().
+
+\family default
+ 
+\end_layout
+
+\begin_layout Subsubsection
+dc_close
+\end_layout
+
+\begin_layout LyX-Code
+dsk_err_t (*dc_close)(DSK_PDRIVER self)
+\end_layout
+
+\begin_layout Standard
+Close the disc image.
+ If it has been changed, you need to write out the contents of the blockstore
+ to a new file, overwriting anything that was there already.
+\end_layout
+
+\begin_layout Standard
+The first thing to do (after basic sanity checks) is to call 
+\family typewriter
+ldbsdisk_detach()
+\family default
+ to ensure all pending buffers have been written to the blockstore.
+ The next is to check if any changes need to be written back; if 
+\family typewriter
+self->dr_dirty
+\family default
+ is zero, there's nothing to write back, so you can just close the blockstore
+ and return.
+\end_layout
+
+\begin_layout LyX-Code
+return ldbs_close(&qrself->qrst_super.ld_store);
+\end_layout
+
+\begin_layout Standard
+Assuming that changes do need to be written back, you now need to reverse
+ the conversion done by your 'open' method, and write the blockstore out
+ in the your disc image format.
+ Some functions which may be helpful here are:
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+ldbs_max_cyl_head()
+\family default
+ will return the number of cylinders and heads necessary to contain this
+ disc image.
+ For example, a 720k DOS disc image would return 80 cylinders, 2 heads.
+ 
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+ldbs_get_stats()
+\family default
+ will analyse the blockstore and return the maximum and minimum values for
+ cylinder, head, sector, sectors per track and sector size.
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+ldbs_all_tracks()
+\family default
+ will iterate over all tracks in the blockstore and, for each track, call
+ a callback function you provide.
+ It can return the tracks in SIDES_ALT, SIDES_OUTOUT or SIDES_OUTBACK order;
+ if you want to process them in a different order you'll need to write your
+ own iteration function.
+ In that case, use 
+\family typewriter
+ldbs_max_cyl_head()
+\family default
+ to get the range, and then 
+\family typewriter
+ldbs_get_trackhead()
+\family default
+ for each track you want to process.
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+ldbs_all_sectors()
+\family default
+ works on the same principle, but the callback is run for each sector in
+ each track.
+ Note that sectors will be returned in the order they are listed in the
+ track header, which may well be different from their numerical order.
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+ldbs_getblock()
+\family default
+ will load a sector using the block ID given for it in the track header.
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+ldbs_get_comment()
+\family default
+ will return the comment (if any).
+ Similarly 
+\family typewriter
+ldbs_get_dpb()
+\family default
+ retrieves the CP/M DPB (if one was written) and 
+\family typewriter
+ldbs_get_geom()
+\family default
+ returns the DSK_GEOMETRY last used to format a track.
+ Note that the geometry recorded is advisory; if it conflicts with the values
+ returned by 
+\family typewriter
+ldbs_get_stats()
+\family default
+, the values returned by 
+\family typewriter
+ldbs_get_stats()
+\family default
+ are going to be the accurate ones.
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+ldbs_load_track()
+\family default
+ will return a memory buffer containing the data from all the sectors in
+ a particular track, in sector ID order.
+\end_layout
+
+\begin_layout Standard
+
+\family typewriter
+*_close()
+\family default
+ will be the last call your driver will receive for a given disc image file,
+ and it should free any resources it is using.
+ Whether it returns DSK_ERR_OK or an error, this disc image will not be
+ used again.
 \end_layout
 
 \begin_layout Section
@@ -7945,6 +8030,991 @@ In general, this call will wrap the input in whatever framing bytes are
 
 \begin_layout Section
 \start_of_appendix
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:copyqm"
+
+\end_inset
+
+The CopyQM File Format
+\end_layout
+
+\begin_layout Subsection
+Introduction
+\end_layout
+
+\begin_layout Standard
+This section describes the file format of files created by CopyQM.
+ A lot of the information has been extracted by looking at hex-dumps of
+ the files, so there might be some errors in the description.
+ 
+\end_layout
+
+\begin_layout Subsection
+Header
+\end_layout
+
+\begin_layout Standard
+The CopyQM files consist of a header, an optional comment (if indicated
+ by the header) followed by the tracks of the image encoded with a run length
+ encoding scheme.
+ The header is 133 bytes long, see table.
+ It always starts with {0x43, 0x51, 0x14 }, which can be used for auto-detection
+ of the image.
+ All numbers have little-endian byte ordering.
+ When all bytes in the header are added together in a byte, the result should
+ be zero.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Tabular
+<lyxtabular version="3" rows="30" columns="3">
+<features rotate="0" tabularvalignment="middle">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<column alignment="left" valignment="top">
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Offset
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Size
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Comment
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0x00
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Always 0x43 ('C')
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0x01
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Always 0x51 ('Q')
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0x02
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Always 0x14
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0x03
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+2
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Sector size (from here to 0x1B inclusive is a DOS BPB)
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0x05
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Sectors per cluster
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0x06
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+2
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Number of reserved sectors
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0x08
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+FAT copies
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0x09
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+2
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Number of root directory entries
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0x0b
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+2
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Total number of sectors
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0x0d
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Media byte
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0x0e
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+2
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Number of sectors per FAT
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0x10
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+2
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Number of sectors per track
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0x12
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+2
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Number of heads
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0x14
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+4
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Number of hidden sectors
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0x18
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+4
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Total sectors if > 65535 (should always be 0 on a floppy image)
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0x1c
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+60?
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Description of media (e.g.
+ 
+\begin_inset Quotes eld
+\end_inset
+
+720K Double-Sided
+\begin_inset Quotes erd
+\end_inset
+
+)
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0x58
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Type of image.
+ 0=DOS, 1=blind, 2=HFS
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0x59
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Density.
+ 0=DD, 1=HD, 2=ED
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0x5a
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Number of tracks used on image
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0x5b
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Total number of tracks for image
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0x5c
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+4
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+CRC for the used, unpacked tracks
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0x60
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+11
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Volume label (DOS/HFS)
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0x6b
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+2
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Creation time
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0x6d
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+2
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Creation date
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0x6f
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+2
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Length of image comment
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0x71
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Number of first sector - 1
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0x74
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Interleave.
+ (0 for older versions of CopyQM)
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0x75
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Skew.
+ Normally 0.
+ Negative number for alt.
+ sides
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+0x84
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Header checksum byte
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+CRC
+\end_layout
+
+\begin_layout Standard
+The CRC is calculated for the unpacked data for all tracks that are used
+ in the image.
+ The CRC value is initialized with 0 and then updated using the CRC 32 polynomia
+l 0x104C11DB7, bit reverse algorithm.
+ Due to a feature in CopyQM (8 bit register as an index into a 1024 byte
+ table) all bytes must have their top two bits removed before added to the
+ CRC.
+\end_layout
+
+\begin_layout Subsection
+Image comment
+\end_layout
+
+\begin_layout Standard
+The image comment follows the header.
+ It has a variable size found in the header.
+ The image comment can contain 
+\backslash
+0-bytes.
+\end_layout
+
+\begin_layout Subsection
+Image data
+\end_layout
+
+\begin_layout Standard
+The image data is run length encoded.
+ Each run is preceded by a 16-bit length.
+ If the length is negative, the byte after the length is repeated 
+\series bold
+-length
+\series default
+ times.
+ If the length is positive, it is followed by 
+\series bold
+length
+\series default
+ bytes of unencoded data.
+ It seems like a new run of repeating or differing data is always started
+ at each new track.
+ Older versions of CopyQM always alternates between runs of differing data
+ and repeating data, even if the length of one of them is zero.
+\end_layout
+
+\begin_layout Section
 \begin_inset CommandInset label
 LatexCommand label
 name "sec: dqk"

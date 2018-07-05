@@ -22,7 +22,13 @@
 
 /* Access functions for CPCEMU discs */
 
+/* [1.5.4] The Offset-Info extension makes it impractical to rewrite DSK
+ *        files in place. Consequently, this driver has been rewritten in 
+ *        the same convert-to-LDBS idiom as Teledisk, CopyQM etc.
+ */
+
 #include "drvi.h"
+#include "drvldbs.h"
 #include "drvcpcem.h"
 
 
@@ -36,53 +42,23 @@
 DRV_CLASS dc_cpcemu = 
 {
 	sizeof(CPCEMU_DSK_DRIVER),
-	"dsk",
+	&dc_ldbsdisk,		/* superclass */
+	"dsk\0",
 	"CPCEMU .DSK driver",
 	cpcemu_open,	/* open */
 	cpcemu_creat,   /* create new */
 	cpcemu_close,   /* close */
-	cpcemu_read,	/* read sector, working from physical address */
-	cpcemu_write,   /* write sector, working from physical address */
-	cpcemu_format,  /* format track, physical */
-	NULL,	  	/* get geometry */
-	cpcemu_secid,   /* logical sector ID */
-	cpcemu_xseek,   /* seek to track */
-	cpcemu_status,  /* get drive status */
-	cpcemu_xread,   /* read sector */
-	cpcemu_xwrite,  /* write sector */ 
-	NULL,		/* Read a track (8272 READ TRACK command) */
-	NULL,		/* Read a track: Version where the sector ID doesn't necessarily match */
-	cpcemu_option_enum,	/* List driver-specific options */
-	cpcemu_option_set,	/* Set a driver-specific option */
-	cpcemu_option_get,	/* Get a driver-specific option */
-	NULL/*cpcemu_trackids*/,/* Read headers for an entire track at once */
-	NULL			/* Read raw track, including sector headers */
 };
 
 DRV_CLASS dc_cpcext = 
 {
 	sizeof(CPCEMU_DSK_DRIVER),
-	"edsk",
+	&dc_ldbsdisk,	/* superclass */
+	"edsk\0cpcemu\0",
 	"Extended .DSK driver",
 	cpcext_open,	/* open */
 	cpcext_creat,   /* create new */
 	cpcemu_close,   /* close */
-	cpcemu_read,	/* read sector, working from physical address */
-	cpcemu_write,   /* write sector, working from physical address */
-	cpcemu_format,  /* format track, physical */
-	NULL,		/* get geometry */
-	cpcemu_secid,   /* logical sector ID */
-	cpcemu_xseek,   /* seek to track */
-	cpcemu_status,  /* get drive status */
-	cpcemu_xread,   /* read sector */
-	cpcemu_xwrite,  /* write sector */ 
-	NULL,			/* Read a track (8272 READ TRACK command) */
-	NULL,			/* Read a track: Version where the sector ID doesn't necessarily match */
-	cpcemu_option_enum,	/* List driver-specific options */
-	cpcemu_option_set,	/* Set a driver-specific option */
-	cpcemu_option_get,	/* Get a driver-specific option */
-	NULL/*cpcemu_trackids*/,/* Read headers for an entire track at once */
-	NULL			/* Read raw track, including sector headers */
 };			  
 
 
@@ -115,11 +91,188 @@ dsk_err_t cpcext_creat(DSK_DRIVER *self, const char *filename)
 #define DC_CHECK(self) if (self->dr_class != &dc_cpcemu && self->dr_class != &dc_cpcext) return DSK_ERR_BADPTR;
 
 
+
+
+/* Migrate a track from CPCEMU .DSK to LDBS format. 
+ *
+ * For simplicity's sake, read the whole track into memory in one go, 
+ * rather than one sector at a time.
+ */
+static dsk_err_t track_to_ldbs(CPCEMU_DSK_DRIVER *cpc_self, 
+	dsk_pcyl_t cyl, dsk_phead_t head, unsigned char *dskhead, 
+	unsigned short **poffptr)
+{
+	dsk_ltrack_t track = (cyl * dskhead[0x31]) + head;
+	unsigned char *dsk_track;	/* DSK track record */
+	LDBS_TRACKHEAD *ldbs_track;	/* LDBS track header */
+	int sector;
+	int source;
+	size_t dsk_trklen;	/* Length of DSK track record */
+	size_t dsk_seclen;	/* Length of sector record */
+	size_t dsk_secsize;	/* Theoretical sector size */
+	unsigned char same;
+	char block_id[4];
+	int n;
+	dsk_err_t err;
+
+	/* First: work out the length of the track. In a non-extended DSK
+	 * this is a constant in the header. */
+	if (dskhead[0] != 'E')
+	{
+		dsk_trklen = ldbs_peek2(dskhead + 0x32);
+	}
+	else	/* In an extended DSK it is held per track */
+	{
+		dsk_trklen = dskhead[0x34 + track] * 256;
+	}
+	/* Allocate and load the track */
+	dsk_track = dsk_malloc(dsk_trklen);
+	if (!dsk_track) return DSK_ERR_NOMEM;
+
+	memset(dsk_track, 0, dsk_trklen);
+
+	if (fread(dsk_track, 1, dsk_trklen, cpc_self->cpc_fp) < dsk_trklen)
+	{
+		dsk_free(dsk_track);
+		return DSK_ERR_SYSERR;
+	}
+	/* Check that the track header has the correct magic */
+	if (memcmp(dsk_track, "Track-Info\r\n", 12))
+	{
+		dsk_free(dsk_track);
+#ifndef HAVE_WINDOWS_H
+		fprintf(stderr, "Track-Info block %d not found\n", track);
+#endif
+		return DSK_ERR_NOTME;
+	}
+	/* Create an LDBS track header */
+	ldbs_track = ldbs_trackhead_alloc(dsk_track[0x15]);
+	if (!ldbs_track)
+	{
+		dsk_free(dsk_track);
+		return DSK_ERR_NOMEM;
+	}
+	/* Generate the fixed part of the header */
+	ldbs_track->count    = dsk_track[0x15];	/* Count of sectors */
+	ldbs_track->datarate = dsk_track[0x12];	/* Data rate */
+	ldbs_track->recmode  = dsk_track[0x13];	/* Recording mode */
+	ldbs_track->gap3     = dsk_track[0x16];	/* GAP#3 length */
+	ldbs_track->filler   = dsk_track[0x17];	/* Format filler */
+
+	if (poffptr[0])
+	{
+		ldbs_track->total_len = poffptr[0][0];
+		++poffptr[0];
+	}
+
+	source = 256;
+	/* In theory a DSK could exist with more than 29 sectors, and 
+	 * in that case Track-info would be longer than 256 bytes. */
+	if (dsk_track[0x15] > 29)
+	{
+		source += 8 * (dsk_track[0x15] - 29);
+		/* (Rounded up to a multiple of 256 bytes) */
+		source = (source + 255) & (~255);
+	}
+	err = DSK_ERR_OK;
+	/* Now migrate each sector, one by one */
+	for (sector = 0; sector < dsk_track[0x15]; sector++)
+	{
+		LDBS_SECTOR_ENTRY *cursec = &ldbs_track->sector[sector];
+
+		cursec->id_cyl  = dsk_track[0x18 + sector*8]; /* ID: Cyl */
+		cursec->id_head = dsk_track[0x19 + sector*8]; /* ID: Head */
+		cursec->id_sec  = dsk_track[0x1A + sector*8]; /* ID: Sector */
+		cursec->id_psh  = dsk_track[0x1B + sector*8]; /* ID: Sector size */
+		cursec->st1     = dsk_track[0x1C + sector*8]; /* ST1 flags */
+		cursec->st2     = dsk_track[0x1D + sector*8]; /* ST2 flags */
+		cursec->copies  = 1;			      /* Copies */
+		cursec->filler  = dsk_track[0x17]; 	      /* Filler byte */
+
+		/* Size of theoretical sector record */
+		dsk_secsize = (128 << dsk_track[0x1B + sector * 8]);
+	
+		/* Size of actual on-disk record */
+		if (dskhead[0] != 'E') 
+		{
+			dsk_seclen = dsk_secsize;
+		}
+		else	
+		{
+			dsk_seclen = ldbs_peek2(dsk_track + 0x1E + sector*8);
+			if (poffptr[0])
+			{
+				cursec->offset = poffptr[0][0];
+				++poffptr[0];
+			}
+		}
+
+		/* See if sector is all one byte; if so, don't copy it */
+		same = dsk_track[source];
+		for (n = 1; n < (int)dsk_seclen; n++) 
+		{
+			if (dsk_track[n+source] != same) break;
+		}
+		if (n >= (int)dsk_seclen)	/* Sector is all one byte */
+		{
+			cursec->copies = 0;	/* Copies */
+			cursec->filler = same;	/* Filler */
+		}
+		else
+		{
+			cursec->trail  = dsk_seclen % dsk_secsize;
+			cursec->copies = dsk_seclen / dsk_secsize;
+			if (cursec->copies < 1)
+				cursec->copies = 1; /* Copies */
+		}
+	
+		/* If sector is blank (no copies) don't need to write it */
+		if (!cursec->copies) 
+		{
+			source += dsk_seclen;
+			continue;
+		}
+		/* Migrate the sector. Record its address. */
+		ldbs_encode_secid(block_id, cyl, head, cursec->id_sec);
+		cursec->blockid = LDBLOCKID_NULL;
+
+
+		err = ldbs_putblock(cpc_self->cpc_super.ld_store, 
+				&cursec->blockid, block_id,
+				dsk_track + source, dsk_seclen);
+		if (err)
+		{
+			ldbs_free(ldbs_track);
+			free(dsk_track);
+			return err;
+		}
+		source += dsk_seclen;
+	}
+	/* Finally write out the track header */
+	err = ldbs_put_trackhead(cpc_self->cpc_super.ld_store, ldbs_track, 
+				cyl, head);
+	ldbs_free(ldbs_track);
+	free(dsk_track);
+	return err;
+}
+
+
+
+
 /* Open DSK image, checking for the magic number */
 static dsk_err_t cpc_open(DSK_DRIVER *self, const char *filename, int extended)
 {
 	CPCEMU_DSK_DRIVER *cpc_self;
-	int n;
+	dsk_err_t err;
+	unsigned char dskhead[256];
+	unsigned char trkhead[256];
+	long filepos = 0x100;
+	dsk_pcyl_t c;
+	dsk_phead_t h;
+	dsk_ltrack_t t;
+	unsigned char buf[15];
+	unsigned offs_count = 0;
+	unsigned short *offsets = NULL, *off_ptr = NULL;
 	
 	/* Sanity check: Is this meant for our driver? */
 	DC_CHECK(self)
@@ -128,12 +281,12 @@ static dsk_err_t cpc_open(DSK_DRIVER *self, const char *filename, int extended)
 	cpc_self->cpc_fp = fopen(filename, "r+b");
 	if (!cpc_self->cpc_fp) 
 	{
-		cpc_self->cpc_readonly = 1;
+		cpc_self->cpc_super.ld_readonly = 1;
 		cpc_self->cpc_fp = fopen(filename, "rb");
 	}
 	if (!cpc_self->cpc_fp) return DSK_ERR_NOTME;
 	/* Check for CPCEMU signature */
-	if (fread(cpc_self->cpc_dskhead, 1, 256, cpc_self->cpc_fp) < 256) 
+	if (fread(dskhead, 1, 256, cpc_self->cpc_fp) < 256) 
 	{
 /* 1.1.6 Don't leak file handles */
 		fclose(cpc_self->cpc_fp);
@@ -142,7 +295,7 @@ static dsk_err_t cpc_open(DSK_DRIVER *self, const char *filename, int extended)
 
 	if (extended)
 	{
-		if (memcmp("EXTENDED", cpc_self->cpc_dskhead, 8)) 
+		if (memcmp("EXTENDED", dskhead, 8)) 
 		{
 /* 1.1.6 Don't leak file handles */
 			fclose(cpc_self->cpc_fp);
@@ -151,988 +304,562 @@ static dsk_err_t cpc_open(DSK_DRIVER *self, const char *filename, int extended)
 	}
 	else 
 	{
-		if (memcmp("MV - CPC", cpc_self->cpc_dskhead, 8))
+		if (memcmp("MV - CPC", dskhead, 8))
 		{
 /* 1.1.6 Don't leak file handles */
 			fclose(cpc_self->cpc_fp);
 			return DSK_ERR_NOTME; 
 		}
 	}
-	/* OK, got signature. */
-	cpc_self->cpc_trkhead[0] = 0;
-	for (n = 0; n < 4; n++)
+	dsk_report("Parsing CPCEMU-format disk image");
+	/* OK, got signature. Now we have to convert to LDBS format.
+	 * First, we need to establish if there is an Offset-Info
+	 * block. This comes after the last track, so count the
+	 * number of tracks and sectors. */
+
+	if (extended)	/* Only extended DSKs have offset info */
 	{
-		cpc_self->cpc_statusw[n] = -1;
-		cpc_self->cpc_status[n]  = 0;
+		dsk_report("Checking for Offset-Info extension");
+		for (t = 0, c = 0; c < dskhead[0x30]; c++)
+			for (h = 0; h < dskhead[0x31]; h++)
+		{
+/* Load each track header in turn... */
+			if (fseek(cpc_self->cpc_fp, filepos, SEEK_SET)) 
+			{
+				fclose(cpc_self->cpc_fp);
+				return DSK_ERR_SYSERR;
+			}
+			if (fread(trkhead, 1, 256, cpc_self->cpc_fp) < 256)
+			{
+				fclose(cpc_self->cpc_fp);
+				return DSK_ERR_CORRUPT;
+			}
+/* The offset table has one entry for the track, and one for each sector
+ * within the track */
+			offs_count += (trkhead[0x15] + 1);
+	
+			filepos += 256L * dskhead[0x34 + t];
+			++t;
+		}
+		offsets = dsk_malloc(offs_count * sizeof(unsigned short));
+		if (!offsets)
+		{
+			fclose(cpc_self->cpc_fp);
+			return DSK_ERR_NOMEM;
+		}
+		/* filepos is now where the Offset-Info extension should be.*/
+		if (fseek(cpc_self->cpc_fp, filepos, SEEK_SET)) 
+		{
+			fclose(cpc_self->cpc_fp);
+			dsk_free(offsets);
+			return DSK_ERR_SYSERR;
+		}
+	/* See if there is an Offset-Info signature there */
+		if (fread(buf, 1, 15, cpc_self->cpc_fp) == sizeof(buf) &&
+	    	    !memcmp(buf, "Offset-Info\r\n", 13))
+		{
+			t = 0;
+			/* Read the offsets */
+			while (offs_count)
+			{
+				if (fread(buf, 1, 2, cpc_self->cpc_fp) < 2) 
+				{
+					fclose(cpc_self->cpc_fp);
+					dsk_free(offsets);
+					return DSK_ERR_CORRUPT;
+				}
+				offsets[t++] = ldbs_peek2(buf);
+				--offs_count;
+			}		
+		}
+		else	/* No Offset-Info block */
+		{
+			dsk_free(offsets);
+			offsets = NULL;
+		}
+		off_ptr = offsets;
 	}
-	return DSK_ERR_OK;
+
+	/* Now migrate each track in turn */
+	err = ldbs_new(&cpc_self->cpc_super.ld_store, NULL, LDBS_DSK_TYPE);
+	if (err)
+	{
+		if (offsets) dsk_free(offsets);
+		fclose(cpc_self->cpc_fp);
+		return err;
+	}
+	filepos = 0x100;
+
+	dsk_report("Loading DSK file  ");
+	for (t = 0, c = 0; c < dskhead[0x30]; c++)
+		for (h = 0; h < dskhead[0x31]; h++)
+	{
+		if (fseek(cpc_self->cpc_fp, filepos, SEEK_SET)) 
+		{
+			ldbs_close(&cpc_self->cpc_super.ld_store);
+			if (offsets) dsk_free(offsets);
+			fclose(cpc_self->cpc_fp);
+			return DSK_ERR_SYSERR;
+		}
+		err = track_to_ldbs(cpc_self, c, h, dskhead, &off_ptr);
+		if (err)
+		{
+			ldbs_close(&cpc_self->cpc_super.ld_store);
+			if (offsets) dsk_free(offsets);
+			fclose(cpc_self->cpc_fp);
+			return err;
+		}	
+		if (extended)
+		{
+			filepos += 256L * dskhead[0x34 + t];
+		}
+		else
+		{
+			filepos += ldbs_peek2(dskhead + 0x32);
+		}
+		++t;
+	}
+	if (offsets) dsk_free(offsets);
+	dsk_report_end();
+	cpc_self->cpc_filename = dsk_malloc_string(filename);
+	cpc_self->cpc_extended = extended;
+	fclose(cpc_self->cpc_fp);
+	return ldbsdisk_attach(self);
 }
+
+static void init_header(unsigned char *dskhead, int extended)
+{
+	memset(dskhead, 0, 256);
+	
+	/* [1.5.4] Let's put the version number in the disk header creator
+	 *        field; there's room for it */	
+	if (extended) strcpy((char *)dskhead,
+		"EXTENDED CPC DSK File\r\nDisk-Info\r\nLIBDSK " LIBDSK_VERSION);
+	else strcpy((char *)dskhead,
+		"MV - CPCEMU Disk-File\r\nDisk-Info\r\nLIBDSK " LIBDSK_VERSION);
+}
+
+
 
 /* Create DSK image */
 static dsk_err_t cpc_creat(DSK_DRIVER *self, const char *filename, int extended)
 {
 	CPCEMU_DSK_DRIVER *cpc_self;
-	int n;
+	dsk_err_t err;
+	unsigned char dskhead[256];
 	
 	/* Sanity check: Is this meant for our driver? */
 	DC_CHECK(self)
 	cpc_self = (CPCEMU_DSK_DRIVER *)self;
 
 	cpc_self->cpc_fp = fopen(filename, "w+b");
-	cpc_self->cpc_readonly = 0;
+	cpc_self->cpc_super.ld_readonly = 0;
 	if (!cpc_self->cpc_fp) return DSK_ERR_SYSERR;
-	memset(cpc_self->cpc_dskhead, 0, 256);
-		
-	if (extended) strcpy((char *)cpc_self->cpc_dskhead,
-		"EXTENDED CPC DSK File\r\nDisk-Info\r\n(LIBDSK)");
-	else strcpy((char *)cpc_self->cpc_dskhead,
-		"MV - CPCEMU Disk-File\r\nDisk-Info\r\n(LIBDSK)");
-	if (fwrite(cpc_self->cpc_dskhead, 1 , 256, cpc_self->cpc_fp) < 256) 
+	
+	init_header(dskhead, extended);
+	if (fwrite(dskhead, 1 , 256, cpc_self->cpc_fp) < 256) 
 		return DSK_ERR_SYSERR;
-	cpc_self->cpc_trkhead[0] = 0;
-	for (n = 0; n < 4; n++)
+
+	cpc_self->cpc_filename = dsk_malloc_string(filename);
+	cpc_self->cpc_extended = extended;
+	fclose(cpc_self->cpc_fp);
+	err = ldbs_new(&cpc_self->cpc_super.ld_store, NULL, LDBS_DSK_TYPE);
+	if (err) return err;
+	return ldbsdisk_attach(self);
+}
+
+
+
+typedef struct offset_count
+{
+	unsigned long sectors;	/* Total number of sectors on disc */
+	int uses_offsets;
+} OFFSET_COUNT;
+
+
+dsk_err_t count_sector_callback(PLDBS self, dsk_pcyl_t c, dsk_phead_t h, 
+			LDBS_SECTOR_ENTRY *se, LDBS_TRACKHEAD *th, void *param)
+{
+	OFFSET_COUNT *oc = param;	
+
+	if (th->total_len || se->offset) oc->uses_offsets = 1;
+	++oc->sectors;
+
+	return DSK_ERR_OK;
+}
+
+
+/* Migrate a track from LDBS to CPCEMU .DSK */
+static dsk_err_t track_from_ldbs(CPCEMU_DSK_DRIVER *cpc_self, PLDBS infile, 
+		dsk_pcyl_t cyl, dsk_phead_t head, unsigned char *dskhead,
+		unsigned char **poffset_ptr)
+{
+	dsk_ltrack_t track = (cyl * dskhead[0x31]) + head;
+	dsk_err_t err = 0;
+	int n;
+/* A Track-Info header is normally 256 bytes. However if a track has more 
+ * than 29 sectors, Track-Info has to be increased */
+	unsigned char trackinfo[2304];
+	LDBS_TRACKHEAD *ldbs_track;	/* LDBS track header */
+	size_t tracklen, secsize, tilen, m;
+	size_t expected = ldbs_peek2(dskhead + 0x32);
+
+/* Initialise the trackinfo block */
+	memset(trackinfo, 0, sizeof(trackinfo));
+	strcpy((char *)trackinfo, "Track-Info\r\n");
+	trackinfo[0x10] = cyl;
+	trackinfo[0x11] = head;
+	trackinfo[0x17] = 0xE5;
+
+	err = ldbs_get_trackhead(infile, &ldbs_track, cyl, head);
+	if (err && err != DSK_ERR_NOADDR) return err;
+
+	if (err == DSK_ERR_NOADDR)
 	{
-		cpc_self->cpc_statusw[n] = -1;
-		cpc_self->cpc_status[n]  = 0;
+		/* Track not found. Write an empty track-info block */
+		if (dskhead[0] == 'E')
+		{
+			dskhead[0x34 + track] = 1;
+		}
+		if (fwrite(trackinfo, 1, 256, cpc_self->cpc_fp) < 256) 
+		{
+			ldbs_free(ldbs_track);
+			return DSK_ERR_SYSERR;
+		}
+		/* If not an EDSK, all tracks are the same length, so write
+		 * padding bytes to the right size */
+		if (dskhead[0] != 'E')
+		{
+			for (m = 256; m < expected; m++)
+			{
+				if (fputc(trackinfo[0x17], cpc_self->cpc_fp) == EOF) 
+				{
+					ldbs_free(ldbs_track);
+					return DSK_ERR_SYSERR;
+				}
+			}
+		}
+		ldbs_free(ldbs_track);
+		return DSK_ERR_OK;
+	}
+	/* EDSK can cope with at most 255 sectors / track */
+	if (ldbs_track->count > 255) ldbs_track->count = 255;
+/* Migrate the track header */
+	trackinfo[0x12] = ldbs_track->datarate;
+	trackinfo[0x13] = ldbs_track->recmode;
+/*	trackinfo[0x14] is sector size: we'll come back to that */
+	trackinfo[0x15] = (unsigned char)ldbs_track->count;
+	trackinfo[0x16] = ldbs_track->gap3;
+	trackinfo[0x17] = ldbs_track->filler;
+
+	if (poffset_ptr[0])
+	{
+		ldbs_poke2(poffset_ptr[0], ldbs_track->total_len);
+		poffset_ptr[0] += 2;
+	}
+
+	for (n = 0; n < ldbs_track->count; n++)
+	{
+		trackinfo[0x14]         = ldbs_track->sector[n].id_psh;
+		trackinfo[0x18 + 8 * n] = ldbs_track->sector[n].id_cyl;
+		trackinfo[0x19 + 8 * n] = ldbs_track->sector[n].id_head;
+		trackinfo[0x1A + 8 * n] = ldbs_track->sector[n].id_sec;
+		trackinfo[0x1B + 8 * n] = ldbs_track->sector[n].id_psh;
+		trackinfo[0x1C + 8 * n] = ldbs_track->sector[n].st1;
+		trackinfo[0x1D + 8 * n] = ldbs_track->sector[n].st2;
+
+		secsize = 128 << ldbs_track->sector[n].id_psh;
+		if (ldbs_track->sector[n].copies > 0)
+		{
+			/* [1.5.4] Provision for trailing bytes */
+			secsize += ldbs_track->sector[n].trail;
+			secsize *= ldbs_track->sector[n].copies;
+		}
+		if (dskhead[0] == 'E')
+		{
+			ldbs_poke2(trackinfo + 0x1E + 8 * n, (unsigned short)secsize);
+			if (poffset_ptr[0])
+			{
+				ldbs_poke2(poffset_ptr[0], ldbs_track->sector[n].offset);
+				poffset_ptr[0] += 2;
+			}
+		}
+	}
+	tilen = 256;
+	if (ldbs_track->count > 29)
+	{
+		tilen = (ldbs_track->count * 8) + 0x18;
+		/* Round up to a multiple of 256 */
+		tilen = (tilen + 255) & ~255;
+	}
+/* Write the Track-Info block */
+	if (fwrite(trackinfo, 1, tilen, cpc_self->cpc_fp) < tilen) 
+	{
+		ldbs_free(ldbs_track);
+		return DSK_ERR_SYSERR;
+	}
+	tracklen = tilen;
+/* Migrate the sectors */
+	for (n = 0; n < ldbs_track->count; n++)
+	{
+		secsize = 128 << ldbs_track->sector[n].id_psh;
+		if (!ldbs_track->sector[n].copies)
+		{
+/* Expand blank sector */
+			for (m = 0; m < secsize; m++)
+			{
+				if (fputc(ldbs_track->sector[n].filler, cpc_self->cpc_fp) == EOF)
+				{
+					ldbs_free(ldbs_track);
+					return DSK_ERR_SYSERR;
+				}
+			}
+			tracklen += secsize;
+		}
+		else
+		{
+			size_t len = 0;
+			char secid[4];
+			void *secbuf;
+
+			err = ldbs_getblock_a(infile, 
+					ldbs_track->sector[n].blockid, 
+					secid, &secbuf, &len);	
+			if (err) return err;
+			if (fwrite(secbuf, 1, len, cpc_self->cpc_fp) < len)
+			{
+				ldbs_free(secbuf);
+				return DSK_ERR_SYSERR;
+			}
+			ldbs_free(secbuf);
+			tracklen += len;
+		}
+	}
+	/* Pad track to a multiple of 256 bytes (eg, if it has an odd
+	 * number of 128-byte sectors) */
+	while (tracklen & 0xFF)
+	{
+		if (fputc(0, cpc_self->cpc_fp) == EOF)
+		{
+			ldbs_free(ldbs_track);
+			return DSK_ERR_SYSERR;
+		}
+		++tracklen;
+	}
+	ldbs_free(ldbs_track);
+	if (dskhead[0] == 'E')
+	{
+		dskhead[0x34 + track] = tracklen / 256;
+	}
+	else
+	{
+		if (tracklen != expected)
+		{
+#ifndef HAVE_WINDOWS_H
+			fprintf(stderr, "ERROR: Cylinder %d head %d "
+					"unexpected track length\n",
+					cyl, head);
+#endif
+		}
 	}
 	return DSK_ERR_OK;
 }
+
+
+
 
 
 dsk_err_t cpcemu_close(DSK_DRIVER *self)
 {
 	CPCEMU_DSK_DRIVER *cpc_self;
-
-	DC_CHECK(self)
-	cpc_self = (CPCEMU_DSK_DRIVER *)self;
-
-	if (cpc_self->cpc_fp) 
-	{
-		if (fclose(cpc_self->cpc_fp) == EOF) return DSK_ERR_SYSERR;
-		cpc_self->cpc_fp = NULL;
-	}
-	return DSK_ERR_OK;  
-}
-
-
-
-
-
-
-/* Find the offset in a DSK for a particular cylinder/head. 
- *
- * CPCEMU DSK files work in "tracks". For a single-sided disk, track number
- * is the same as cylinder number. For a double-sided disk, track number is
- * (2 * cylinder + head). This is independent of disc format.
- */
-static long lookup_track(CPCEMU_DSK_DRIVER *self, const DSK_GEOMETRY *geom,
-		dsk_pcyl_t cylinder, dsk_phead_t head)
-{
-	unsigned char *b;
-	dsk_ltrack_t track;
-	long trk_offset;
-	unsigned int nt;
-
-	if (!self->cpc_fp) return -1;
-
-	/* [LIBDSK v0.6.0] Compare with our header, not the passed
-	 * geometry */
-	/* Seek off the edge of the drive? Note that we allow one 
-	 * extra cylinder & one extra head, so that we can move to 
-	 * a blank track to format it. */
-	if (cylinder >  self->cpc_dskhead[0x30]) return -1;
-	if (head     >  self->cpc_dskhead[0x31]) return -1;
-
-	/* Convert cylinder & head to CPCEMU "track" */
-
-	track = cylinder;
-	if (self->cpc_dskhead[0x31] > 1) track *= 2;
-	track += head;
-
-	/* Look up the cylinder and head using the header. This behaves 
-	 * differently in normal and extended DSK files */
-	
-	if (!memcmp(self->cpc_dskhead, "EXTENDED", 8))
-	{
-		trk_offset = 256;   /* DSK header = 256 bytes */
-		b = self->cpc_dskhead + 0x34;
-		for (nt = 0; nt < track; nt++)
-		{
-			trk_offset += 256 * b[nt]; /* [v0.9.0] */
-		}
-	}
-	else	/* Normal; all tracks have the same length */
-	{
-		trk_offset = (self->cpc_dskhead[0x33] * 256);
-		trk_offset += self->cpc_dskhead[0x32];
-
-		trk_offset *= track;		/* No. of tracks */
-		trk_offset += 256;	  /* DSK header */	
-	}
-	return trk_offset;
-}
-
-
-
-
-
-/* Seek to a cylinder. Checks if that particular cylinder exists. 
- * We test for the existence of a cylinder by looking for Track <n>, Head 0.
- * Fortunately the DSK format does not allow for discs with different numbers
- * of tracks on each side (though this is obviously possible with a real disc)
- * so if head 0 exists then the whole cylinder does. 
-
-
-static dsk_err_t seek_cylinder(CPCEMU_DSK_DRIVER *self, DSK_GEOMETRY *geom, int cylinder)
-{
-	long nr;
-	if (!self->cpc_fp) return DSK_ERR_NOTRDY;
-
-	// Check if the DSK image goes out to the correct cylinder 
-	nr = lookup_track(self, geom, cylinder, 0);
-	
-	if (nr < 0) return DSK_ERR_SEEKFAIL;
-	return DSK_ERR_OK;
-}
-*/
-
-/* Load the "Track-Info" header for the given cylinder and head */
-static dsk_err_t load_track_header(CPCEMU_DSK_DRIVER *self, 
-	const DSK_GEOMETRY *geom, int cylinder, int head)
-{
-	long track;
-	int  sector_size;
-	unsigned char rate, recording;
-
-	track = lookup_track(self, geom, cylinder, head);
-	if (track < 0) return DSK_ERR_SEEKFAIL;	   /* Bad track */
-	fseek(self->cpc_fp, track, SEEK_SET);
-	if (fread(self->cpc_trkhead, 1, 256, self->cpc_fp) < 256)
-		return DSK_ERR_NOADDR;			  /* Missing address mark */
-	if (memcmp(self->cpc_trkhead, "Track-Info", 10))
-	{
-		return DSK_ERR_NOADDR;
-	}
-	/* Check if the track density and recording mode match the density
-	 * and recording mode in the geometry. */
-	sector_size = 128 << self->cpc_trkhead[0x14];
-
-	rate	  = self->cpc_trkhead[0x12];
-	recording = self->cpc_trkhead[0x13];
-
-	/* Guess the data rate used. We assume Double Density, and then
-	 * look at the number of sectors in the track to see if the
-	 * format looks like a High Density one. */
-	if (rate == 0)
-	{
-		if (sector_size == 1024 && self->cpc_trkhead[0x15] >= 7) 
-		{
-			rate = 2; /* ADFS F */
-		}
-		else if (sector_size == 512 && self->cpc_trkhead[0x15] >= 15)
-		{
-			rate = 2; /* IBM PC 1.2M or 1.4M */
-		}
-		else rate = 1;
-	}
-	/* Similarly for recording mode. Note that I check for exactly
-	 * 10 sectors, because the MD3 copy protection scheme uses 9 
-	 * 256-byte sectors and they're recorded using MFM. */
-	if (recording == 0)
-	{
-		if (sector_size == 256 && self->cpc_trkhead[0x15] == 10)
-		{
-			recording = 1;  /* BBC Micro DFS */
-		}
-		else recording = 2;
-	}
-	switch(rate)
-	{
-		/* 1: Single / Double Density */
-		case 1: if (geom->dg_datarate != RATE_SD && 
-			    geom->dg_datarate != RATE_DD) return DSK_ERR_NOADDR;
-			break;
-		/* 2: High density */
-		case 2: if (geom->dg_datarate != RATE_HD) return DSK_ERR_NOADDR;
-			break;
-		/* 3: Extra High Density */
-		case 3: if (geom->dg_datarate != RATE_ED) return DSK_ERR_NOADDR;
-			break;
-		/* Unknown density */
-		default:
-			return DSK_ERR_NOADDR;
-	}
-	/* Check data rate */
-	switch(recording)
-	{
-		/* Recording mode: 1 for FM */
-		case 1: if ((geom->dg_fm & RECMODE_MASK) != RECMODE_FM) 
-				return DSK_ERR_NOADDR;
-			break;
-		/* Recording mode: 2 for MFM */
-		case 2: if ((geom->dg_fm & RECMODE_MASK) != RECMODE_MFM) 
-				return DSK_ERR_NOADDR;
-			break;
-		default:	/* GCR??? */
-			return DSK_ERR_NOADDR;
-	}
-	return DSK_ERR_OK;
-}
-
-
-/* Read a sector ID from a given track */
-dsk_err_t cpcemu_secid(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
-			dsk_pcyl_t cyl, dsk_phead_t head, DSK_FORMAT *result)
-{
-	CPCEMU_DSK_DRIVER *cpc_self;
-	dsk_err_t e;
-	int offs;
-
-	if (!self || !geom || !result)
-		return DSK_ERR_BADPTR;
-	DC_CHECK(self)
-	cpc_self = (CPCEMU_DSK_DRIVER *)self;
-	
-	if (!cpc_self->cpc_fp) return DSK_ERR_NOTRDY;
-
-	/* lookup_track() allows us to seek to a nonexistent track.  */
-	/* But we don't want this when reading; so ensure the track  */
-	/* does actually exist. */
-	if (cyl  >= cpc_self->cpc_dskhead[0x30]) return DSK_ERR_NOADDR;
-	if (head >= cpc_self->cpc_dskhead[0x31]) return DSK_ERR_NOADDR;
-
-
-	e = load_track_header(cpc_self, geom, cyl, head);
-	if (e) return e;
-
-	/* 1.1.11: If the track has no sectors, return DSK_ERR_NOADDR */
-	if (cpc_self->cpc_trkhead[0x15] == 0)
-		return DSK_ERR_NOADDR;
-	
-	/* Offset of the chosen sector header */
-	++cpc_self->cpc_sector;
-	offs = 0x18 + 8 * (cpc_self->cpc_sector % cpc_self->cpc_trkhead[0x15]);
-
-	result->fmt_cylinder = cpc_self->cpc_trkhead[offs];
-	result->fmt_head	 = cpc_self->cpc_trkhead[offs+1];
-	result->fmt_sector   = cpc_self->cpc_trkhead[offs+2];
-	result->fmt_secsize  = 128 << cpc_self->cpc_trkhead[offs+3];
-	memset(cpc_self->cpc_status, 0, sizeof(cpc_self->cpc_status));
-	return DSK_ERR_OK;  
-}
-
-
-/* Find the offset of a sector in the current track 
- * Enter with cpc_trkhead loaded and the file pointer 
- * just after it (ie, you have just called load_track_header() ) 
- *
- * Returns secid  = address of 8-byte sector info area in track header
- *	   seclen = actual length of sector data; may be a multiple of 
- *		   the sector size for weak sectors
- */ 
-
-static long sector_offset(CPCEMU_DSK_DRIVER *self, dsk_psect_t sector, 
-		size_t *seclen, unsigned char **secid)
-{
-	int maxsec = self->cpc_trkhead[0x15];
-	long offset = 0;
-	int n;
-
-	/* Pointer to sector details */
-	*secid = self->cpc_trkhead + 0x18;
-
-	/* Length of sector */  
-	*seclen = (0x80 << self->cpc_trkhead[0x14]);
-
-	/* Extended DSKs have individual sector sizes */
-	if (!memcmp(self->cpc_dskhead, "EXTENDED", 8))
-	{
-/* v1.1.11: Start by looking at the current sector to see if it's the one
- * requested. */ 
-		if (self->cpc_sector >= 0 && self->cpc_sector < maxsec)
-		{
-/* Calculate the offset of the current sector */
-			for (n = 0; n < self->cpc_sector; n++)
-			{
-				*seclen = (*secid)[6] + 256 * (*secid)[7]; /* [v0.9.0] */
-				offset   += (*seclen);
-				(*secid) += 8;
-			}
-			if ((*secid)[2] == sector) return offset;
-		}
-/* The current sector is not the requested one -- search the track for 
- * a sector with the correct ID */
-		offset = 0;
-		*secid = self->cpc_trkhead + 0x18;
-		for (n = 0; n < maxsec; n++)
-		{
-			*seclen = (*secid)[6] + 256 * (*secid)[7]; /* [v0.9.0] */
-			if ((*secid)[2] == sector) return offset;
-			offset   += (*seclen);
-			(*secid) += 8;
-		}
-	}
-	else	/* Non-extended, all sector sizes are the same */
-	{
-		if (self->cpc_sector >= 0 && self->cpc_sector < maxsec)
-		{
-/* v1.1.11: As above, check the current sector first */
-			offset += (*seclen) * self->cpc_sector;
-			(*secid) += 8 * self->cpc_sector;
-			if ((*secid)[2] == sector) return offset;
-		}
-/* And if that fails search from the beginning */
-		offset = 0;
-		*secid = self->cpc_trkhead + 0x18;
-		for (n = 0; n < maxsec; n++)
-		{
-			if ((*secid)[2] == sector) return offset;
-			offset   += (*seclen);
-			(*secid) += 8;
-		}
-	}
-	return -1;  /* Sector not found */
-}
-
-
-static unsigned char *sector_head(CPCEMU_DSK_DRIVER *self, int sector)
-{
-	int ms = self->cpc_trkhead[0x15];
-	int sec;
-
-	for (sec = 0; sec < ms; sec++)
-	{
-		if (self->cpc_trkhead[0x1A + 8 * sec] == sector)
-			return self->cpc_trkhead + 0x18 + 8 * sec;
-	}
-	return NULL;	
-}
-
-
-/* Seek within the DSK file to a given head & sector in the current cylinder. 
- *
- * On entry, *request_len is the expected sector size.
- * If the sector is shorter than this, *request_len will be reduced.
- *
- * weak_copies will be set to 1 in normal use; 2 or more if multiple copies
- * of the sector have been saved.
- *
- * sseclen will be set to the actual size of a sector in the file, so that
- * a random copy can be extracted.
- */ 
-static dsk_err_t seekto_sector(CPCEMU_DSK_DRIVER *self, 
-	const DSK_GEOMETRY *geom, int cylinder, int head, int cyl_expected,
-	int head_expected, int sector, size_t *request_len, int *weak_copies,
-	size_t *sseclen)
-{
-	int offs;
-	size_t seclen;	/* Length of sector data in file */
+	LDBS_STATS stats;
+	OFFSET_COUNT oc;
 	dsk_err_t err;
-	unsigned char *secid;
-	long trkbase;
+	dsk_pcyl_t c;
+	dsk_phead_t h;
+	unsigned char dskhead[256];
+	unsigned char *offset_rec = NULL;
+	unsigned char *offset_ptr;
+	size_t offset_len;
 
-	*weak_copies = 1;
-	err = load_track_header(self, geom, cylinder, head);
-	if (err) return err;
-	trkbase = ftell(self->cpc_fp);
-	offs = (int)sector_offset(self, sector, &seclen, &secid);
-	
-	if (offs < 0) return DSK_ERR_NOADDR;	/* Sector not found */
-
-	if (cyl_expected != secid[0] || head_expected != secid[1])
-	{
-		/* We are not in the right place */
-		return DSK_ERR_NOADDR;
-	}
-	*sseclen = 128 << (secid[3] & 7);
-/* Sector shorter than expected. Report a data error, and set
- * request_len to the actual size. */
-	if ((*sseclen) < (*request_len))
-	{
-		err = DSK_ERR_DATAERR;
-		*request_len = *sseclen;
-	}
-/* Sector longer than expected. Report a data error but don't change 
- * request_len */
-	else if ((*sseclen) > (*request_len))
-	{
-		err = DSK_ERR_DATAERR;
-	}
-/* If there is room for two or more copies, we have a weak-recording 
- * situation. */
-	if ((*sseclen) * 2 <= seclen)
-	{
-		*weak_copies = seclen / (*sseclen);
-	}
-
-	fseek(self->cpc_fp, trkbase + offs, SEEK_SET);
-
-	return err;
-}
-
-
-/* Read a sector */
-dsk_err_t cpcemu_read(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
-		      void *buf, dsk_pcyl_t cylinder,
-		      dsk_phead_t head, dsk_psect_t sector)
-{
-	return cpcemu_xread(self, geom, buf, cylinder, head, cylinder,
-				dg_x_head(geom, head), 
-				dg_x_sector(geom, head, sector), 
-				geom->dg_secsize, 0);
-}
-
-dsk_err_t cpcemu_xread(DSK_DRIVER *self, const DSK_GEOMETRY *geom, void *buf, 
-		       dsk_pcyl_t cylinder,   dsk_phead_t head, 
-		       dsk_pcyl_t cyl_expect, dsk_phead_t head_expect,
-		       dsk_psect_t sector, size_t sector_size, int *deleted)
-{
-	CPCEMU_DSK_DRIVER *cpc_self;
-	dsk_err_t err;
-	int weak_copies;
-	size_t sseclen;
-	size_t len = sector_size;   /* 1.1.2: Was geom->dg_secsize; but
-				     * that fails when individual sectors
-				     * are bigger than the size in geom. */
-	int rdeleted = 0;
-	int try_again = 0;
-	unsigned char *sh;
-
-	if (!buf || !geom || !self) return DSK_ERR_BADPTR;
 	DC_CHECK(self)
 	cpc_self = (CPCEMU_DSK_DRIVER *)self;
 
-	if (deleted && *deleted) rdeleted = 0x40;
-
-	do
+	/* Firstly, ensure any pending changes are flushed to the LDBS 
+	 * blockstore. Once this has been done we own the blockstore again 
+	 * and have to close it after we've finished with it. */
+	err = ldbsdisk_detach(self); 
+	if (err)
 	{
-		err  = seekto_sector(cpc_self, geom, cylinder,head, 
-				cyl_expect, head_expect, sector, &len,
-				&weak_copies, &sseclen);
-/* Are we retrying because we are looking for deleted data and found 
- * nondeleted or vice versa?
- *
- * If so, and we have run out of sectors in this track, AND we are on head 0,
- * AND the disc has 2 heads, AND we are in multitrack mode, then look on head 1
- * as well. Amazing.
- * */
-		if (try_again == 1 && err == DSK_ERR_NOADDR)
-		{
-			err = DSK_ERR_NODATA;
-			if ((!geom->dg_nomulti) && head == 0 && 
-				  cpc_self->cpc_dskhead[0x31] > 0)
-			{
-				head++;
-				sector = geom->dg_secbase;  
-				continue;   
-			}
-		}
-		try_again = 0;
-		/* v1.1.11: Sector not found, we go back to start of track */
-		if (err == DSK_ERR_NOADDR)
-			cpc_self->cpc_sector = -1;
-		if (err != DSK_ERR_DATAERR && err != DSK_ERR_OK)
-			return err;
-		/* We have the sector. But does it contain deleted data? */
-		sh = sector_head(cpc_self, sector);
-		if (!sh) return DSK_ERR_NODATA;
-
-		if (deleted) *deleted = 0;
-		if (rdeleted != (sh[5] & 0x40)) /* Mismatch! */
-		{
-			if (geom->dg_noskip) 
-			{
-				if (deleted) *deleted = 1;
-			}
-			else
-			{
-/* Try the next sector. */
-				try_again = 1;
-				++sector;
-				continue;
-			}
-		}
-/* This next line should never be true, because len starts as sector_size and 
- * seekto_sector() only ever reduces it. */
-		if (len > sector_size) len = sector_size;
-
-/* If there are multiple copies of the sector present, pick one at random */
-		if (weak_copies > 1)
-		{
-			long offset = (rand() % weak_copies) * sseclen;
-			fseek(cpc_self->cpc_fp, offset, SEEK_CUR);
-		}
-
-		if (fread(buf, 1, len, cpc_self->cpc_fp) < len) 
-			err = DSK_ERR_DATAERR;
-/* Sector header ST2: If bit 5 set, data error 
- * Maybe need to emulate some other bits in a similar way */
-		if (sh[5] & 0x20) err = DSK_ERR_DATAERR;
-		memset(cpc_self->cpc_status, 0, sizeof(cpc_self->cpc_status));
-		/* Set ST1 and ST2 from results of sector read */
-		cpc_self->cpc_status[1] = sh[4];
-		cpc_self->cpc_status[2] = sh[5];
+		dsk_free(cpc_self->cpc_filename);
+		ldbs_close(&cpc_self->cpc_super.ld_store);
+		return err;
 	}
-	while (try_again);
-	
-	return err;
-}	   
 
-
-/* Write a sector */
-dsk_err_t cpcemu_write(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
-			const void *buf, dsk_pcyl_t cylinder,
-			dsk_phead_t head, dsk_psect_t sector)
-{
-	return cpcemu_xwrite(self, geom, buf, cylinder, head, cylinder,
-				dg_x_head(geom, head),
-				dg_x_sector(geom, head, sector), 
-				geom->dg_secsize, 0);
-}
-
-dsk_err_t cpcemu_xwrite(DSK_DRIVER *self, const DSK_GEOMETRY *geom, 
-			  const void *buf, 
-			  dsk_pcyl_t cylinder,   dsk_phead_t head, 
-			  dsk_pcyl_t cyl_expect, dsk_phead_t head_expect,
-			  dsk_psect_t sector, size_t sector_size,
-			  int deleted)
-{
-	CPCEMU_DSK_DRIVER *cpc_self;
-	dsk_err_t err;
-	size_t len = sector_size; /* geom->dg_secsize; */
-	int n, weak_copies;
-	size_t sseclen;
-
-	if (!buf || !geom || !self) return DSK_ERR_BADPTR;
-	DC_CHECK(self)
-	cpc_self = (CPCEMU_DSK_DRIVER *)self;
-
-	if (cpc_self->cpc_readonly) return DSK_ERR_RDONLY;
-
-	err  = seekto_sector(cpc_self, geom, cylinder,head,  
-				cyl_expect, head_expect, sector, &len,
-				&weak_copies, &sseclen);
-	if (err == DSK_ERR_DATAERR || err == DSK_ERR_OK)
+	/* If this disc image has not been written to, just close it and 
+	 * dispose thereof. */
+	if (!self->dr_dirty)
 	{
-		unsigned char osh4, osh5;
-		unsigned char *sh = sector_head(cpc_self, sector);
-		err = DSK_ERR_OK;   /* Ignore data error (disc sector bigger than expected) */
-/* Limit length by (firstly) the amount of space in the file, and (secondly)
- * the size specified in the sector header */
-		if (len > sector_size) len = sector_size;
-		if (len > sseclen)     len = sseclen;
-/* If the file had multiple copies of a sector, overwrite them all */
-		for (n = 0; n < weak_copies; n++)
+		dsk_free(cpc_self->cpc_filename);
+		return ldbs_close(&cpc_self->cpc_super.ld_store);
+	}
+	/* Trying to save changes but source is read-only */
+	if (cpc_self->cpc_super.ld_readonly)
+	{
+		dsk_free(cpc_self->cpc_filename);
+		ldbs_close(&cpc_self->cpc_super.ld_store);
+		return DSK_ERR_RDONLY;
+	}
+	dsk_report(cpc_self->cpc_extended ? "Writing CPCEMU EDSK file" : 
+				"Writing CPCEMU DSK file");
+	init_header(dskhead, cpc_self->cpc_extended);	
+
+	err = ldbs_get_stats(cpc_self->cpc_super.ld_store, &stats);
+	if (err) 
+	{
+		dsk_free(cpc_self->cpc_filename);
+		ldbs_close(&cpc_self->cpc_super.ld_store);
+		dsk_report_end();
+		return err;
+	}
+	/* Check for presence of offset info; that forces EDSK */
+	memset(&oc, 0, sizeof(oc));
+	err = ldbs_all_sectors(cpc_self->cpc_super.ld_store, 
+			count_sector_callback, SIDES_ALT, &oc);
+	if (err) 
+	{
+		dsk_free(cpc_self->cpc_filename);
+		ldbs_close(&cpc_self->cpc_super.ld_store);
+		dsk_report_end();
+		return err;
+	}
+
+	if (dskhead[0] != 'E' &&
+		(stats.max_spt != stats.min_spt ||
+		stats.max_sector_size != stats.min_sector_size ||
+		stats.max_spt > 29 ||
+		oc.uses_offsets))
+	{
+#ifndef HAVE_WINDOWS_H
+		fprintf(stderr, "Input file cannot be converted to DSK -- EDSK format is required.\n");
+#endif
+		dsk_free(cpc_self->cpc_filename);
+		ldbs_close(&cpc_self->cpc_super.ld_store);
+		dsk_report_end();
+		return DSK_ERR_RDONLY;
+	}
+	cpc_self->cpc_fp = fopen(cpc_self->cpc_filename, "wb");
+	if (!cpc_self->cpc_fp)
+	{
+		dsk_free(cpc_self->cpc_filename);
+		ldbs_close(&cpc_self->cpc_super.ld_store);
+		dsk_report_end();
+		return DSK_ERR_SYSERR;
+	}
+	memset(dskhead + 0x30, 0, 0xD0);
+		
+	if (fseek(cpc_self->cpc_fp, 0, SEEK_SET))
+	{
+		fclose(cpc_self->cpc_fp);
+		dsk_free(cpc_self->cpc_filename);
+		ldbs_close(&cpc_self->cpc_super.ld_store);
+		dsk_report_end();
+		return DSK_ERR_SYSERR;
+	}
+	/* Get the track directory */
+	err = ldbs_max_cyl_head(cpc_self->cpc_super.ld_store, &c, &h);
+      	if (err)
+	{
+		fclose(cpc_self->cpc_fp);
+		dsk_free(cpc_self->cpc_filename);
+		ldbs_close(&cpc_self->cpc_super.ld_store);
+		dsk_report_end();
+		return err;
+	}
+	/* Compute the maximum cylinder and head */
+	dskhead[0x30] = c;
+	dskhead[0x31] = h;
+
+	if (dskhead[0] != 'E')
+	{
+		/* Fixed-length tracks: 256 byte header + secsize * spt
+		 * sectors */
+		ldbs_poke2(dskhead + 0x32,
+				(unsigned short)(256 + stats.max_sector_size * stats.max_spt));
+	}
+	offset_rec = offset_ptr = NULL;
+	if (dskhead[0] == 'E' && oc.uses_offsets)
+	{
+		/* Size of Offset-Info block */
+		offset_len = 15 + ((c * h + oc.sectors) * 2);
+		offset_rec = ldbs_malloc( offset_len );
+		if (offset_rec)
 		{
-			if (fwrite(buf, 1, len, cpc_self->cpc_fp) < len)
-				err = DSK_ERR_DATAERR;
+			memcpy(offset_rec, "Offset-Info\r\n", 14);
+			offset_rec[14] = 0;
+			offset_ptr = offset_rec + 15;
 		}
-
-/* If writing deleted data, update the sector header accordingly */
-
-		osh4 = sh[4];
-		osh5 = sh[5];
-/* If ST1 and ST2 have been set explicitly, store their new values */
-		if (cpc_self->cpc_statusw[1] >= 0) sh[4] = cpc_self->cpc_statusw[1];
-		if (cpc_self->cpc_statusw[2] >= 0) sh[5] = cpc_self->cpc_statusw[2];
-				if (deleted) sh[5] |= 0x40;
-		else		 sh[5] &= ~0x40;
-
-		if (sh[5] != osh5 || sh[4] != osh4)
+		else	
 		{
-			long track = lookup_track(cpc_self, geom, cylinder, head);
-			if (track < 0) return DSK_ERR_SEEKFAIL;	   /* Bad track */
-			fseek(cpc_self->cpc_fp, track, SEEK_SET);
-			if (fwrite(cpc_self->cpc_trkhead, 1, 256, cpc_self->cpc_fp) < 256)
-				return DSK_ERR_DATAERR;  /* Write failed */
+			fclose(cpc_self->cpc_fp);
+			dsk_free(cpc_self->cpc_filename);
+			ldbs_close(&cpc_self->cpc_super.ld_store);
+			dsk_report_end();
+			return DSK_ERR_NOMEM;
 		}
 	}
-	for (n = 0; n < 4; n++)
+
+	/* Write an (incomplete) DSK / EDSK header */
+	if (fwrite(dskhead, 1 , 256, cpc_self->cpc_fp) < 256) 
 	{
-		cpc_self->cpc_statusw[n] = -1;
-		cpc_self->cpc_status[n]  = 0;
+		fclose(cpc_self->cpc_fp);
+		dsk_free(cpc_self->cpc_filename);
+		ldbs_close(&cpc_self->cpc_super.ld_store);
+		dsk_report_end();
+		return DSK_ERR_SYSERR;	
 	}
-	return err;
-}
-
-
-/* Format a track on a DSK. Can grow the DSK file. */
-dsk_err_t cpcemu_format(DSK_DRIVER *self, DSK_GEOMETRY *geom,
-			dsk_pcyl_t cylinder, dsk_phead_t head,
-			const DSK_FORMAT *format, unsigned char filler)
-{
-	CPCEMU_DSK_DRIVER *cpc_self;
-	int ext;
-	long trkoff;	/* Make these longs for 16-bit systems */
-	unsigned long img_trklen;
-	unsigned char oldhead[256];
-	unsigned char *blanksec;
-	unsigned n, trkno, trklen, seclen;
-	
-	if (!format || !geom || !self) return DSK_ERR_BADPTR;
-	DC_CHECK(self)
-	cpc_self = (CPCEMU_DSK_DRIVER *)self;
-
-	if (!cpc_self->cpc_fp)	  return DSK_ERR_NOTRDY;
-	if (cpc_self->cpc_readonly) return DSK_ERR_RDONLY;
-
-	ext = 0;
-	memcpy(oldhead, cpc_self->cpc_dskhead, 256);
-
-/* 1. Only if the DSK has either (1 track & 1 head) or (2 heads) can we
- *   format the second head
- */
-	if (head)
+	for (c = 0; c < dskhead[0x30]; c++)
 	{
-		if (cpc_self->cpc_dskhead[0x31] == 1 && 
-			cpc_self->cpc_dskhead[0x30] > 1) return DSK_ERR_RDONLY;
-
-		if (cpc_self->cpc_dskhead[0x31] == 1) 
-			cpc_self->cpc_dskhead[0x31] = 2;
+		for (h = 0; h < dskhead[0x31]; h++)
+		{
+			err = track_from_ldbs(cpc_self, 
+				cpc_self->cpc_super.ld_store, c, h, 
+				dskhead, &offset_ptr);
+			if (err) break;
+		}
+		if (err) break;
 	}
-/* 2. Find out the CPCEMU number of the new cylinder/head */
-
-	if (cpc_self->cpc_dskhead[0x31] < 1) cpc_self->cpc_dskhead[0x31] = 1;
-	trkno = cylinder;
-	trkno *= cpc_self->cpc_dskhead[0x31];
-	trkno += head;
-
-/* 3. Find out how long the proposed new track is
- *
- * nb: All sizes *include* track header
- */
-	trklen = 0;
-	for (n = 0; n < geom->dg_sectors; n++)
+	if (offset_rec && !err)
 	{
-		trklen += format[n].fmt_secsize;
+		if (fwrite(offset_rec, 1, offset_len, cpc_self->cpc_fp) < offset_len)
+		{
+			err = DSK_ERR_SYSERR;
+		}
 	}
-	trklen += 256;  /* For header */
-/* 4. Work out if this length is suitable
- */
-	if (!memcmp(cpc_self->cpc_dskhead, "EXTENDED", 8))
+/* Rewrite the updated header */
+	if (!err)
 	{
-		unsigned char *b;
-		/* For an extended DSK, work as follows: 
-		 * If the track is reformatting an existing one, 
-		 * the length must be <= what's there. 
-		 * If the track is new, it must be contiguous with the 
-		 * others */
+		if (fseek(cpc_self->cpc_fp, 0, SEEK_SET) ||
+		    fwrite(dskhead, 1, 256, cpc_self->cpc_fp) < 256) 
+		{
+			err = DSK_ERR_SYSERR;
+		}
 
-		ext = 1;
-		img_trklen = (cpc_self->cpc_dskhead[0x34 + trkno] * 256);
-		if (img_trklen)
-		{
-			if (trklen > img_trklen) return DSK_ERR_RDONLY;
-		}
-		else if (trkno > 0) 
-		{
-			if (!cpc_self->cpc_dskhead[0x34 + trkno - 1]) 
-			{
-				memcpy(cpc_self->cpc_dskhead, oldhead, 256);
-				return DSK_ERR_RDONLY;
-			}
-		}
-		/* Work out where the track should be. */
-		b = cpc_self->cpc_dskhead + 0x34;
-		trkoff = 256; 
-		for (n = 0; n < trkno; n++)
-		{
-			trkoff += 256 * b[n];
-		}
-		/* Store the length of the new track (rounding up)*/
-		b[n] = (unsigned char)((trklen + 255) >> 8);
+	}
+	dsk_free(cpc_self->cpc_filename);
+	ldbs_close(&cpc_self->cpc_super.ld_store);
+	dsk_report_end();
+	if (err)
+	{
+		fclose(cpc_self->cpc_fp);
+		return err;
 	}
 	else
 	{
-		img_trklen = cpc_self->cpc_dskhead[0x32] + 256 *
-			 cpc_self->cpc_dskhead[0x33];
-		/* If no tracks formatted, or just the one track, length can
-		 * be what we like */
-		if ( (cpc_self->cpc_dskhead[0x30] == 0) ||
-			 (cpc_self->cpc_dskhead[0x30] == 1 && 
-			  cpc_self->cpc_dskhead[0x31] == 1) )
-		{
-			if (trklen > img_trklen)
-			{
-				cpc_self->cpc_dskhead[0x32] = (unsigned char)(trklen & 0xFF);
-				cpc_self->cpc_dskhead[0x33] = (unsigned char)(trklen >> 8);
-				img_trklen = trklen;	
-			}
-		}
-		if (trklen > img_trklen)
-		{
-			memcpy(cpc_self->cpc_dskhead, oldhead, 256);
-			return DSK_ERR_RDONLY;
-		}
-		trkoff = 256 + (img_trklen * trkno);
+		if (fclose(cpc_self->cpc_fp)) return DSK_ERR_SYSERR;
 	}
-/* Seek to the track. */
-	fseek(cpc_self->cpc_fp, trkoff, SEEK_SET);
-	/* Now generate and write a Track-Info buffer */
-	memset(cpc_self->cpc_trkhead, 0, sizeof(cpc_self->cpc_trkhead));
-
-	strcpy((char *)cpc_self->cpc_trkhead, "Track-Info\r\n");
-
-	cpc_self->cpc_trkhead[0x10] = (unsigned char)cylinder;
-	cpc_self->cpc_trkhead[0x11] = (unsigned char)head;
-	switch (geom->dg_datarate)
-	{
-		case RATE_SD: cpc_self->cpc_trkhead[0x12] = 1; break;
-		case RATE_DD: cpc_self->cpc_trkhead[0x12] = 1; break;
-		case RATE_HD: cpc_self->cpc_trkhead[0x12] = 2; break;
-		case RATE_ED: cpc_self->cpc_trkhead[0x12] = 3; break;
-	}
-	switch (geom->dg_fm & RECMODE_MASK)
-	{
-		case RECMODE_FM:  cpc_self->cpc_trkhead[0x13] = 1; break;
-		case RECMODE_MFM: cpc_self->cpc_trkhead[0x13] = 2; break;
-	}
-	cpc_self->cpc_trkhead[0x14] = dsk_get_psh(format[0].fmt_secsize);
-	cpc_self->cpc_trkhead[0x15] = (unsigned char)geom->dg_sectors;
-	cpc_self->cpc_trkhead[0x16] = geom->dg_fmtgap;
-	cpc_self->cpc_trkhead[0x17] = filler;
-	for (n = 0; n < geom->dg_sectors; n++)
-	{
-/* The DSK format is limited to 29 sectors / track. More than that would result
- * in a buffer overflow. */
-		if ((0x1F + 8 *n) >= sizeof(cpc_self->cpc_trkhead))
-		{   
-#ifndef HAVE_WINDOWS_H
-			fprintf(stderr, "Overflow: DSK format cannot handle %d sectors / track", n);
-#endif
-			return DSK_ERR_OVERRUN;
-		}
-		cpc_self->cpc_trkhead[0x18 + 8*n] = (unsigned char)format[n].fmt_cylinder;
-		cpc_self->cpc_trkhead[0x19 + 8*n] = (unsigned char)format[n].fmt_head;
-		cpc_self->cpc_trkhead[0x1A + 8*n] = (unsigned char)format[n].fmt_sector;
-		cpc_self->cpc_trkhead[0x1B + 8*n] = dsk_get_psh(format[n].fmt_secsize);
-		if (ext)
-		{
-			seclen = format[n].fmt_secsize;
-			cpc_self->cpc_trkhead[0x1E + 8 * n] = (unsigned char)(seclen & 0xFF);
-			cpc_self->cpc_trkhead[0x1F + 8 * n] = (unsigned char)(seclen >> 8);
-		}
-	}
-	if (fwrite(cpc_self->cpc_trkhead, 1, 256, cpc_self->cpc_fp) < 256)
-	{
-		memcpy(cpc_self->cpc_dskhead, oldhead, 256);
-		return DSK_ERR_RDONLY;
-	}
-	/* Track header written. Write sectors */
-	for (n = 0; n < geom->dg_sectors; n++)
-	{
-		seclen = format[n].fmt_secsize;
-		blanksec = dsk_malloc(seclen);
-		if (!blanksec)
-		{
-			memcpy(cpc_self->cpc_dskhead, oldhead, 256);
-			return DSK_ERR_NOMEM;
-		}
-		memset(blanksec, filler, seclen);
-		if (fwrite(blanksec, 1, seclen, cpc_self->cpc_fp) < seclen)
-		{
-			memcpy(cpc_self->cpc_dskhead, oldhead, 256);
-			return DSK_ERR_SYSERR;
-		}
-		dsk_free(blanksec);
-	}
-	if (cylinder >= cpc_self->cpc_dskhead[0x30])
-	{
-		cpc_self->cpc_dskhead[0x30] = (unsigned char)(cylinder + 1);
-	}
-	/* Track formatted OK. Now write back the modified DSK header */
-	fseek(cpc_self->cpc_fp, 0, SEEK_SET);
-	if (fwrite(cpc_self->cpc_dskhead, 1, 256, cpc_self->cpc_fp) < 256)
-	{
-		memcpy(cpc_self->cpc_dskhead, oldhead, 256);
-		return DSK_ERR_RDONLY;
-	}
-	/* If the disc image has grown because of this, record this in the
-	 * disc geometry struct */
-
-	if (geom->dg_heads	 < cpc_self->cpc_dskhead[0x31])
-		geom->dg_heads	 = cpc_self->cpc_dskhead[0x31];
-	if (geom->dg_cylinders < cpc_self->cpc_dskhead[0x30])
-		geom->dg_cylinders = cpc_self->cpc_dskhead[0x30];
-		
 	return DSK_ERR_OK;
 }
 
-
-
-/* Seek to a cylinder. */
-dsk_err_t cpcemu_xseek(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
-					dsk_pcyl_t cyl, dsk_phead_t head)
-{
-	CPCEMU_DSK_DRIVER *cpc_self;
-
-	if (!self || !geom) return DSK_ERR_BADPTR;
-	DC_CHECK(self)
-	cpc_self = (CPCEMU_DSK_DRIVER *)self;
 	
-	if (!cpc_self->cpc_fp) return DSK_ERR_NOTRDY;
-
-	/* See if the cylinder & head are in range */
-	if (cyl  > cpc_self->cpc_dskhead[0x30] ||
-	    head > cpc_self->cpc_dskhead[0x31]) return DSK_ERR_SEEKFAIL;
-	return DSK_ERR_OK;
-}
-
-/* 1.1.11: This function shouldn't be necessary, because DSK's emulation of
- * a real diskette ought to be good enough that the generic one works.
- * I've left it in, but not compiling. */
-#if 0
-dsk_err_t cpcemu_trackids(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
-			  dsk_pcyl_t cyl, dsk_phead_t head,
-			  dsk_psect_t *count, DSK_FORMAT **result)
-{
-	CPCEMU_DSK_DRIVER *cpc_self;
-	dsk_err_t e;
-	unsigned char *secid;
-	int seclen;
-	int maxsec;
-	int n;
-
-	DSK_FORMAT headers[256];
-
-	if (!self || !geom || !result)
-		return DSK_ERR_BADPTR;
-	DC_CHECK(self)
-	cpc_self = (CPCEMU_DSK_DRIVER *)self;
-	
-	if (!cpc_self->cpc_fp) return DSK_ERR_NOTRDY;
-
-	e = load_track_header(cpc_self, geom, cyl, head);
-	if (e) return e;
-
-	/* lookup_track() allows us to seek to a nonexistent track.  */
-	/* But we don't want this when reading; so ensure the track  */
-	/* does actually exist.									  */
-	if (cyl  >= cpc_self->cpc_dskhead[0x30]) return DSK_ERR_NOADDR;
-	if (head >= cpc_self->cpc_dskhead[0x31]) return DSK_ERR_NOADDR;
-
-	//
-	maxsec = cpc_self->cpc_trkhead[0x15];
-
-	/* Pointer to sector details */
-	secid = cpc_self->cpc_trkhead + 0x18;
-
-	/* Length of sector */  
-	seclen = (0x80 << cpc_self->cpc_trkhead[0x14]);
-
-	/* Extended DSKs have individual sector sizes */
-	if (!memcmp(cpc_self->cpc_dskhead, "EXTENDED", 8))
-	{
-		for (n = 0; n < maxsec; n++)
-		{
-			headers[n].fmt_cylinder = cyl;
-			headers[n].fmt_head = head;
-			headers[n].fmt_secsize = secid[6] + 256 * secid[7];
-			headers[n].fmt_sector = secid[2];
-			secid += 8;
-		}
-	}
-	else	/* Non-extended, all sector sizes are the same */
-	{
-		for (n = 0; n < maxsec; n++)
-		{
-			headers[n].fmt_cylinder = cyl;
-			headers[n].fmt_head = head;
-			headers[n].fmt_secsize = seclen;
-			headers[n].fmt_sector = secid[2];
-			secid += 8;
-		}
-	}
-
-	*count = maxsec;
-	*result = dsk_malloc( maxsec * sizeof(DSK_FORMAT) );
-	if (!(*result)) return DSK_ERR_NOMEM;
-	memcpy(*result, headers, maxsec * sizeof(DSK_FORMAT)) ;
-	return DSK_ERR_OK;
-}
-#endif
-
-dsk_err_t cpcemu_status(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
-					  dsk_phead_t head, unsigned char *result)
-{
-	CPCEMU_DSK_DRIVER *cpc_self;
-
-	if (!self || !geom) return DSK_ERR_BADPTR;
-	DC_CHECK(self)
-	cpc_self = (CPCEMU_DSK_DRIVER *)self;
-
-	if (!cpc_self->cpc_fp) *result &= ~DSK_ST3_READY;
-	if (cpc_self->cpc_readonly) *result |= DSK_ST3_RO;
-	return DSK_ERR_OK;
-}
-
-dsk_err_t cpcemu_option_enum(DSK_DRIVER *self, int idx, char **optname)
-{
-	if (!self) return DSK_ERR_BADPTR;
-	DC_CHECK(self);
-
-	switch(idx)
-	{
-		case 0: if (optname) *optname = "ST0"; return DSK_ERR_OK;
-		case 1: if (optname) *optname = "ST1"; return DSK_ERR_OK;
-		case 2: if (optname) *optname = "ST2"; return DSK_ERR_OK;
-		case 3: if (optname) *optname = "ST3"; return DSK_ERR_OK;
-	}
-	return DSK_ERR_BADOPT;
-}
-
-dsk_err_t cpcemu_option_set(DSK_DRIVER *self, const char *optname, int value)
-{
-	CPCEMU_DSK_DRIVER *cpcself;
-
-	if (!self || !optname) return DSK_ERR_BADPTR;
-	DC_CHECK(self);
-	cpcself = (CPCEMU_DSK_DRIVER *)self;
-
-	if (!strcmp(optname, "ST0"))
-	{
-		cpcself->cpc_statusw[0] = value;
-	}
-	else if (!strcmp(optname, "ST1"))
-	{
-		cpcself->cpc_statusw[1] = value;
-	}
-	else if (!strcmp(optname, "ST2"))
-	{
-		cpcself->cpc_statusw[2] = value;
-	}
-	else if (!strcmp(optname, "ST3"))
-	{
-		cpcself->cpc_statusw[3] = value;
-	}
-	else return DSK_ERR_BADOPT;
-	return DSK_ERR_OK;
-}
-dsk_err_t cpcemu_option_get(DSK_DRIVER *self, const char *optname, int *value)
-{
-	CPCEMU_DSK_DRIVER *cpcself;
-
-	if (!self || !optname) return DSK_ERR_BADPTR;
-	DC_CHECK(self);
-	cpcself = (CPCEMU_DSK_DRIVER *)self;
-
-	if (!strcmp(optname, "ST0"))
-	{
-		if (value) *value = cpcself->cpc_status[0];
-	}
-	else if (!strcmp(optname, "ST1"))
-	{
-		if (value) *value = cpcself->cpc_status[1];
-	}
-	else if (!strcmp(optname, "ST2"))
-	{
-		if (value) *value = cpcself->cpc_status[2];
-	}
-	else if (!strcmp(optname, "ST3"))
-	{
-		if (value) *value = cpcself->cpc_status[3];
-	}
-	else return DSK_ERR_BADOPT;
-	return DSK_ERR_OK;
-}
 

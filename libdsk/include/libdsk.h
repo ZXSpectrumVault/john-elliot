@@ -1,7 +1,7 @@
 /***************************************************************************
  *                                                                         *
  *    LIBDSK: General floppy and diskimage access library                  *
- *    Copyright (C) 2001-2015 John Elliott <seasip.webmaster@gmail.com>    *
+ *    Copyright (C) 2001-2018 John Elliott <seasip.webmaster@gmail.com>    *
  *                                                                         *
  *    Modifications to add dsk_dirty()                                     *
  *    (c) 2005 Philip Kendall <pak21-spectrum@srcf.ucam.org>               *
@@ -58,7 +58,7 @@
 extern "C" {
 #endif
 
-#define LIBDSK_VERSION "1.4.2"
+#define LIBDSK_VERSION "1.5.8"
 
 /************************* TYPES ********************************/
 
@@ -100,6 +100,7 @@ typedef const char *  dsk_cchar_t;	/* Const char * */
 #define DSK_ERR_TIMEOUT  (-29)  /* Communications timed out */
 #define DSK_ERR_UNKRPC   (-30)  /* RPC server does not recognise function */
 #define DSK_ERR_BADMEDIA (-31)	/* Unsuitable media for drive */
+#define DSK_ERR_CORRUPT  (-32)	/* Disk image file is corrupt */
 #define DSK_ERR_UNKNOWN  (-99)	/* Unknown error */
 
 /* Is this error a transient error, that may be cleared by a retry? */
@@ -156,6 +157,7 @@ typedef enum
 	FMT_AMPRO400D,	/* 10 sectors, 512 bytes/sector, 2 sides */
 	FMT_AMPRO400S,	/* 5 sectors, 1024 bytes/sector, 1 side */
 	FMT_AMPRO800,	/* 5 sectors, 1024 bytes/sector, 2 sides */
+	FMT_1200K,	/* 15 sectors, 2 sides  */
 	FMT_UNKNOWN = -1
 } dsk_format_t;
 
@@ -399,6 +401,12 @@ LDPUBLIC32 dsk_err_t  LDPUBLIC16 dg_cpm86geom(DSK_GEOMETRY *self, const unsigned
 LDPUBLIC32 dsk_err_t  LDPUBLIC16 dg_aprigeom(DSK_GEOMETRY *self, const unsigned char *bootsect);
 LDPUBLIC32 dsk_err_t  LDPUBLIC16 dg_opusgeom(DSK_GEOMETRY *self, const unsigned char *bootsect);
 
+/* Tries all the above, in approximate order of detectability. This is 
+ * intended to assist in parsing flat file disc images that contain no
+ * metadata, so the first 512 bytes are all you have to determine the
+ * format. */
+LDPUBLIC32 dsk_err_t  LDPUBLIC16 dg_bootsecgeom(DSK_GEOMETRY *self, const unsigned char *bootsect);
+
 /* Read a random sector header from current track */
 LDPUBLIC32 dsk_err_t  LDPUBLIC16 dsk_psecid(DSK_PDRIVER self, const DSK_GEOMETRY *geom,
 				dsk_pcyl_t cylinder, dsk_phead_t head,
@@ -490,17 +498,30 @@ LDPUBLIC32 dsk_err_t LDPUBLIC16 dsk_map_itod(unsigned int n, DSK_PDRIVER *ptr);
  *  * all the memory used by the mapping */
 LDPUBLIC32 dsk_err_t LDPUBLIC16 dsk_map_delete(unsigned int index);
 
-
+/* Copy one entire disk image to another. Currently this can only be done if 
+ * both of them are based internally on LDBS; DSK_ERR_NOTIMPL will be returned 
+ * otherwise. 
+ * 
+ * geom can be null. If it is not null, it will be used when converting 
+ * from file formats that don't specify their own geometry (such as raw)
+ */
+LDPUBLIC32 dsk_err_t LDPUBLIC16 dsk_copy(DSK_GEOMETRY *geom, 
+				DSK_PDRIVER source, DSK_PDRIVER dest);
 
 /* Define this to print on the console a trace of all mallocs */
 #undef TRACE_MALLOCS 
 #ifdef TRACE_MALLOCS
 void *dsk_malloc(size_t size);
+void *dsk_remalloc(void *ptr, size_t size);
 void  dsk_free(void *ptr);
 #else
 #define dsk_malloc malloc
+#define dsk_realloc realloc
 #define dsk_free free
 #endif
+
+/* Helper method: Copy string 's' to a dsk_malloced buffer */
+LDPUBLIC32 char * LDPUBLIC16 dsk_malloc_string(const char *s);
 
 #ifdef __cplusplus
 }

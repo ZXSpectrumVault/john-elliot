@@ -51,7 +51,8 @@
 DRV_CLASS dc_dskf = 
 {
 	sizeof(DSKF_DSK_DRIVER),
-	"dskf",
+	NULL,		/* superclass */
+	"dskf\0",
 	"IBM LoadDskF driver",
 	dskf_open,	/* open */
 	dskf_creat,	/* create new */
@@ -70,6 +71,7 @@ dsk_err_t dskf_open(DSK_DRIVER *self, const char *filename)
 	int magic;
 	DSKF_DSK_DRIVER *dskfself;
 	char *comment;
+	size_t len;
 
 	/* Sanity check: Is this meant for our driver? */
 	if (self->dr_class != &dc_dskf) return DSK_ERR_BADPTR;
@@ -126,12 +128,15 @@ dsk_err_t dskf_open(DSK_DRIVER *self, const char *filename)
 		comment = dsk_malloc(clen);
 		if (comment != NULL)
 		{
-			size_t len;
-
 			memset(comment, 0, clen);
 			len = fread(comment, 1, clen - 1, dskfself->dskf_fp);
 			dsk_set_comment(self, comment);
 			dsk_free(comment);
+			if (len < (clen - 1)) 
+			{
+				fclose(dskfself->dskf_fp);
+				return DSK_ERR_SYSERR;
+			}
 		}
 	}	
 
@@ -141,12 +146,12 @@ dsk_err_t dskf_open(DSK_DRIVER *self, const char *filename)
 
 dsk_err_t dskf_creat(DSK_DRIVER *self, const char *filename)
 {
-	DSKF_DSK_DRIVER *dskfself;
-	
-	/* Sanity check: Is this meant for our driver? */
-	if (self->dr_class != &dc_dskf) return DSK_ERR_BADPTR;
-	dskfself = (DSKF_DSK_DRIVER *)self;
 /*
+	DSKF_DSK_DRIVER *dskfself;
+*/	
+	/* Sanity check: Is this meant for our driver? */
+/*	if (self->dr_class != &dc_dskf) return DSK_ERR_BADPTR;
+	dskfself = (DSKF_DSK_DRIVER *)self;
 
 	dskfself->dskf_fp = fopen(filename, "w+b");
 	dskfself->dskf_readonly = 0;

@@ -172,7 +172,10 @@ int do_md3(char *outfile, char *outtyp, char *outcomp, int forcehead, char *news
                 	if (!e) printf("New serial no: %s\n", unscramble(buf+17));
 		}
 	}
-	if (outdr) dsk_close(&outdr);
+	if (outdr) 
+	{
+		if (!e) e = dsk_close(&outdr); else dsk_close(&outdr);
+	}
 	if (e)
 	{
 		fprintf(stderr, "Could not get MD3 serial number from disc.\n");

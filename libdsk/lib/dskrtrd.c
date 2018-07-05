@@ -34,6 +34,7 @@ LDPUBLIC32 dsk_err_t  LDPUBLIC16 dsk_rtread(DSK_PDRIVER self,
 
 	dc = self->dr_class;
 
+	WALK_VTABLE(dc, dc_rtread)
         if (!dc->dc_rtread) return DSK_ERR_NOTIMPL;
 	return (dc->dc_rtread)(self,geom,buf,cylinder,head,reserved, &bufsiz);	
 

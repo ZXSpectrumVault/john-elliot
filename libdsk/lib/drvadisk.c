@@ -1,7 +1,7 @@
 /***************************************************************************
  *                                                                         *
  *    LIBDSK: General floppy and diskimage access library                  *
- *    Copyright (C) 2001-2  John Elliott <seasip.webmaster@gmail.com>          *
+ *    Copyright (C) 2001-2, 2017  John Elliott <seasip.webmaster@gmail.com>*
  *                                                                         *
  *    This library is free software; you can redistribute it and/or        *
  *    modify it under the terms of the GNU Library General Public          *
@@ -22,19 +22,20 @@
 
 /* This driver works with the compressed "apridisk" format. The compression
  * works by doing RLE on individual sectors. We use the same method as for
- * CFI - decompressing the whole file into memory, and writing back in 
- * drv_close(). 
+ * CFI - decompressing the whole file into memory (or, since 1.5.3, into 
+ * an LDBS blockstore), and writing back in drv_close(). 
  */
 
 #include <stdio.h>
 #include "libdsk.h"
 #include "drvi.h"
+#include "drvldbs.h"
 #include "drvadisk.h"
 
 #define APRIDISK_DELETED      0xE31D0000UL
 #define APRIDISK_MAGIC        0xE31D0001UL
 #define APRIDISK_COMMENT      0xE31D0002UL
-#define APRIDISK_CREATOR           0xE31D0003UL
+#define APRIDISK_CREATOR      0xE31D0003UL
 #define APRIDISK_UNCOMPRESSED 0x9E90
 #define APRIDISK_COMPRESSED   0x3E5A
 
@@ -44,18 +45,12 @@
 DRV_CLASS dc_adisk = 
 {
 	sizeof(ADISK_DSK_DRIVER),
-	"apridisk",
+	&dc_ldbsdisk,	/* superclass */
+	"apridisk\0",
 	"APRIDISK file driver",
 	adisk_open,	/* open */
 	adisk_creat,	/* create new */
 	adisk_close,	/* close */
-	adisk_read,	/* read sector, working from physical address */
-	adisk_write,	/* write sector, working from physical address */
-	adisk_format,	/* format track, physical */
-	NULL,		/* get geometry */
-	adisk_secid,	/* sector ID */
-	adisk_xseek,	/* seek to track */
-	adisk_status,	/* drive status */
 };
 
 static char adisk_wmagic[128] =
@@ -64,340 +59,370 @@ static char adisk_wmagic[128] =
 	' ','i','m','a','g','e',26,4 
 };
 
-static dsk_err_t adisk_ensure_size(ADISK_DSK_DRIVER *self, dsk_lsect_t nsec)
+/* 16-byte header of an Apridisk record */
+typedef struct adisk_recheader
 {
-	/* Ensure the requested track is in range, by starting at 
-	 * max (adisk_maxsectors, 1) and doubling repeatedly */
-	dsk_ltrack_t maxsecs = self->adisk_maxsectors;
+	unsigned long item_type;
+	unsigned short compression;
+	unsigned short header_size;
+	unsigned long data_size;
+	unsigned char head;
+	unsigned char sector;
+	unsigned short cylinder;	
+} ADISK_RECHEADER;
 
-	if (!maxsecs) maxsecs = 1;
-	while (nsec >= maxsecs) maxsecs *= 2;
+static dsk_err_t adisk_readheader(FILE *fp, ADISK_RECHEADER *result)
+{
+	unsigned char buf[16];
+	int len;
 
-	/* Need to allocate more. */
-	if (maxsecs != self->adisk_maxsectors)
+	len = fread(buf, 1, sizeof(buf), fp);
+	if (len < (int)sizeof(buf)) return DSK_ERR_SEEKFAIL;
+
+	result->item_type   = ldbs_peek4(buf);
+	result->compression = ldbs_peek2(buf+4);
+	result->header_size = ldbs_peek2(buf+6);
+	result->data_size   = ldbs_peek4(buf+8);
+	result->head        = buf[12];
+	result->sector      = buf[13];
+	result->cylinder    = ldbs_peek2(buf+14);
+
+	len = result->header_size - 16;
+	while (len)
 	{
-		/* Create new array of tracks */
-		ADISK_SECTOR *t = dsk_malloc(maxsecs * sizeof(ADISK_SECTOR));
-		if (!t) return DSK_ERR_NOMEM;
-		memset(t, 0, maxsecs * sizeof(ADISK_SECTOR));
-		/* Copy over existing array */
-		memcpy(t, self->adisk_sectors, self->adisk_maxsectors * sizeof(ADISK_SECTOR));
-		dsk_free(self->adisk_sectors);
-		self->adisk_sectors  = t;
-		self->adisk_maxsectors = maxsecs;
+		if (fgetc(fp) == EOF) return DSK_ERR_SEEKFAIL;
 	}
+	
 	return DSK_ERR_OK;
-}
-
-
-/* Read a little-endian word from the file. Return DSK_ERR_SEEKFAIL if EOF. */
-static dsk_err_t adisk_rdshort(FILE *fp, unsigned short *s)
-{
-	int c = fgetc(fp);
-	if (c == EOF) return DSK_ERR_SEEKFAIL;
-	*s = (c & 0xFF);
-	c = fgetc(fp);
-	if (c == EOF) return DSK_ERR_SEEKFAIL;
-	*s |= ((c << 8) & 0xFF00);
-	return DSK_ERR_OK;
-}
-
-
-static dsk_err_t adisk_rdlong(FILE *fp, unsigned long *l)
-{
-	unsigned short w0, w1;
-	dsk_err_t e;
-
-	e = adisk_rdshort(fp, &w0); if (e) return e;
-	e = adisk_rdshort(fp, &w1); if (e) return e;
-	*l = (((unsigned long)(w1)) << 16) | w0;
-	return DSK_ERR_OK;
-}
-
-
-
-void adisk_free_sector(ADISK_SECTOR *ltrk)
-{
-	if (ltrk && ltrk->adisks_data) 
-	{
-		dsk_free(ltrk->adisks_data);
-		ltrk->adisks_data = NULL;
-	}
 }
 
 
 /* Given a compressed buffer, either find its uncompressed length
  * or decompress it */
-static dsk_err_t adisk_size_sector(ADISK_SECTOR *psec, unsigned char *buf, 
-				unsigned short blkc, int pass)
+static size_t adisk_decompress(unsigned char *compressed, size_t c_len,
+				  unsigned char *result)
 {
-	unsigned char *bufp, *wrp;
+	unsigned char *readp, *writep;
 	unsigned short blklen;
-	
-	wrp = NULL;	
-	bufp = buf;
-	if (pass)	/* Pass 2: Allocate the data buffer whose */
-	{		/* size we found on pass 1. */
-		psec->adisks_data = dsk_malloc(psec->adisks_datalen);
-		if (!psec->adisks_data) return DSK_ERR_NOMEM;
-		wrp = psec->adisks_data;
-	}
-	else psec->adisks_datalen = 0;	/* Pass 1: Reset total length */
-	while (blkc)
-	{
-		blklen =   (*(bufp++)) & 0xFF;
-		blklen |= ((*(bufp++)) << 8) & 0xFF00;
+	size_t u_len = 0;
 
-		if (pass)
+	readp  = compressed;
+	writep = NULL;	
+	if (result) writep = result;
+	u_len = 0;
+
+	while (c_len >= 3)
+	{
+		blklen = ldbs_peek2(readp); 
+		readp += 2;
+
+		if (writep)
 		{
-			memset(wrp, *bufp, blklen);
-			wrp += blklen;
+			memset(writep, readp[0], blklen);
+			writep += blklen;
 		}
-		else psec->adisks_datalen += blklen;
-		bufp++;
-		blkc -= 3;
+		u_len += blklen;
+		readp++;
+		c_len -= 3;
 	}
-	return DSK_ERR_OK;
+	return u_len;
 }
 
 
 
-static dsk_err_t adisk_load_sector(ADISK_DSK_DRIVER *self, dsk_lsect_t nsec, FILE *fp)
+/* Read the next block from the Apridisk file and add it to the 
+ * blockstore */
+static dsk_err_t adisk_add_block(ADISK_DSK_DRIVER *self, FILE *fp)
 {
 	dsk_err_t err;
-	unsigned char *buf;
-	ADISK_SECTOR *psec;
-/* Sector header */
-	unsigned long sh_magic;
-	unsigned short sh_compressed;
-	unsigned short sh_hdrsize;
-	unsigned long  sh_datasize;
-	unsigned long  sh_identity;
-	
-	/* Ensure that adisk_sectors is big enough to hold this track */
-	err = adisk_ensure_size(self, nsec); 
-	if (err) return err;
+	unsigned char *buf, *buf2;
+	char secid[4];
+	int n, nsec, allsame;
+	LDBLOCKID blkid;
 
 	/* Load the track header. */
+	ADISK_RECHEADER rh;
+	LDBS_TRACKHEAD *trkh;
 
-	err = adisk_rdlong(fp, &sh_magic); if (err) return DSK_ERR_OVERRUN;
-	if (sh_magic != APRIDISK_MAGIC 
-	&&  sh_magic != APRIDISK_COMMENT 
-	&&  sh_magic != APRIDISK_DELETED
-	&&  sh_magic != APRIDISK_CREATOR)
+	err = adisk_readheader(fp, &rh); if (err) return DSK_ERR_OVERRUN;
+/*
+	printf("rh: item_type=%08x\n", rh.item_type);
+	printf("rh: compression=%04x\n", rh.compression);
+	printf("rh: header size=%04x\n", rh.header_size);
+	printf("rh: data size=%08x\n",   rh.data_size);
+	printf("rh: head=%02x\n", rh.head);
+	printf("rh: sector=%02x\n", rh.sector);
+	printf("rh: sector=%04x\n", rh.cylinder);
+*/
+	if (rh.item_type != APRIDISK_MAGIC 
+	&&  rh.item_type != APRIDISK_COMMENT 
+	&&  rh.item_type != APRIDISK_DELETED
+	&&  rh.item_type != APRIDISK_CREATOR)
 	{
 		return DSK_ERR_NOTME;
 	}
-	err = adisk_rdshort(fp, &sh_compressed); if (err) return DSK_ERR_OVERRUN;
-	if (sh_compressed != APRIDISK_COMPRESSED 
-	&&  sh_compressed != APRIDISK_UNCOMPRESSED) 
+	if (rh.compression != APRIDISK_COMPRESSED 
+	&&  rh.compression != APRIDISK_UNCOMPRESSED) 
 	{
 		return DSK_ERR_NOTME;
 	}
-	err = adisk_rdshort(fp, &sh_hdrsize);  if (err) return DSK_ERR_OVERRUN;
-	err = adisk_rdlong (fp, &sh_datasize); if (err) return DSK_ERR_OVERRUN;
-	err = adisk_rdlong (fp, &sh_identity); if (err) return DSK_ERR_OVERRUN;
-
-	/* Compressed length must be at least 3; a block can't be any smaller! */
-	if (sh_datasize < 3 && sh_compressed == APRIDISK_COMPRESSED) 
+	/* Compressed length must be at least 3; a block can't be any 
+	 * smaller! */
+	if (rh.data_size < 3 && rh.compression == APRIDISK_COMPRESSED) 
 	{
 		return DSK_ERR_NOTME;
 	}
-	buf = dsk_malloc(1 + sh_datasize);
-	buf[sh_datasize] = 0;
-	if (buf == NULL) return DSK_ERR_NOMEM;
-	/* Skip over any extra bytes of sector header (we ignore them) */
-	while (sh_hdrsize > 0x10)
-	{
-		if (fgetc(fp) == EOF) return DSK_ERR_OVERRUN;
-		--sh_hdrsize;
-	}
-	if (sh_magic != APRIDISK_MAGIC && sh_magic != APRIDISK_COMMENT && sh_magic != APRIDISK_CREATOR)
-	{
-		while (sh_datasize > 0)
-		{
-			if (fgetc(fp) == EOF) return DSK_ERR_OVERRUN;
-			--sh_datasize;
-		}
+	/* Skip over deleted data blocks */
+	if (rh.item_type == APRIDISK_DELETED)
+	{	
+		if (fseek(fp, rh.data_size, SEEK_CUR)) return DSK_ERR_SYSERR;
 		return DSK_ERR_OK;
 	}
-	/* Try to load the track buffer. If that fails, bail out */
-	if (fread(buf, 1, sh_datasize, fp) < sh_datasize) 
+	buf = dsk_malloc(1 + rh.data_size);
+	buf[rh.data_size] = 0;
+	if (buf == NULL) return DSK_ERR_NOMEM;
+
+	/* Try to load the payload. If that fails, bail out */
+	if (fread(buf, 1, rh.data_size, fp) < rh.data_size)
 	{
 		dsk_free(buf);
 		return DSK_ERR_NOTME;	
 	}
-	/* Handle comments here */
-	if (sh_magic == APRIDISK_COMMENT)
+	/* If block is compressed, decompress it */
+	if (rh.compression == APRIDISK_COMPRESSED)
 	{
-		int n;
-		/* Don't support compressed comments */
-		if (sh_compressed == APRIDISK_COMPRESSED) return DSK_ERR_OK;
+		size_t u_len = adisk_decompress(buf, rh.data_size, NULL);
+
+		buf2 = dsk_malloc(u_len + 1);
+		if (!buf2)
+		{
+			dsk_free(buf);
+			return DSK_ERR_NOMEM;
+		}
+		adisk_decompress(buf, rh.data_size, buf2);
+		buf2[u_len] = 0;
+		dsk_free(buf);
+		buf = buf2;
+		rh.data_size = u_len;
+	}
+	switch (rh.item_type)
+	{
+		char *c;
+
+		case APRIDISK_COMMENT:
 
 		/* APRIDISK comments for some reason are terminated by \r */	
-		for (n = 0; buf[n]; n++) 
-			if (buf[n] == '\r' && buf[n+1] != '\n') buf[n] = '\n';
-		dsk_set_comment(&self->adisk_super, (char *)buf);
-		return DSK_ERR_OK;
-	}
-	if (sh_magic == APRIDISK_CREATOR)
-	{
-		/* Don't support compressed creator blocks */
-		if (sh_compressed == APRIDISK_COMPRESSED) return DSK_ERR_OK;
-		self->adisk_creator = dsk_malloc(1 + strlen((char *)buf));
-		if (self->adisk_creator)
-			strcpy(self->adisk_creator, (char *)buf);
-		return DSK_ERR_OK;
-	}
-	psec = &self->adisk_sectors[nsec];
-	adisk_free_sector(psec);
-	if (sh_compressed == APRIDISK_COMPRESSED)
-	{
-		/* Pass 1: Determine size of uncompressed data */
-		err = adisk_size_sector(psec, buf, (unsigned short)sh_datasize, 0);
-		/* Pass 2: Decompress */
-		if (!err) err = adisk_size_sector(psec, buf, (unsigned short)sh_datasize, 1);
-		dsk_free(buf);
-	}
-	else
-	{
-		psec->adisks_data = buf;
-		psec->adisks_datalen = sh_datasize;
-		err = DSK_ERR_OK;
-	}
-	if (err) 
-	{
-		adisk_free_sector(psec);
-		return err;
-	}
-	psec->adisks_magic    = sh_magic;
-	psec->adisks_cylinder = (unsigned short)(sh_identity >> 16);
-	psec->adisks_head     = (unsigned char)(sh_identity & 0xFF);
-	psec->adisks_sector   = (unsigned char)((sh_identity >> 8) & 0xFF);
-	return DSK_ERR_OK;
-}
+			for (n = 0; buf[n]; n++) 
+			{
+				if (buf[n] == '\r' && buf[n+1] != '\n') 
+					buf[n] = '\n';
+			}
+		/* Assume the original comment was in codepage 437 */
+			n = cp437_to_utf8((char *)buf, NULL, -1);
+			c = dsk_malloc(n + 1);
+			err = DSK_ERR_NOMEM;
+			if (c)
+			{
+				cp437_to_utf8((char *)buf, c, -1);
+				err = ldbs_put_comment
+					(self->adisk_super.ld_store, c);
+				dsk_free(c);
+			}
+			dsk_free(buf);
+			return err;
 
-/* Number of bytes in a run. For RLE. 
-static int number_same(unsigned char *c, int tlen)
-{
-	unsigned char m = (*c); 
-	int matched = 1;
-
-	while (tlen > 0)
-	{
-		++c;
-		--tlen;
-		if (!tlen) break;
-		if (*c != m) return matched;
-		++matched;	
-		if (matched == 0x7FFF) return matched;
+		case APRIDISK_CREATOR:
+			n = cp437_to_utf8((char *)buf, NULL, -1);
+			c = dsk_malloc(n + 1);
+			err = DSK_ERR_NOMEM;
+			if (c)
+			{
+				cp437_to_utf8((char *)buf, c, -1);
+				err = ldbs_put_creator
+					(self->adisk_super.ld_store, c);
+				dsk_free(c);
+			}
+			dsk_free(buf);
+			return err;
 	}
-	return matched;	
-}
-*/
-
-static dsk_err_t adisk_save_sector(ADISK_DSK_DRIVER *self, ADISK_SECTOR *psec, FILE *fp)
-{
-	unsigned n;
-	unsigned long slen;
-	int compress = 1;
-	unsigned char *buf;
-	
-	if (!psec->adisks_data) return DSK_ERR_OK;	/* Vacuous sector */
-
-	/* Compress the sector using RLE. Only compress if all bytes are the
-	 * same. */
-	for (n = 1; n < psec->adisks_datalen; n++)	
+	/* Right, it's a sector. Store it. Unless, that is, it's all the
+	 * same byte. */
+	allsame = buf[0];
+	for (n = 1; n < (int)(rh.data_size); n++)
 	{
-		if (psec->adisks_data[n] != psec->adisks_data[0]) 
+		if (buf[n] != buf[0]) 
 		{
-			compress = 0;
+			allsame = -1;
 			break;
 		}
 	}
-	
-	if (compress) slen = 16 + 3;
-	else	      slen = 16 + psec->adisks_datalen;
-
-	buf = dsk_malloc(slen); if (!buf) return DSK_ERR_NOMEM;
-
-	if (compress)
+	if (allsame != -1)
 	{
-		buf[ 4] = APRIDISK_COMPRESSED & 0xFF;
-		buf[ 5] = APRIDISK_COMPRESSED >> 8;
-		buf[16] = (unsigned char)( psec->adisks_datalen & 0xFF);
-		buf[17] = (unsigned char)((psec->adisks_datalen >> 8) & 0xFF);
-		buf[18] =  psec->adisks_data[0];
+		dsk_free(buf);
 	}
 	else
 	{
-		buf[ 4] = APRIDISK_UNCOMPRESSED & 0xFF;
-		buf[ 5] = APRIDISK_UNCOMPRESSED >> 8;
-		memcpy(buf + 16, psec->adisks_data, psec->adisks_datalen);
-	}
-	buf[ 0] =   APRIDISK_MAGIC        & 0xFF;
-	buf[ 1] =  (APRIDISK_MAGIC >> 8 ) & 0xFF;
-	buf[ 2] =  (APRIDISK_MAGIC >> 16) & 0xFF;
-	buf[ 3] =  (APRIDISK_MAGIC >> 24) & 0xFF;
-	buf[ 6] =  0x10;
-	buf[ 7] =  0;
-	buf[ 8] = (unsigned char)( (slen - 16) & 0xFF);
-	buf[ 9] = (unsigned char)(((slen - 16) >>  8) & 0xFF);
-	buf[10] = (unsigned char)(((slen - 16) >> 16) & 0xFF);
-	buf[11] = (unsigned char)(((slen - 16) >> 24) & 0xFF);
-	buf[12] =  psec->adisks_head;
-	buf[13] =  psec->adisks_sector;
-	buf[14] =  psec->adisks_cylinder & 0xFF;
-	buf[15] = (psec->adisks_cylinder >> 8) & 0xFF;
-
-	if (fwrite(buf, 1, slen, fp) < slen)
-	{
+		ldbs_encode_secid(secid, rh.cylinder, rh.head, rh.sector);
+		blkid = LDBLOCKID_NULL;
+		err = ldbs_putblock(self->adisk_super.ld_store, &blkid, secid, 
+				buf, rh.data_size);
 		dsk_free(buf);
-		return DSK_ERR_SYSERR;
+		if (err) return err;
 	}
-	dsk_free(buf);
-	return DSK_ERR_OK;
+	/* Now it needs to be recorded in the track header */
+	err = ldbs_get_trackhead(self->adisk_super.ld_store, &trkh, 
+				rh.cylinder, rh.head);
+	if (err) { dsk_free(buf); return err; }
+
+	if (trkh)
+	{
+		nsec = trkh->count;
+		trkh = ldbs_trackhead_realloc(trkh, (unsigned short)(1 + trkh->count));
+		if (!trkh) { dsk_free(buf); return DSK_ERR_NOMEM; }
+	}
+	else
+	{
+		nsec = 0;
+		trkh = ldbs_trackhead_alloc(1);
+		if (!trkh) { dsk_free(buf); return DSK_ERR_NOMEM; }
+
+		trkh->datarate = 1;
+		trkh->recmode = 2;
+		trkh->filler = 0xf6;
+	}
+	if (trkh->count < 9) 		trkh->gap3 = 0x50;
+	else if (trkh->count < 10)	trkh->gap3 = 0x52;
+	else				trkh->gap3 = 0x17;
+
+	trkh->sector[nsec].id_cyl  = (unsigned char)(rh.cylinder);
+	trkh->sector[nsec].id_head = rh.head;
+	trkh->sector[nsec].id_sec  = rh.sector;
+	trkh->sector[nsec].id_psh  = dsk_get_psh(rh.data_size);
+	trkh->sector[nsec].st1     = 0;
+	trkh->sector[nsec].st2     = 0;
+	if (allsame == -1)
+	{
+		trkh->sector[nsec].copies  = 1;
+		trkh->sector[nsec].filler  = 0xF6;
+		trkh->sector[nsec].blockid = blkid;
+	}
+	else
+	{
+		trkh->sector[nsec].copies  = 0;
+		trkh->sector[nsec].filler  = allsame;
+		trkh->sector[nsec].blockid = LDBLOCKID_NULL;
+	}
+	err = ldbs_put_trackhead(self->adisk_super.ld_store, trkh, 
+				rh.cylinder, rh.head);
+	dsk_free(trkh);
+	return err;
 }
 
-static dsk_err_t adisk_save_comment(ADISK_DSK_DRIVER *self, FILE *fp)
+
+
+/* Open an Apridisk drive image and convert to LDBS */
+dsk_err_t adisk_open(DSK_DRIVER *self, const char *filename)
 {
-	char *cmt = NULL;
-	unsigned char *buf;
-	unsigned long slen;
-	int n;
+	FILE *fp;
+	ADISK_DSK_DRIVER *adiskself;
+	dsk_err_t err;	
+	unsigned long magic;
+	unsigned char header[128];
+	unsigned char magbuf[4];
+	
+	/* Sanity check: Is this meant for our driver? */
+	if (self->dr_class != &dc_adisk) return DSK_ERR_BADPTR;
+	adiskself = (ADISK_DSK_DRIVER *)self;
 
-	dsk_get_comment(&self->adisk_super, &cmt); 
-	if (!cmt) return DSK_ERR_OK;	/* No comment */
-
-	buf = dsk_malloc(slen = 17 + strlen(cmt));
-	if (!buf) return DSK_ERR_OK;
-	memset(buf, 0, slen);
-	strcpy((char *)buf + 16, cmt);
-	/* Convert lone newlines to lone CRs */
-	for (n = 17; buf[n]; n++)	 
+	fp = fopen(filename, "r+b");
+	if (!fp) 
 	{
-		if (buf[n] == '\n' && buf[n-1] != '\r') buf[n] = '\r';
-	}	
-	buf[ 0] =   APRIDISK_COMMENT        & 0xFF;
-	buf[ 1] =  (APRIDISK_COMMENT >> 8 ) & 0xFF;
-	buf[ 2] =  (APRIDISK_COMMENT >> 16) & 0xFF;
-	buf[ 3] =  (APRIDISK_COMMENT >> 24) & 0xFF;
-	buf[ 4] = APRIDISK_UNCOMPRESSED & 0xFF;
-	buf[ 5] = APRIDISK_UNCOMPRESSED >> 8;
-	buf[ 6] =  0x10;
-	buf[ 7] =  0;
-	buf[ 8] = (unsigned char)( (slen - 16) & 0xFF);
-	buf[ 9] = (unsigned char)(((slen - 16) >>  8) & 0xFF);
-	buf[10] = (unsigned char)(((slen - 16) >> 16) & 0xFF);
-	buf[11] = (unsigned char)(((slen - 16) >> 24) & 0xFF);
+		adiskself->adisk_super.ld_readonly = 1;
+		fp = fopen(filename, "rb");
+	}
+	if (!fp) return DSK_ERR_NOTME;
 
-	if (fwrite(buf, 1, slen, fp) < slen)
+	/* Try to check the magic number at 0x80 */
+	if (fread(header, 1, sizeof(header), fp) < (int)sizeof(header) 
+	|| (memcmp(header, adisk_wmagic, sizeof(adisk_wmagic)))
+	|| (fread(magbuf, 1, sizeof(magbuf), fp) < (int)sizeof(magbuf))
+	|| ((magic = ldbs_peek4(magbuf)) != APRIDISK_MAGIC && 
+	    magic != APRIDISK_CREATOR &&
+	    magic != APRIDISK_COMMENT &&
+	    magic != APRIDISK_DELETED))
 	{
-		dsk_free(buf);
+		fclose(fp);
+		return DSK_ERR_NOTME;
+	}
+	/* Seek to end of header */
+	fseek(fp, 0x80, SEEK_SET);	
+	/* Keep a copy of the filename; when writing back, we will need it */
+	adiskself->adisk_filename = dsk_malloc_string(filename);
+	if (!adiskself->adisk_filename) return DSK_ERR_NOMEM;
+
+	/* Initialise a new blockstore */
+	err = ldbs_new(&adiskself->adisk_super.ld_store, NULL, LDBS_DSK_TYPE);
+	if (err)
+	{
+		dsk_free(adiskself->adisk_filename);
+		fclose(fp);
+		return err;
+	}
+
+	dsk_report("Loading APRIDISK file into memory");
+	while (!feof(fp))	
+	{
+		err = adisk_add_block(adiskself, fp);
+		/* DSK_ERR_OVERRUN: End of file */
+		if (err == DSK_ERR_OVERRUN) 
+		{
+			break;
+		}
+		if (err) 
+		{
+			dsk_free(adiskself->adisk_filename);
+			dsk_report_end();
+			return err;
+		}
+	} 
+	dsk_report_end();
+	err = ldbsdisk_attach(self);
+	return err;
+}
+
+
+dsk_err_t adisk_creat(DSK_DRIVER *self, const char *filename)
+{
+	FILE *fp;
+	ADISK_DSK_DRIVER *adiskself;
+	dsk_err_t err;	
+	
+	/* Sanity check: Is this meant for our driver? */
+	if (self->dr_class != &dc_adisk) return DSK_ERR_BADPTR;
+	adiskself = (ADISK_DSK_DRIVER *)self;
+
+	/* Create a 0-byte file, just to be sure we can */
+	fp = fopen(filename, "wb");
+	if (!fp) return DSK_ERR_SYSERR;
+	if (fwrite(adisk_wmagic, 1, 128, adiskself->adisk_fp) < 128)
+	{
+		fclose(fp);
 		return DSK_ERR_SYSERR;
 	}
-	dsk_free(buf);
-	return DSK_ERR_OK;
+	fclose(fp);
+
+	adiskself->adisk_filename = dsk_malloc_string(filename);
+	if (!adiskself->adisk_filename) return DSK_ERR_NOMEM;
+
+	/* Initialise a new blockstore */ 
+	err = ldbs_new(&adiskself->adisk_super.ld_store, NULL, LDBS_DSK_TYPE);
+	if (err)
+	{
+		dsk_free(adiskself->adisk_filename);
+		fclose(fp);
+		return err;
+	}
+	return ldbsdisk_attach(self);
 }
 
 
@@ -409,11 +434,9 @@ static dsk_err_t adisk_save_creator(ADISK_DSK_DRIVER *self, FILE *fp)
 	unsigned long slen;
 	int n;
 
-/*
-	if (self->adisk_creator) cmt = self->adisk_creator; 
-	else
-*/
 	cmt = "LIBDSK v" LIBDSK_VERSION;
+
+	/* No need to do utf8_to_cp437, because cmt is ASCII */
 	
 	buf = dsk_malloc(slen = 17 + strlen(cmt));
 	if (!buf) return DSK_ERR_OK;
@@ -423,19 +446,48 @@ static dsk_err_t adisk_save_creator(ADISK_DSK_DRIVER *self, FILE *fp)
 	for (n = 17; buf[n]; n++)	 
 	{
 		if (buf[n] == '\n' && buf[n-1] != '\r') buf[n] = '\r';
+	}
+	ldbs_poke4(buf,     APRIDISK_CREATOR);
+	ldbs_poke2(buf + 4, (short)APRIDISK_UNCOMPRESSED);
+	ldbs_poke2(buf + 6, 0x10);
+	ldbs_poke4(buf + 8, slen - 16);
+
+	if (fwrite(buf, 1, slen, fp) < slen)
+	{
+		dsk_free(buf);
+		return DSK_ERR_SYSERR;
+	}
+	dsk_free(buf);
+	return DSK_ERR_OK;
+}
+
+
+static dsk_err_t adisk_save_comment(ADISK_DSK_DRIVER *self, FILE *fp)
+{
+	char *cmt = NULL;
+	unsigned char *buf;
+	unsigned long slen;
+	int n;
+	dsk_err_t err;
+
+	err = ldbs_get_comment(self->adisk_super.ld_store, &cmt); 
+	if (err || !cmt) return DSK_ERR_OK;	/* No comment */
+
+	n = utf8_to_cp437(cmt, NULL, -1);
+	buf = dsk_malloc(slen = 16 + n);
+	if (!buf) return DSK_ERR_OK;
+	memset(buf, 0, slen);
+	utf8_to_cp437(cmt, (char *)(buf + 16), slen - 16);
+
+	/* Convert lone newlines to lone CRs */
+	for (n = 17; buf[n]; n++)	 
+	{
+		if (buf[n] == '\n' && buf[n-1] != '\r') buf[n] = '\r';
 	}	
-	buf[ 0] =   APRIDISK_CREATOR        & 0xFF;
-	buf[ 1] =  (APRIDISK_CREATOR >> 8 ) & 0xFF;
-	buf[ 2] =  (APRIDISK_CREATOR >> 16) & 0xFF;
-	buf[ 3] =  (APRIDISK_CREATOR >> 24) & 0xFF;
-	buf[ 4] = APRIDISK_UNCOMPRESSED & 0xFF;
-	buf[ 5] = APRIDISK_UNCOMPRESSED >> 8;
-	buf[ 6] =  0x10;
-	buf[ 7] =  0;
-	buf[ 8] = (unsigned char)( (slen - 16) & 0xFF);
-	buf[ 9] = (unsigned char)(((slen - 16) >>  8) & 0xFF);
-	buf[10] = (unsigned char)(((slen - 16) >> 16) & 0xFF);
-	buf[11] = (unsigned char)(((slen - 16) >> 24) & 0xFF);
+	ldbs_poke4(buf,     APRIDISK_COMMENT);
+	ldbs_poke2(buf + 4, (short)APRIDISK_UNCOMPRESSED);
+	ldbs_poke2(buf + 6, 0x10);
+	ldbs_poke4(buf + 8, slen - 16);
 
 	if (fwrite(buf, 1, slen, fp) < slen)
 	{
@@ -448,387 +500,145 @@ static dsk_err_t adisk_save_creator(ADISK_DSK_DRIVER *self, FILE *fp)
 
 
 
-dsk_err_t adisk_open(DSK_DRIVER *self, const char *filename)
+
+static dsk_err_t sector_callback(PLDBS store, dsk_pcyl_t cyl, dsk_phead_t head,
+			LDBS_SECTOR_ENTRY *se, LDBS_TRACKHEAD *th, void *param)
 {
-	FILE *fp;
-	ADISK_DSK_DRIVER *adiskself;
-	dsk_err_t err;	
-	dsk_lsect_t count;
-	unsigned long magic;
-	
-	/* Sanity check: Is this meant for our driver? */
-	if (self->dr_class != &dc_adisk) return DSK_ERR_BADPTR;
-	adiskself = (ADISK_DSK_DRIVER *)self;
+	ADISK_DSK_DRIVER *adiskself = param;
+	unsigned long slen;
+	int compress = 1;
+	unsigned char *buf;
+	char type[4];
+	size_t secsize = (128 << se->id_psh);
+	dsk_err_t err;
 
-	fp = fopen(filename, "r+b");
-	if (!fp) 
+	/* If the sector is blank, save as compressed; otherwise 
+	 * uncompressed. */
+	compress = (se->copies == 0);
+
+	if (compress) slen = 16 + 3;
+	else	      slen = 16 + secsize;
+
+	buf = dsk_malloc(slen); if (!buf) return DSK_ERR_NOMEM;
+
+	if (compress)
 	{
-		adiskself->adisk_readonly = 1;
-		fp = fopen(filename, "rb");
+		ldbs_poke2(buf + 4, (unsigned short)APRIDISK_COMPRESSED);
+		ldbs_poke4(buf + 8, 3);
+		ldbs_poke2(buf + 16, (unsigned short)secsize);
+		buf[18] =  se->filler;
 	}
-	if (!fp) return DSK_ERR_NOTME;
-
-	/* Try to check the magic number at 0x80 */
-	if (fread(adiskself->adisk_header, 1, sizeof(adiskself->adisk_header), 
-				fp) < (int)sizeof(adiskself->adisk_header) 
-	|| (memcmp(adiskself->adisk_header, adisk_wmagic, sizeof(adisk_wmagic)))
-	|| (adisk_rdlong(fp, &magic) != DSK_ERR_OK) 
-	|| (magic != APRIDISK_MAGIC && 
-	    magic != APRIDISK_CREATOR &&
-	    magic != APRIDISK_COMMENT &&
-	    magic != APRIDISK_DELETED))
+	else
 	{
-		fclose(fp);
-		return DSK_ERR_NOTME;
-	}
-	/* Seek to end of header */
-	fseek(fp, 0x80, SEEK_SET);	
-
-	adiskself->adisk_dirty = 0;
-	adiskself->adisk_sec = 0;
-	/* Keep a copy of the filename; when writing back, we will need it */
-	adiskself->adisk_filename = dsk_malloc(1 + strlen(filename));
-	if (!adiskself->adisk_filename) return DSK_ERR_NOMEM;
-	strcpy(adiskself->adisk_filename, filename);	
-
-	/* Now to load the sectors. Allow 1440 (a 720k floppy); 
-	 * if there are more than that, we dynamically grow the array. */
-	adiskself->adisk_maxsectors = 1440;
-	adiskself->adisk_sectors = dsk_malloc(1440 * sizeof(ADISK_SECTOR));
-	if (!adiskself->adisk_sectors) 
-	{
-		dsk_free(adiskself->adisk_filename);
-		return DSK_ERR_NOMEM;
-	}
-	memset(adiskself->adisk_sectors, 0, 1440 * sizeof(ADISK_SECTOR));
-	count = 0;
-	dsk_report("Loading APRIDISK file into memory");
-	while (!feof(fp))
-	{
-		err = adisk_load_sector(adiskself, count++, fp);
-		/* DSK_ERR_OVERRUN: End of file */
-		adiskself->adisk_nsectors = count;
-		if (err == DSK_ERR_OVERRUN) 
-		{
-			dsk_report_end();
-			return DSK_ERR_OK;
-		}
-		if (err) 
-		{
-			dsk_free(adiskself->adisk_filename);
-			dsk_free(adiskself->adisk_sectors);
-			dsk_report_end();
+		ldbs_poke2(buf + 4, (unsigned short)APRIDISK_UNCOMPRESSED);
+		ldbs_poke4(buf + 8, 128 << se->id_psh);
+		err = ldbs_getblock(adiskself->adisk_super.ld_store, 
+			se->blockid, type, buf + 16, &secsize);
+		if (err && err != DSK_ERR_OVERRUN)
+		{	
+			dsk_free(buf);
 			return err;
 		}
-	} 
-	dsk_report_end();
+	}
+	ldbs_poke4(buf,     APRIDISK_MAGIC);
+	ldbs_poke2(buf + 6, 0x10);
+	buf[12] =  head;
+	buf[13] =  se->id_sec;
+	ldbs_poke2(buf + 14, (unsigned short)cyl);
+
+	if (fwrite(buf, 1, slen, adiskself->adisk_fp) < slen)
+	{
+		dsk_free(buf);
+		return DSK_ERR_SYSERR;
+	}
+	dsk_free(buf);
 	return DSK_ERR_OK;
+
 }
 
-
-dsk_err_t adisk_creat(DSK_DRIVER *self, const char *filename)
-{
-	ADISK_DSK_DRIVER *adiskself;
-	FILE *fp;
-	
-	/* Sanity check: Is this meant for our driver? */
-	if (self->dr_class != &dc_adisk) return DSK_ERR_BADPTR;
-	adiskself = (ADISK_DSK_DRIVER *)self;
-
-	/* See if the file can be created. But don't hold it open. */
-	fp = fopen(filename, "wb");
-	adiskself->adisk_readonly = 0;
-	if (!fp) return DSK_ERR_SYSERR;
-	fclose(fp);
-	adiskself->adisk_dirty = 1;
-
-	/* Keep a copy of the filename, for writing back */
-	adiskself->adisk_filename = dsk_malloc(1 + strlen(filename));
-	if (!adiskself->adisk_filename) return DSK_ERR_NOMEM;
-	strcpy(adiskself->adisk_filename, filename);	
-	
-	adiskself->adisk_maxsectors = 0;
-	adiskself->adisk_sectors = NULL;
-
-	return DSK_ERR_OK;
-}
 
 
 dsk_err_t adisk_close(DSK_DRIVER *self)
 {
 	ADISK_DSK_DRIVER *adiskself;
-	dsk_err_t err = DSK_ERR_OK;
-	dsk_ltrack_t trk;
+	dsk_err_t err;
 
 	if (self->dr_class != &dc_adisk) return DSK_ERR_BADPTR;
 	adiskself = (ADISK_DSK_DRIVER *)self;
 
-	if (adiskself->adisk_filename && (adiskself->adisk_dirty))
-	{
-/* When writing back to a ADISK, create the file from scratch. */
-/* XXX Sort the sectors... */
-		FILE *fp = fopen(adiskself->adisk_filename, "wb");
-		if (!fp) err = DSK_ERR_SYSERR;
-		else
-		{
-			dsk_report("Compressing APRIDISK file");
-			if (fwrite(adisk_wmagic, 1, 128, fp) < 128)
-			{
-				err = DSK_ERR_SYSERR;
-			}
-			else if ((err = adisk_save_creator(adiskself, fp))) { }
-			else for (trk = 0; trk < adiskself->adisk_maxsectors; trk++)
-			{
-				err = adisk_save_sector(adiskself, 
-					&adiskself->adisk_sectors[trk], fp);
-				if (err) break;
-			}
-			if (!err) err = adisk_save_comment(adiskself, fp);
-			fclose(fp);
-			dsk_report_end();
-		}
-	}
-/* Free track buffers if we have them */
-	if (adiskself->adisk_sectors)
-	{
-		unsigned int n;
-		for (n = 0; n < adiskself->adisk_maxsectors; n++)
-		{
-			adisk_free_sector(&adiskself->adisk_sectors[n]);
-		}
-		dsk_free(adiskself->adisk_sectors);
-		adiskself->adisk_sectors = NULL;
-		adiskself->adisk_maxsectors = 0;
-	}
-	if (adiskself->adisk_filename) 
+	/* Firstly, ensure any pending changes are flushed to the LDBS 
+	 * blockstore. Once this has been done we own the blockstore again 
+	 * and have to close it after we've finished with it. */
+	err = ldbsdisk_detach(self); 
+	if (err)
 	{
 		dsk_free(adiskself->adisk_filename);
-		adiskself->adisk_filename = NULL;
+		ldbs_close(&adiskself->adisk_super.ld_store);
+		return err;
 	}
-	if (adiskself->adisk_creator)
+
+	/* If this disc image has not been written to, just close it and 
+	 * dispose thereof. */
+	if (!self->dr_dirty)
 	{
-		dsk_free(adiskself->adisk_creator);
-		adiskself->adisk_creator = NULL;
+		dsk_free(adiskself->adisk_filename);
+		return ldbs_close(&adiskself->adisk_super.ld_store);
 	}
+	/* Trying to save changes but source is read-only */
+	if (adiskself->adisk_super.ld_readonly)
+	{
+		dsk_free(adiskself->adisk_filename);
+		ldbs_close(&adiskself->adisk_super.ld_store);
+		return DSK_ERR_RDONLY;
+	}
+	adiskself->adisk_fp = fopen(adiskself->adisk_filename, "wb");
+	if (!adiskself->adisk_fp)
+	{
+		dsk_free(adiskself->adisk_filename);
+		ldbs_close(&adiskself->adisk_super.ld_store);
+		return DSK_ERR_SYSERR;	
+	}
+	dsk_report("Compressing APRIDISK file");
+	if (fwrite(adisk_wmagic, 1, 128, adiskself->adisk_fp) < 128)
+	{
+		err = DSK_ERR_SYSERR;
+	}
+	/* Write creator. Which is LibDsk, not the original utility */
+	if (!err)
+	{
+		err = adisk_save_creator(adiskself, adiskself->adisk_fp);
+	}
+	/* Dump the sectors */	
+	if (!err)
+	{
+		err = ldbs_all_sectors(adiskself->adisk_super.ld_store, 
+				sector_callback, SIDES_ALT, adiskself);
+	}
+	/* Write the comment */
+	if (!err)
+	{
+		err = adisk_save_comment(adiskself, adiskself->adisk_fp);
+	}
+	if (!err)
+	{
+		if (fclose(adiskself->adisk_fp))
+		{
+			err = DSK_ERR_SYSERR;
+		}
+	}
+	else
+	{
+		fclose(adiskself->adisk_fp);
+	}
+	dsk_report_end();
+	dsk_free(adiskself->adisk_filename);
+	ldbs_close(&adiskself->adisk_super.ld_store);
+
 	return err;
 }
 
-static dsk_err_t adisk_find_sector(ADISK_DSK_DRIVER *self, const DSK_GEOMETRY *geom,
-				dsk_pcyl_t cylinder, dsk_phead_t head, 
-				dsk_psect_t sector, void **buf, unsigned long *ns)
-{
-	ADISK_SECTOR *psec;
-	dsk_lsect_t nsec;
-
-	for (nsec = 0; nsec < self->adisk_maxsectors; nsec++)
-	{
-		psec = &self->adisk_sectors[nsec];
-		if (psec->adisks_cylinder == cylinder &&
-		    psec->adisks_head     == head     &&
-		    psec->adisks_sector   == sector) break;
-	}
-	/* Sector not found? */
-	if (nsec >= self->adisk_maxsectors) return DSK_ERR_NOADDR;
-	/* Sector has no data? */
-	if (psec->adisks_data == NULL)    return DSK_ERR_NODATA;
-
-	*ns  = nsec;
-	*buf = psec->adisks_data;
-	return DSK_ERR_OK;
-}
-
-
-dsk_err_t adisk_read(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
-                             void *buf, dsk_pcyl_t cylinder,
-                              dsk_phead_t head, dsk_psect_t sector)
-{
-	ADISK_DSK_DRIVER *adiskself;
-	void *secbuf;
-	dsk_err_t err;
-	unsigned long nsec;
-
-	if (!buf || !self || !geom || self->dr_class != &dc_adisk) return DSK_ERR_BADPTR;
-	adiskself = (ADISK_DSK_DRIVER *)self;
-
-	if (!adiskself->adisk_filename) return DSK_ERR_NOTRDY;
-
-	err = adisk_find_sector(adiskself, geom, cylinder, head, sector, &secbuf, &nsec);
-	if (err) return err;
-	memcpy(buf, secbuf, geom->dg_secsize);
-	return DSK_ERR_OK;
-}
 
 
 
-dsk_err_t adisk_write(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
-                             const void *buf, dsk_pcyl_t cylinder,
-                              dsk_phead_t head, dsk_psect_t sector)
-{
-	ADISK_DSK_DRIVER *adiskself;
-	dsk_err_t err;
-	void *secbuf;
-	unsigned long nsec;
-
-	if (!buf || !self || !geom || self->dr_class != &dc_adisk) return DSK_ERR_BADPTR;
-	adiskself = (ADISK_DSK_DRIVER *)self;
-
-	if (!adiskself->adisk_filename) return DSK_ERR_NOTRDY;
-	if (adiskself->adisk_readonly) return DSK_ERR_RDONLY;
-
-	err = adisk_find_sector(adiskself, geom, cylinder, head, sector, &secbuf, &nsec);
-	if (err) return err;
-	memcpy(secbuf, buf, geom->dg_secsize);
-	adiskself->adisk_dirty = 1;
-	return DSK_ERR_OK;
-}
-
-
-
-dsk_err_t adisk_format(DSK_DRIVER *self, DSK_GEOMETRY *geom,
-                                dsk_pcyl_t cylinder, dsk_phead_t head,
-                                const DSK_FORMAT *format, unsigned char filler)
-{
-	ADISK_DSK_DRIVER *adiskself;
-	dsk_err_t err;
-	dsk_psect_t nlsec;
-	unsigned long nsec, secsize;
-	void *secbuf;
-	ADISK_SECTOR *psec;
-
-	if (!self || !geom || self->dr_class != &dc_adisk) return DSK_ERR_BADPTR;
-	adiskself = (ADISK_DSK_DRIVER *)self;
-
-	if (!adiskself->adisk_filename) return DSK_ERR_NOTRDY;
-	if (adiskself->adisk_readonly) return DSK_ERR_RDONLY;
-
-	/* See if there's a sector header for this sector already */
-	for (nlsec = 0; nlsec < geom->dg_sectors; nlsec++)
-	{
-		secsize = format[nlsec].fmt_secsize;
-		err = adisk_find_sector(adiskself, geom, cylinder, head, 
-				format[nlsec].fmt_sector, &secbuf, &nsec);
-		if (err)	/* new sector */
-		{
-			nsec = adiskself->adisk_nsectors;
-			err = adisk_ensure_size(adiskself, nsec);
-			if (err) return err;
-			psec = &adiskself->adisk_sectors[nsec];
-/* Allocate a new sector buffer  */
-			psec->adisks_magic    = APRIDISK_MAGIC;
-			psec->adisks_cylinder = cylinder;
-			psec->adisks_head     = head;
-			psec->adisks_sector   = format[nlsec].fmt_sector;
-			psec->adisks_data = dsk_malloc(secsize);
-			if (!psec->adisks_data) return DSK_ERR_NOMEM;
-			else psec->adisks_datalen = secsize;
-			++adiskself->adisk_nsectors;
-		}
-		else
-		{
-			psec = &adiskself->adisk_sectors[nsec];
-			/* Readjust size */
-			if (psec->adisks_datalen != secsize)
-			{
-				if (psec->adisks_data) dsk_free(psec->adisks_data);
-				psec->adisks_data = dsk_malloc(secsize);
-				if (!psec->adisks_data) return DSK_ERR_NOMEM;
-				else psec->adisks_datalen = secsize;
-			}
-		}
-		memset(psec->adisks_data, filler, secsize);
-	}	
-	return DSK_ERR_OK;
-}
-	
-
-dsk_err_t adisk_xseek(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
-                      dsk_pcyl_t cylinder, dsk_phead_t head)
-{
-	ADISK_DSK_DRIVER *adiskself;
-	unsigned long nsec;
-
-	if (!self || !geom || self->dr_class != &dc_adisk) return DSK_ERR_BADPTR;
-	adiskself = (ADISK_DSK_DRIVER *)self;
-
-	if (!adiskself->adisk_filename) return DSK_ERR_NOTRDY;
-
-	if (cylinder >= geom->dg_cylinders || head >= geom->dg_heads)
-		return DSK_ERR_SEEKFAIL;
-
-	/* Find a sector with the given track / head */
-	for (nsec = 0; nsec < adiskself->adisk_nsectors; nsec++)
-	{
-		if (adiskself->adisk_sectors[nsec].adisks_cylinder == cylinder &&
-		    adiskself->adisk_sectors[nsec].adisks_head     == head)
-			return DSK_ERR_OK;
-	}
-	return DSK_ERR_SEEKFAIL;
-}
-
-dsk_err_t adisk_status(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
-                      dsk_phead_t head, unsigned char *result)
-{
-	ADISK_DSK_DRIVER *adiskself;
-
-	if (!self || !geom || self->dr_class != &dc_adisk) return DSK_ERR_BADPTR;
-	adiskself = (ADISK_DSK_DRIVER *)self;
-
-	if (!adiskself->adisk_filename) *result &= ~DSK_ST3_READY;
-	if (adiskself->adisk_readonly) *result |= DSK_ST3_RO;
-	return DSK_ERR_OK;
-}
-
-
-/* Read a sector ID from a given track */
-dsk_err_t adisk_secid(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
-                                dsk_pcyl_t cylinder, dsk_phead_t head, DSK_FORMAT *result)
-{
-        ADISK_DSK_DRIVER *adiskself;
-	dsk_psect_t count; 
-	int nsec, lastmatch, zeromatch;
-
-        if (!self || !geom || !result || self->dr_class != &dc_adisk)
-                return DSK_ERR_BADPTR;
-        adiskself = (ADISK_DSK_DRIVER *)self;
-
-	/* Number of matches to skip */
-	count = adiskself->adisk_sec + 1;
-	lastmatch = -1;
-	zeromatch = -1;
-
-	/* Find sectors which match the criteria. 
-	 * Set zeromatch to be the one found "count" sectors in.
-	 * Set lastmatch to be the last one found. 
-	 * If zeromatch=lastmatch, reset the count so that the next
-	 * call returns the first sector */
-	for (nsec = 0; nsec < (int)adiskself->adisk_nsectors; nsec++)
-	{
-		if (adiskself->adisk_sectors[nsec].adisks_cylinder == cylinder &&
-		    adiskself->adisk_sectors[nsec].adisks_head     == head &&
-		    adiskself->adisk_sectors[nsec].adisks_datalen)
-		{
-			lastmatch = nsec;
-			if (count)
-			{
-				--count;
-				if (!count) zeromatch = nsec;
-			}
-		}
-	}
-	/* No suitable sectors found */
-	if (lastmatch == -1) return DSK_ERR_NOADDR;
-	if (zeromatch == -1) zeromatch = lastmatch;
-	/* If lastmatch == zeromatch, then the next search will run out of 
-	 * sectors. Reset the counter. */
-	if (zeromatch == lastmatch) adiskself->adisk_sec = 0;
-	else			    adiskself->adisk_sec++;
-
-	result->fmt_cylinder = adiskself->adisk_sectors[zeromatch].adisks_cylinder;
-	result->fmt_head     = adiskself->adisk_sectors[zeromatch].adisks_head;
-	result->fmt_sector   = adiskself->adisk_sectors[zeromatch].adisks_sector;
-	result->fmt_secsize  = adiskself->adisk_sectors[zeromatch].adisks_datalen;
-	
-	return DSK_ERR_OK;
-}
 
 

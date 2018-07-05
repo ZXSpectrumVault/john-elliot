@@ -33,7 +33,11 @@ LDPUBLIC32 dsk_err_t LDPUBLIC16 dsk_psecid(DSK_DRIVER *self, const DSK_GEOMETRY 
 
 	dc = self->dr_class;
 
-        if (!dc->dc_secid) return DSK_ERR_NOTIMPL;
+	WALK_VTABLE(dc, dc_secid)
+        if (!dc->dc_secid) 
+	{
+		return DSK_ERR_NOTIMPL;
+	}
 	return (dc->dc_secid)(self,geom,cylinder,head,result);	
 
 }

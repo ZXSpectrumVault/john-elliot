@@ -75,9 +75,8 @@ dsk_err_t tios_open(DSK_PDRIVER pDriver, const char *name, char *nameout)
 	if (!self || self->super.rd_class != &rpc_termios) return DSK_ERR_BADPTR;
 	if (strncmp(name, "serial:", 7)) return DSK_ERR_NOTME;
 	name += 7;
-	self->filename = dsk_malloc(strlen(name) + 1);
+	self->filename = dsk_malloc_string(name);
 	if (!self->filename) return DSK_ERR_NOMEM;
-	strcpy(self->filename, name);
 	sep = strchr(self->filename, ',');
 	if (sep) *sep = 0;
 /* We have a filename. Let's open it up... */
@@ -325,12 +324,12 @@ static dsk_err_t rdbyte(TERMIOS_REMOTE_DATA *self, unsigned char *c)
 static dsk_err_t read_bytes(TERMIOS_REMOTE_DATA *self, int count, 
 		unsigned char *c)
 {
-	int tries, err, count0;
-	unsigned char *c0 ;
+	int tries, err; /* , count0; */
+/*	unsigned char *c0 ;
 
 	c0 = c;
 	count0 = count;
-/*	printf("Reading %d bytes\n", count); fflush(stdout); */
+	printf("Reading %d bytes\n", count); fflush(stdout); */
 	for (tries = 0; tries < 30;)
 	{
 		err = read(self->infd, c, count);

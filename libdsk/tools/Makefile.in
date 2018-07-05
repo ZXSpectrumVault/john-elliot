@@ -91,7 +91,7 @@ host_triplet = @host@
 target_triplet = @target@
 bin_PROGRAMS = dsktrans$(EXEEXT) dskform$(EXEEXT) dskid$(EXEEXT) \
 	dskdump$(EXEEXT) dskscan$(EXEEXT) dskutil$(EXEEXT) \
-	md3serial$(EXEEXT) apriboot$(EXEEXT)
+	md3serial$(EXEEXT) apriboot$(EXEEXT) dskconv$(EXEEXT)
 noinst_PROGRAMS = @TOOLCLASSES@ forkslave$(EXEEXT) dsktest$(EXEEXT) \
 	serslave$(EXEEXT)
 EXTRA_PROGRAMS =
@@ -132,6 +132,11 @@ am_check3_OBJECTS = check3.$(OBJEXT)
 check3_OBJECTS = $(am_check3_OBJECTS)
 check3_LDADD = $(LDADD)
 check3_DEPENDENCIES = ../lib/libdsk.la
+am_dskconv_OBJECTS = dskconv.$(OBJEXT) utilopts.$(OBJEXT) \
+	formname.$(OBJEXT)
+dskconv_OBJECTS = $(am_dskconv_OBJECTS)
+dskconv_LDADD = $(LDADD)
+dskconv_DEPENDENCIES = ../lib/libdsk.la
 am_dskdump_OBJECTS = dskdump.$(OBJEXT) utilopts.$(OBJEXT) \
 	formname.$(OBJEXT)
 dskdump_OBJECTS = $(am_dskdump_OBJECTS)
@@ -212,15 +217,15 @@ am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
 SOURCES = $(apriboot_SOURCES) $(check1_SOURCES) $(check2_SOURCES) \
-	$(check3_SOURCES) $(dskdump_SOURCES) $(dskform_SOURCES) \
-	$(dskid_SOURCES) $(dskscan_SOURCES) $(dsktest_SOURCES) \
-	$(dsktrans_SOURCES) $(dskutil_SOURCES) $(forkslave_SOURCES) \
-	$(md3serial_SOURCES) $(serslave_SOURCES)
+	$(check3_SOURCES) $(dskconv_SOURCES) $(dskdump_SOURCES) \
+	$(dskform_SOURCES) $(dskid_SOURCES) $(dskscan_SOURCES) \
+	$(dsktest_SOURCES) $(dsktrans_SOURCES) $(dskutil_SOURCES) \
+	$(forkslave_SOURCES) $(md3serial_SOURCES) $(serslave_SOURCES)
 DIST_SOURCES = $(apriboot_SOURCES) $(check1_SOURCES) $(check2_SOURCES) \
-	$(check3_SOURCES) $(dskdump_SOURCES) $(dskform_SOURCES) \
-	$(dskid_SOURCES) $(dskscan_SOURCES) $(dsktest_SOURCES) \
-	$(dsktrans_SOURCES) $(dskutil_SOURCES) $(forkslave_SOURCES) \
-	$(md3serial_SOURCES) $(serslave_SOURCES)
+	$(check3_SOURCES) $(dskconv_SOURCES) $(dskdump_SOURCES) \
+	$(dskform_SOURCES) $(dskid_SOURCES) $(dskscan_SOURCES) \
+	$(dsktest_SOURCES) $(dsktrans_SOURCES) $(dskutil_SOURCES) \
+	$(forkslave_SOURCES) $(md3serial_SOURCES) $(serslave_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -382,6 +387,7 @@ top_srcdir = @top_srcdir@
 uudecode = @uudecode@
 AM_CPPFLAGS = -I$(top_srcdir)/include
 LDADD = ../lib/libdsk.la
+dskconv_SOURCES = dskconv.c utilopts.c utilopts.h formname.c formname.h
 dsktrans_SOURCES = dsktrans.c utilopts.c utilopts.h formname.c formname.h \
 		 apriboot.h bootsec.c
 
@@ -519,6 +525,10 @@ check3$(EXEEXT): $(check3_OBJECTS) $(check3_DEPENDENCIES) $(EXTRA_check3_DEPENDE
 	@rm -f check3$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(check3_OBJECTS) $(check3_LDADD) $(LIBS)
 
+dskconv$(EXEEXT): $(dskconv_OBJECTS) $(dskconv_DEPENDENCIES) $(EXTRA_dskconv_DEPENDENCIES) 
+	@rm -f dskconv$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(dskconv_OBJECTS) $(dskconv_LDADD) $(LIBS)
+
 dskdump$(EXEEXT): $(dskdump_OBJECTS) $(dskdump_DEPENDENCIES) $(EXTRA_dskdump_DEPENDENCIES) 
 	@rm -f dskdump$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(dskdump_OBJECTS) $(dskdump_LDADD) $(LIBS)
@@ -571,6 +581,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check2.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check3.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crc16.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dskconv.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dskdump.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dskform.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dskid.Po@am__quote@

@@ -60,15 +60,21 @@
 /*  &dc_dqk,     * Compressed .DSK - now subsumed by compression
                          * library. */
     &dc_adisk,  /* APRIDISK image */
+#ifndef WIN16    
     &dc_qm,     /* CopyQM */
     &dc_tele,	/* Teledisk */
+#endif
+    &dc_ldbsdisk, /* LibDsk block store */
+    &dc_qrst,	/* Compaq Quick Release Sector Transfer */
     &dc_imd,	/* IMAGEDISK IMD */
 /*  &dc_dskf,	   IBM LoadDskF */
     &dc_ydsk,	/* YAZE YDSK */
 
 /* 4. Raw files with no magic number. */
-    &dc_posix,
-/* 5. Raw files that will never be selected automatically. For example, 
+    &dc_posixalt,
+    &dc_posixoo,
+    &dc_posixob,
+/* 5. Files that will never be selected automatically. For example, 
  *   the MYZ80 drive image cannot be reliably identified, so it must be 
  *   explicitly specified. */
     &dc_myz80,

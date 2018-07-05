@@ -34,6 +34,7 @@ LDPUBLIC32 dsk_err_t LDPUBLIC16 dsk_ptread(DSK_DRIVER *self, const DSK_GEOMETRY 
 
 	dc = self->dr_class;
 
+	WALK_VTABLE(dc, dc_tread)
 	if (dc->dc_tread) 
 	{
 		err = (dc->dc_tread)(self,geom,buf,cylinder,head);	
@@ -91,10 +92,23 @@ LDPUBLIC32 dsk_err_t LDPUBLIC16 dsk_xtread(DSK_DRIVER *self, const DSK_GEOMETRY 
 
 	dc = self->dr_class;
 
+	WALK_VTABLE(dc, dc_xtread)
 	if (dc->dc_xtread) 
 	{
 		err = (dc->dc_xtread)(self,geom,buf,cylinder,head,
 				cyl_expected, head_expected);	
+		/* If set to store bytes complemented, flip them as they come
+		 * out. (If we are using the dsk_pread() fallback, the 
+		 * complement will take place in dsk_pread() ) */
+		if (geom->dg_fm & RECMODE_COMPLEMENT)
+		{
+			for (sec = 0; sec < geom->dg_sectors * geom->dg_secsize;
+				sec++)
+			{
+				((char *)buf)[sec] = ~((char *)buf)[sec];
+			}
+		}
+
 		if (err != DSK_ERR_NOTIMPL) return err;
 	}
 

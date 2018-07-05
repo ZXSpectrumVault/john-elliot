@@ -81,7 +81,6 @@ SBRS = COMPBZ2.SBR \
 		RPCPACK.SBR \
 		RPCSERV.SBR \
 		DRVRCPM.SBR \
-		DRVQM.SBR \
 		DSKREPRT.SBR \
 		CRCTABLE.SBR \
 		DRVADISK.SBR \
@@ -92,13 +91,17 @@ SBRS = COMPBZ2.SBR \
 		DSKTRKID.SBR \
 		DRVNTWDM.SBR \
 		REMOTE.SBR \
-		DRVTELE.SBR \
 		DRVLOGI.SBR \
 		COMPTLZH.SBR \
 		DRVJV3.SBR \
 		DRVIMD.SBR \
 		DRVSIMH.SBR \
-		DRVYDSK.SBR
+		DRVYDSK.SBR \
+		LDBS.SBR \
+		DRVLDBS.SBR \
+		DRVQRST.SBR \
+		DSKCOPY.SBR \
+		DSKICONV.SBR
 
 
 COMPBZ2_DEP = j:\c\libdsk\lib\compi.h \
@@ -135,6 +138,8 @@ DRVCFI_DEP = j:\c\libdsk\lib\drvi.h \
 	j:\c\libdsk\lib\drv.h \
 	linux/fd.h \
 	linux/fdreg.h \
+	j:\c\libdsk\lib\drvldbs.h \
+	j:\c\libdsk\lib\ldbs.h \
 	j:\c\libdsk\lib\drvcfi.h
 
 
@@ -142,6 +147,7 @@ DRVCPCEM_DEP = j:\c\libdsk\lib\drvi.h \
 	j:\c\libdsk\lib\drv.h \
 	linux/fd.h \
 	linux/fdreg.h \
+	j:\c\libdsk\lib\ldbs.h \
 	j:\c\libdsk\lib\drvcpcem.h
 
 
@@ -153,7 +159,8 @@ DRVLINUX_DEP = j:\c\libdsk\lib\drvi.h \
 	sys/ioctl.h
 
 
-DRVMYZ80_DEP = j:\c\libdsk\lib\drvi.h \
+DRVMYZ80_DEP = j:\c\libdsk\lib\ldbs.h \
+	j:\c\libdsk\lib\drvi.h \
 	j:\c\libdsk\lib\drv.h \
 	linux/fd.h \
 	linux/fdreg.h \
@@ -164,6 +171,7 @@ DRVPOSIX_DEP = j:\c\libdsk\lib\drvi.h \
 	j:\c\libdsk\lib\drv.h \
 	linux/fd.h \
 	linux/fdreg.h \
+	j:\c\libdsk\lib\ldbs.h \
 	j:\c\libdsk\lib\drvposix.h
 
 
@@ -279,7 +287,8 @@ DRVWIN16_DEP = j:\c\libdsk\lib\drvi.h \
 	j:\c\libdsk\lib\w16defs.h
 
 
-DRVNWASP_DEP = j:\c\libdsk\lib\drvi.h \
+DRVNWASP_DEP = j:\c\libdsk\lib\ldbs.h \
+	j:\c\libdsk\lib\drvi.h \
 	j:\c\libdsk\lib\drv.h \
 	linux/fd.h \
 	linux/fdreg.h \
@@ -321,14 +330,6 @@ DRVRCPM_DEP = j:\c\libdsk\lib\drvi.h \
 	j:\c\libdsk\lib\drvrcpm.h
 
 
-DRVQM_DEP = j:\c\libdsk\lib\drvi.h \
-	j:\c\libdsk\lib\drv.h \
-	linux/fd.h \
-	linux/fdreg.h \
-	j:\c\libdsk\lib\drvqm.h \
-	j:\c\libdsk\lib\crctable.h
-
-
 DSKREPRT_DEP = j:\c\libdsk\lib\drvi.h \
 	j:\c\libdsk\lib\drv.h \
 	linux/fd.h \
@@ -341,6 +342,8 @@ DRVADISK_DEP = j:\c\libdsk\lib\drvi.h \
 	j:\c\libdsk\lib\drv.h \
 	linux/fd.h \
 	linux/fdreg.h \
+	j:\c\libdsk\lib\drvldbs.h \
+	j:\c\libdsk\lib\ldbs.h \
 	j:\c\libdsk\lib\drvadisk.h
 
 
@@ -395,14 +398,8 @@ REMOTE_DEP = j:\c\libdsk\lib\drvi.h \
 	j:\c\libdsk\lib\remote.inc
 
 
-DRVTELE_DEP = j:\c\libdsk\lib\drvi.h \
-	j:\c\libdsk\lib\drv.h \
-	linux/fd.h \
-	linux/fdreg.h \
-	j:\c\libdsk\lib\drvtele.h
-
-
-DRVLOGI_DEP = j:\c\libdsk\lib\drvi.h \
+DRVLOGI_DEP = j:\c\libdsk\lib\ldbs.h \
+	j:\c\libdsk\lib\drvi.h \
 	j:\c\libdsk\lib\drv.h \
 	linux/fd.h \
 	linux/fdreg.h \
@@ -418,6 +415,8 @@ DRVJV3_DEP = j:\c\libdsk\lib\drvi.h \
 	j:\c\libdsk\lib\drv.h \
 	linux/fd.h \
 	linux/fdreg.h \
+	j:\c\libdsk\lib\drvldbs.h \
+	j:\c\libdsk\lib\ldbs.h \
 	j:\c\libdsk\lib\drvjv3.h
 
 
@@ -425,21 +424,58 @@ DRVIMD_DEP = j:\c\libdsk\lib\drvi.h \
 	j:\c\libdsk\lib\drv.h \
 	linux/fd.h \
 	linux/fdreg.h \
+	j:\c\libdsk\lib\drvldbs.h \
+	j:\c\libdsk\lib\ldbs.h \
 	j:\c\libdsk\lib\drvimd.h
 
 
-DRVSIMH_DEP = j:\c\libdsk\lib\drvi.h \
+DRVSIMH_DEP = j:\c\libdsk\lib\ldbs.h \
+	j:\c\libdsk\lib\drvi.h \
 	j:\c\libdsk\lib\drv.h \
 	linux/fd.h \
 	linux/fdreg.h \
 	j:\c\libdsk\lib\drvsimh.h
 
 
-DRVYDSK_DEP = j:\c\libdsk\lib\drvi.h \
+DRVYDSK_DEP = j:\c\libdsk\lib\ldbs.h \
+	j:\c\libdsk\lib\drvi.h \
 	j:\c\libdsk\lib\drv.h \
 	linux/fd.h \
 	linux/fdreg.h \
 	j:\c\libdsk\lib\drvydsk.h
+
+
+LDBS_DEP = j:\c\libdsk\lib\ldbs.h
+
+
+DRVLDBS_DEP = j:\c\libdsk\lib\drvi.h \
+	j:\c\libdsk\lib\drv.h \
+	linux/fd.h \
+	linux/fdreg.h \
+	j:\c\libdsk\lib\drvldbs.h \
+	j:\c\libdsk\lib\ldbs.h
+
+
+DRVQRST_DEP = j:\c\libdsk\lib\drvi.h \
+	j:\c\libdsk\lib\drv.h \
+	linux/fd.h \
+	linux/fdreg.h \
+	j:\c\libdsk\lib\drvldbs.h \
+	j:\c\libdsk\lib\ldbs.h \
+	j:\c\libdsk\lib\drvqrst.h
+
+
+DSKCOPY_DEP = j:\c\libdsk\lib\drvi.h \
+	j:\c\libdsk\lib\drv.h \
+	linux/fd.h \
+	linux/fdreg.h \
+	j:\c\libdsk\lib\ldbs.h
+
+
+DSKICONV_DEP = j:\c\libdsk\lib\drvi.h \
+	j:\c\libdsk\lib\drv.h \
+	linux/fd.h \
+	linux/fdreg.h
 
 
 all:	$(PROJ).DLL $(PROJ).BSC
@@ -540,9 +576,6 @@ RPCSERV.OBJ:	..\LIB\RPCSERV.C $(RPCSERV_DEP)
 DRVRCPM.OBJ:	..\LIB\DRVRCPM.C $(DRVRCPM_DEP)
 	$(CC) $(CFLAGS) $(CUSEPCHFLAG) /c ..\LIB\DRVRCPM.C
 
-DRVQM.OBJ:	..\LIB\DRVQM.C $(DRVQM_DEP)
-	$(CC) $(CFLAGS) $(CUSEPCHFLAG) /c ..\LIB\DRVQM.C
-
 DSKREPRT.OBJ:	..\LIB\DSKREPRT.C $(DSKREPRT_DEP)
 	$(CC) $(CFLAGS) $(CUSEPCHFLAG) /c ..\LIB\DSKREPRT.C
 
@@ -573,9 +606,6 @@ DRVNTWDM.OBJ:	..\LIB\DRVNTWDM.C $(DRVNTWDM_DEP)
 REMOTE.OBJ:	..\LIB\REMOTE.C $(REMOTE_DEP)
 	$(CC) $(CFLAGS) $(CUSEPCHFLAG) /c ..\LIB\REMOTE.C
 
-DRVTELE.OBJ:	..\LIB\DRVTELE.C $(DRVTELE_DEP)
-	$(CC) $(CFLAGS) $(CUSEPCHFLAG) /c ..\LIB\DRVTELE.C
-
 DRVLOGI.OBJ:	..\LIB\DRVLOGI.C $(DRVLOGI_DEP)
 	$(CC) $(CFLAGS) $(CUSEPCHFLAG) /c ..\LIB\DRVLOGI.C
 
@@ -594,15 +624,30 @@ DRVSIMH.OBJ:	..\LIB\DRVSIMH.C $(DRVSIMH_DEP)
 DRVYDSK.OBJ:	..\LIB\DRVYDSK.C $(DRVYDSK_DEP)
 	$(CC) $(CFLAGS) $(CUSEPCHFLAG) /c ..\LIB\DRVYDSK.C
 
+LDBS.OBJ:	..\LIB\LDBS.C $(LDBS_DEP)
+	$(CC) $(CFLAGS) $(CUSEPCHFLAG) /c ..\LIB\LDBS.C
+
+DRVLDBS.OBJ:	..\LIB\DRVLDBS.C $(DRVLDBS_DEP)
+	$(CC) $(CFLAGS) $(CUSEPCHFLAG) /c ..\LIB\DRVLDBS.C
+
+DRVQRST.OBJ:	..\LIB\DRVQRST.C $(DRVQRST_DEP)
+	$(CC) $(CFLAGS) $(CUSEPCHFLAG) /c ..\LIB\DRVQRST.C
+
+DSKCOPY.OBJ:	..\LIB\DSKCOPY.C $(DSKCOPY_DEP)
+	$(CC) $(CFLAGS) $(CUSEPCHFLAG) /c ..\LIB\DSKCOPY.C
+
+DSKICONV.OBJ:	..\LIB\DSKICONV.C $(DSKICONV_DEP)
+	$(CC) $(CFLAGS) $(CUSEPCHFLAG) /c ..\LIB\DSKICONV.C
+
 
 $(PROJ).DLL::	COMPBZ2.OBJ COMPGZ.OBJ COMPRESS.OBJ COMPSQ.OBJ DRVCFI.OBJ DRVCPCEM.OBJ \
 	DRVLINUX.OBJ DRVMYZ80.OBJ DRVPOSIX.OBJ DRVWIN32.OBJ DSKCHECK.OBJ DSKERROR.OBJ DSKFMT.OBJ \
 	DSKGEOM.OBJ DSKJNI.OBJ DSKLPHYS.OBJ DSKOPEN.OBJ DSKPARS.OBJ DSKREAD.OBJ DSKSECID.OBJ \
 	DSKSEEK.OBJ DSKSGEOM.OBJ DSKSTAT.OBJ DSKTREAD.OBJ DSKWRITE.OBJ DRVWIN16.OBJ DRVNWASP.OBJ \
-	RPCCLI.OBJ RPCMAP.OBJ RPCPACK.OBJ RPCSERV.OBJ DRVRCPM.OBJ DRVQM.OBJ DSKREPRT.OBJ \
-	CRCTABLE.OBJ DRVADISK.OBJ DSKCMT.OBJ DSKRETRY.OBJ DSKDIRTY.OBJ DSKRTRD.OBJ DSKTRKID.OBJ \
-	DRVNTWDM.OBJ REMOTE.OBJ DRVTELE.OBJ DRVLOGI.OBJ COMPTLZH.OBJ DRVJV3.OBJ DRVIMD.OBJ \
-	DRVSIMH.OBJ DRVYDSK.OBJ $(OBJS_EXT) $(DEFFILE)
+	RPCCLI.OBJ RPCMAP.OBJ RPCPACK.OBJ RPCSERV.OBJ DRVRCPM.OBJ DSKREPRT.OBJ CRCTABLE.OBJ \
+	DRVADISK.OBJ DSKCMT.OBJ DSKRETRY.OBJ DSKDIRTY.OBJ DSKRTRD.OBJ DSKTRKID.OBJ DRVNTWDM.OBJ \
+	REMOTE.OBJ DRVLOGI.OBJ COMPTLZH.OBJ DRVJV3.OBJ DRVIMD.OBJ DRVSIMH.OBJ DRVYDSK.OBJ \
+	LDBS.OBJ DRVLDBS.OBJ DRVQRST.OBJ DSKCOPY.OBJ DSKICONV.OBJ $(OBJS_EXT) $(DEFFILE)
 	echo >NUL @<<$(PROJ).CRF
 COMPBZ2.OBJ +
 COMPGZ.OBJ +
@@ -636,7 +681,6 @@ RPCMAP.OBJ +
 RPCPACK.OBJ +
 RPCSERV.OBJ +
 DRVRCPM.OBJ +
-DRVQM.OBJ +
 DSKREPRT.OBJ +
 CRCTABLE.OBJ +
 DRVADISK.OBJ +
@@ -647,13 +691,17 @@ DSKRTRD.OBJ +
 DSKTRKID.OBJ +
 DRVNTWDM.OBJ +
 REMOTE.OBJ +
-DRVTELE.OBJ +
 DRVLOGI.OBJ +
 COMPTLZH.OBJ +
 DRVJV3.OBJ +
 DRVIMD.OBJ +
 DRVSIMH.OBJ +
 DRVYDSK.OBJ +
+LDBS.OBJ +
+DRVLDBS.OBJ +
+DRVQRST.OBJ +
+DSKCOPY.OBJ +
+DSKICONV.OBJ +
 $(OBJS_EXT)
 $(PROJ).DLL
 $(MAPFILE)

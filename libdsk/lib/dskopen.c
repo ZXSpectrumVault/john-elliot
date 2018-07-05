@@ -35,6 +35,23 @@ static DRV_CLASS *classes[] =
 };
 
 
+/* [1.5.3] Allow for aliases in driver names. Extend driver name so it's
+ * a chain of nul-terminated strings finally terminated by a double-nul */
+static int match_drvname(const char *type, DRV_CLASS *dc)
+{
+	const char *dn = dc->dc_drvname;
+
+	while (*dn)
+	{
+		if (!strcmp(type, dn)) 
+		{
+			return 1;
+		}
+		dn += 1 + strlen(dn);
+	}
+	return 0;
+}
+
 
 
 static void dr_construct(DSK_DRIVER *self, DRV_CLASS *dc)
@@ -83,12 +100,13 @@ static dsk_err_t dsk_iopen(DSK_DRIVER **self, const char *filename, int ndrv, CO
 	if (cd) filename = cd->cd_ufilename;
 
 	if (!dc) return DSK_ERR_BADPTR;
-	
+
 	(*self) = dsk_malloc(dc->dc_selfsize);
 	if (!*self) return DSK_ERR_NOMEM;
 	dr_construct(*self, dc);
 
 	err = (dc->dc_open)(*self, filename);
+/*	printf("%s: open %s = %d\n", dc->dc_drvname, filename, err); */
 	if (err == DSK_ERR_OK) 
 	{
 		(*self)->dr_compress = cd;
@@ -119,7 +137,7 @@ LDPUBLIC32 dsk_err_t LDPUBLIC16 dsk_creat(DSK_DRIVER **self, const char *filenam
 
 	for (ndrv = 0; classes[ndrv]; ndrv++)
 	{
-		if (!strcmp(type, classes[ndrv]->dc_drvname))
+		if (match_drvname(type, classes[ndrv]))
 		{
 			e = dsk_icreat(self, filename, ndrv, cd);
 			if (e != DSK_ERR_OK && cd) comp_abort(&cd);
@@ -152,7 +170,7 @@ LDPUBLIC32 dsk_err_t LDPUBLIC16 dsk_open(DSK_DRIVER **self, const char *filename
 	{
 		for (ndrv = 0; classes[ndrv]; ndrv++)
 		{
-			if (!strcmp(type, classes[ndrv]->dc_drvname))
+			if (match_drvname(type, classes[ndrv]))
 			{
 				e = dsk_iopen(self, filename, ndrv, cd);
 				if (e && cd) comp_abort(&cd);
@@ -203,6 +221,8 @@ LDPUBLIC32 dsk_err_t LDPUBLIC16 dsk_close(DSK_DRIVER **self)
 		dsk_free(opt);
 		opt = opt2;
 	}
+	/* And any comments */
+	dsk_set_comment(*self, NULL);
 	dsk_free (*self);
 	*self = NULL;
 	return e;
@@ -300,4 +320,16 @@ LDPUBLIC32 const char * LDPUBLIC16 dsk_compdesc(DSK_DRIVER *self)
 	return comp_desc(self->dr_compress);	
 }
 
+
+int drv_instanceof(DSK_DRIVER *drv, DRV_CLASS *dc)
+{
+	DRV_CLASS *clazz = drv->dr_class;
+
+	while (clazz)
+	{
+		if (clazz == dc) return 1;
+		clazz = clazz->dc_super;
+	}
+	return 0;
+}
 

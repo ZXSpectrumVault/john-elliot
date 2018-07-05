@@ -175,9 +175,8 @@ dsk_err_t fossil_open(DSK_PDRIVER pDriver, const char *name, char *nameout)
 	if (!self || self->super.rd_class != &rpc_fossil) return DSK_ERR_BADPTR;
 	if (strncmp(name, "serial:", 7)) return DSK_ERR_NOTME;
 	name += 7;
-	self->filename = dsk_malloc(strlen(name) + 1);
+	self->filename = dsk_malloc_string(name);
 	if (!self->filename) return DSK_ERR_NOMEM;
-	strcpy(self->filename, name);
 	sep = strchr(self->filename, ',');
 	if (sep) *sep = 0;
 	self->portno = atoi(self->filename);

@@ -28,6 +28,9 @@ typedef struct
         FILE *lpx_fp;
 	int   lpx_readonly;
 	unsigned long  lpx_filesize;
+/* Used only when importing an LDBS file */
+	DSK_GEOMETRY *lpx_export_geom;
+	unsigned char *lpx_secbuf;
 } LOGICAL_DSK_DRIVER;
 
 dsk_err_t logical_open(DSK_DRIVER *self, const char *filename);
@@ -46,4 +49,6 @@ dsk_err_t logical_xseek(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
                                 dsk_pcyl_t cylinder, dsk_phead_t head);
 dsk_err_t logical_status(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
                                 dsk_phead_t head, unsigned char *result);
+dsk_err_t logical_to_ldbs(DSK_DRIVER *self, struct ldbs **result, DSK_GEOMETRY *geom);
+dsk_err_t logical_from_ldbs(DSK_DRIVER *self, struct ldbs *source, DSK_GEOMETRY *geom);
 

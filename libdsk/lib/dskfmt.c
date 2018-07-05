@@ -40,6 +40,7 @@ LDPUBLIC32 dsk_err_t LDPUBLIC16 dsk_pformat(DSK_DRIVER *self, DSK_GEOMETRY *geom
         if (self && self->dr_compress && self->dr_compress->cd_readonly)
                 return DSK_ERR_RDONLY;
 
+	WALK_VTABLE(dc, dc_format)
         if (!dc->dc_format) return DSK_ERR_NOTIMPL;
 	for (n = 0; n < self->dr_retry_count; n++)
 	{

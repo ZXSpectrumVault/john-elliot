@@ -31,6 +31,7 @@
 DRV_CLASS dc_remote =
 {
 	sizeof(DSK_DRIVER),	/* [deliberately] No extra data */
+	NULL,		/* superclass */
 	"remote",
 	"Remote LibDsk instance",
 	remote_open,

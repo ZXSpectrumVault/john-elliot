@@ -86,7 +86,7 @@ int check_numeric(char *arg, int *argc, char **argv)
 
 static void report(const char *s)
 {
-        printf("%s\r", s);
+        printf("%-79.79s\r", s);
         fflush(stdout);
 }
 
@@ -359,8 +359,14 @@ int do_copy(char *infile, char *outfile)
 	}
 abort:
 	printf("\r                                     \r");
-	if (indr)  dsk_close(&indr);
-	if (outdr) dsk_close(&outdr);
+	if (outdr) 
+	{
+		if (!e) e = dsk_close(&outdr); else dsk_close(&outdr);
+	}
+	if (indr) 
+	{
+		if (!e) e = dsk_close(&indr); else dsk_close(&indr);
+	}
 	if (buf) dsk_free(buf);
 	if (e)
 	{

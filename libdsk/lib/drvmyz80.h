@@ -48,3 +48,8 @@ dsk_err_t myz80_xseek(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
 dsk_err_t myz80_status(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
                       dsk_phead_t head, unsigned char *result);
 
+/* Convert to LDBS format. */
+dsk_err_t myz80_to_ldbs(DSK_DRIVER *self, struct ldbs **result, DSK_GEOMETRY *geom);
+
+/* Convert from LDBS format. */
+dsk_err_t myz80_from_ldbs(DSK_DRIVER *self, struct ldbs *source, DSK_GEOMETRY *geom);

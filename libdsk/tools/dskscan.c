@@ -78,7 +78,7 @@ int check_numeric(char *arg, int *argc, char **argv)
 
 static void report(const char *s)
 {
-        fprintf(stderr, "%s\r", s);
+        fprintf(stderr, "%-79.79s\r", s);
         fflush(stderr);
 }
 
@@ -212,7 +212,10 @@ int do_scan(char *infile)
 abort:
 		if (xml) printf("</disc>\n");
 	}
-	if (indr)  dsk_close(&indr);
+	if (indr) 
+	{
+		if (!e) e = dsk_close(&indr); else dsk_close(&indr);
+	}
 	if (e)
 	{
 		fprintf(stderr, "\n%s: %s\n", op, dsk_strerror(e));

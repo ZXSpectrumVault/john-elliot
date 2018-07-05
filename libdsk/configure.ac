@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
-UPDATED='November 1, 2016'
-AC_INIT(LibDsk, 1.4.2)
+UPDATED='January 31, 2018'
+AC_INIT(LibDsk, 1.5.8)
 AC_CONFIG_SRCDIR(lib/dskopen.c)
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_MACRO_DIR(m4)
@@ -66,6 +66,8 @@ AC_CHECK_FUNCS(basename)
 AC_CHECK_FUNCS(fork)
 AC_CHECK_FUNCS(GetTempFileName)
 AC_CHECK_FUNCS(sleep)
+AC_CHECK_FUNCS(ftruncate)
+AC_CHECK_FUNCS(chsize)
 
 dnl Checks for zlib
 if test x$with_zlib = xyes; then

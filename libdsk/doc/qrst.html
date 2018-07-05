@@ -1,0 +1,84 @@
+<html>
+<head>
+<title>QRST file format</title>
+</head>
+<body>
+<h1>QRST file format</h1>
+
+<p>QRST (Quick Release Sector Transfer) is a disc image format used by 
+Compaq to distribute diagnostic floppies.</p>
+
+<h2>Header</h2>
+
+<p>The header is 796 bytes long:</p>
+<pre>
+0000:	DB	'QRST',0	;Magic number
+0005:	DB	0, 80h, 3Fh	;Unknown; not accessed by QRST.EXE.
+0008:	DD	checksum	;Checksum of disc, see below (little-endian)
+000C:	DB	disc capacity	;1 =&gt; 360k
+				;2 =&gt; 1.2M
+				;3 =&gt; 720k
+				;4 =&gt; 1.4M
+				;5 =&gt; 160k
+				;6 =&gt; 180k
+				;7 =&gt; 320k
+000D:	DB	volume number in current set (1-based)
+000E:	DB	number of volumes in current set
+000F:	DB	description, ASCII with terminating 0. Can extend up to 004A. 
+004B:	DB	disk label, ASCII with terminating 0. Can extend up to 031B.
+</pre>
+
+<p>The checksum is the sum of all bytes on the disc, each byte multiplied 
+by (1 + its offset on the disc). So for a 360k disc it would be (1 * first 
+byte of first sector) + (2 * second byte of first sector) + ... + (368640 * 
+last byte of last sector).</p>
+
+<h2>Track records</h2>
+
+<p>There are three types of track record:</p>
+
+<h3>Uncompressed track</h3>
+<p>This consists of a 3-byte header followed by the uncompressed bytes for 
+that track:</p>
+<pre>
+0000:	DB	cylinder
+0001:	DB	head
+0002:	DB	0		;Uncompressed track
+0003:	DB	track data
+</pre>
+<p>The length of the track is determined from the disk type in the header.</p>
+
+<h3>Empty track</h3>
+<p>If the entire track is set to the same byte, that is represented by a 
+4-byte record:</p>
+<pre>
+0000:	DB	cylinder
+0001:	DB	head
+0002:	DB	1		;blank track
+0003:	DB	filler byte
+</pre>
+
+<h3>Compressed track</h3>
+<p>A compressed track is stored as a 5-byte header, followed by the compressed
+data.</p>
+<pre>
+0000:	DB	cylinder
+0001:	DB	head
+0002:	DB	2		;compressed track
+0003:	DW	length of compressed data (little-endian).
+</pre>
+
+<p>The compressed data consists of alternating runs of literal bytes:</p>
+<pre>
+0000:	DB	count
+0001:	DB	byte1, byte2, ..., byten
+</pre>
+<p>and repeat bytes:</p>
+<pre>
+0000:	DB	count
+0001:	DB	byte_to_repeat
+</pre>
+
+
+</body>
+</html>

@@ -1,14 +1,10 @@
 <html>
 	<head>
-		<title>LDBS disk image format v0.1</title>
+		<title>LDBS disk image format v0.3</title>
 	</head>
 	<body>
-		<h1>LDBS disk image format v0.1</h1>
-		<h2>John Elliott, 18 March 2016</h2>
-
-<p><em>This specification is currently only a draft; LDBS files created 
-according to it may not remain readable by future versions of LibDsk / 
-other utilities.</em></p>
+		<h1>LDBS disk image format v0.3</h1>
+		<h2>John Elliott, 14 March 2017</h2>
 
 <h2>Introduction</h2>
 
@@ -20,7 +16,7 @@ format proves useful in other situations.</p>
 <p>The suggested file extension is .ldbs.</p>
 
 <p>The reference implementation for this version of LDBS is 
-ldbs.c / ldbs.h, supplied with LibDsk v1.5.0.</p>
+ldbs.c / ldbs.h, supplied with LibDsk v1.5.4.</p>
 
 <p>The file structure is defined at two levels: a generic block store, and 
 the specific block types used to specify a disk image.</p>
@@ -31,6 +27,27 @@ have feature parity with CPCEMU extended .DSK, but in a more extensible
 format with greater support for in-place rewrites. It is not, for example,
 possible to reformat a track from 8 to 9 512-byte sectors in an EDSK file,
 without rewriting all subsequent tracks.</p>
+
+<h2>Change history</h2>
+
+<dl>
+<dt>0.3 (8 March 2017)</dt>
+<dd><ul>
+<li>Altered the definition of the track and sector headers to support some 
+CPC copy-protection methods and add further extensibility. Since this is a 
+breaking change to the binary file format, I have increased the version number 
+in the header.</li>
+</ul>
+<dt>0.2 (3 March 2017)</dt>
+<dd><ul>
+<li>Added a warning against storing file offsets in custom blocks.</li>
+<li>Implemented a few more helper methods. The disk image format itself
+remains unchanged.</li>
+</ul>
+</dd>
+<dt>0.1 (16 March 2016)</dt>
+<dd>Original version.</dd>
+</dl>
 
 <h2>Data storage: Block Store</h2>
 
@@ -46,8 +63,15 @@ avoid signed / unsigned issues, they should not exceed 2^31.</p>
 	<tr><td>0x0000</td><td>4 bytes</td><td>LDBS magic number:
 			<tt>0x4C 0x42 0x53 0x01</tt> ('<tt>LBS\01</tt>')</td></tr>
 	<tr><td>0x0004</td><td>4 bytes</td><td>File type. For a disk image
-			this is <tt>0x44 0x53 0x4B 0x01</tt>
-			('<tt>DSK\01</tt>').</td></tr>
+			this is <tt>0x44 0x53 0x4B 0x02</tt>
+			('<tt>DSK\02</tt>'). If it is 
+			<tt>0x44 0x53 0x4B 0x01</tt> ('<tt>DSK\01</tt>') then
+			it is in <a href="ldbs-0.2.html">LDBS 0.2</a> or 
+			earlier format. Such disc images are not likely to be 
+			in wide circulation and I don't think you need to 
+			bother implementing support for them. The supplied 
+			<tt>ldbs_v2</tt> utility can convert disc images in 
+			the earlier format to the current version.</td></tr>
 	<tr><td>0x0008</td><td>offset</td><td>Offset of first block in
 			'used' linked list. Zero means there are no used
 			data blocks.</td></tr>
@@ -162,8 +186,9 @@ than performing linear searches of the file or walking its linked lists.</p>
 	</tr>
 </table>
 <p>The format of a directory entry is one of <tt>T<var>xxx</var></tt>,
-<tt>INFO</tt>, <tt>CREA</tt>, <tt>DPB</tt> or <tt>GEOM</tt>. In each
-case, this is the block type of the corresponding block in the store.</p>
+<tt>INFO</tt>, <tt>CREA</tt>, <tt>DPB</tt> or <tt>GEOM</tt>, or a 
+custom block type (beginning with a lowercase 'a'-'z'). In each case, this 
+is the block type of the corresponding block in the store.</p>
 
 
 <table border="1"><tr><th>Offset</th><th>Type</th><th>Meaning</th></tr>
@@ -204,17 +229,30 @@ image file.</p>
 these in the disk image file. It will only be present on disks containing
 a CP/M filesystem.</p>
 
+<h3>Custom block types</h3>
 
-<p>Other entry types may be defined in later versions of this spec; 
-implementations should ignore unknown block types. It may, for example,
-be useful at some point to create a 'BOOT' block type containing the 
-keystrokes necessary to boot a disk, or a 'PICT' block containing a
-picture of the disk.</p>
+<p>Other block types than the ones listed here may be defined in later 
+versions of this spec; implementations should ignore unknown block types. 
+It may, for example, be useful at some point to create a 'BOOT' block type 
+containing the keystrokes necessary to boot a disk, or a 'PICT' block 
+containing a picture of the disk.</p>
 
 <p>All future block types defined by this spec will start with a capital 
 letter, 'A'-'Z'. Block types beginning with a lowercase letter 'a'-'z' 
 can be used for private purposes &mdash; there is, of course, no guarantee 
 that someone else won't pick the same block type for their own use.</p>
+
+<p>You should avoid storing file offsets in your custom blocks. There is 
+nothing stopping an LDBS implementation from rearranging blocks in a file
+so they end up at different offsets (for example, to remove unused space).
+However, such an implementation won't be aware of offsets held in custom 
+blocks, and so won't update them. This isn't just a theoretical danger:
+<tt>ldbs_clone()</tt> reverses the order of blocks when duplicating an
+LDBS file.</p>
+
+<p>The LibDsk TeleDisk, CopyQM and QRST drivers use custom blocks to hold
+details from the original file headers which aren't used by other disk
+image formats. These are, respectively, 'utd0', 'ucqm', and 'uqrs'.
 
 <h3>Track header</h3>
 
@@ -223,24 +261,44 @@ that someone else won't pick the same block type for their own use.</p>
 	<tr><td>0x0000</td><td>20 bytes</td><td>LDBS block header. Type 
 			field contains <tt>0x54 <var>cyl cyl head</var> 
 			</tt>, corresponding to directory entry. </td></tr>
-	<tr><td>0x0014</td><td>2 bytes</td><td>Number of sector entries
+	<tr><td>0x0014</td><td>2 bytes</td><td><b>[LDBS 0.3]</b> Length of 
+			fixed track header in bytes (= offset of first sector 
+			header less 0x0014).  Currently 0x000C, but you should 
+			not rely on this; future extensions may require extra 
+			bytes to be added to the track header.</td></tr>
+	<tr><td>0x0016</td><td>2 bytes</td><td><b>[LDBS 0.3]</b> Length of 
+			each sector entry in bytes. Currently 0x0010, but 
+			you should not rely on this; future extensions 
+			may require extra bytes to be added to the sector
+			header.</td></tr>
+	<tr><td>0x0018</td><td>2 bytes</td><td>Number of sector entries
 				in the track header.</td></tr>
-	<tr><td>0x0016</td><td>1 byte</td><td>Data rate when track was 
+	<tr><td>0x001A</td><td>1 byte</td><td>Data rate when track was 
 			recorded:
 <pre>0 =&gt; unknown
-1 =&gt; Single or double density
-2 =&gt; High density
-3 =&gt; Extended density</pre></td>
+1 =&gt; Single density (125 kbit/s or 150 kbit/s FM) or double density (250 kbit/s or 300 kbit/s MFM)
+2 =&gt; High density (500 kbit/s MFM, or [unlikely] 250 kbit/s FM)
+3 =&gt; Extended density (1000 kbit/s MFM, or [unlikely] 500 kbit/s FM)</pre>
+<p>Note: The 250 kbit/s and 300 kbit/s rates (and their FM equivalents) are 
+	combined because the same disc may appear to use either rate, 
+	depending whether it is read in a 360k drive or a 1.2Mb drive.</td>
 	</tr>
-	<tr><td>0x0017</td><td>1 byte</td><td>Recording mode used for the 
+	<tr><td>0x001B</td><td>1 byte</td><td>Recording mode used for the 
 			track:
 <pre>0 =&gt; unknown
 1 =&gt; FM
 2 =&gt; MFM</pre></td>
 	</tr>
-	<tr><td>0x0018</td><td>1 byte</td><td>Format gap length</td></tr>
-	<tr><td>0x0019</td><td>1 byte</td><td>Default filler byte</td></tr>
-	<tr><td>0x001A</td><td>12 bytes per sector</td><td>Sector descriptors</td>
+	<tr><td>0x001C</td><td>1 byte</td><td>Format gap length</td></tr>
+	<tr><td>0x001D</td><td>1 byte</td><td>Default filler byte</td></tr>
+	<tr><td>0x001E</td><td>2 bytes</td><td><b>[LDBS 0.3]</b> Approximate 
+	length of track (including address marks and gaps) in bytes. For some 
+	timing-based copy protection schemes. Zero if this value was not
+	captured when the disc was imaged.</td></tr>
+	<tr><td>0x0020</td><td></td><td><b>[LDBS 0.3]</b> Future versions may
+		add extra bytes here. See offset 0x0014</td></tr>
+	<tr><td>See offset 0x0014</td><td>See offset 0x0016</td>
+		<td><b>[LDBS 0.3]</b> Sector headers</td></tr>
 </table>
 <p>Each sector descriptor is formed:</p>
 <table border="1"><tr><th>Offset</th><th>Type</th><th>Meaning</th></tr>
@@ -278,6 +336,16 @@ Bit 0: Missing address mark in data field</pre>
 	<tr><td>0x0008</td><td>offset</td><td>Offset of sector data block
 			for this sector. If number of copies is zero, this
 			must be zero too.</td></tr>
+	<tr><td>0x000C</td><td>2 bytes</td><td>Number of trailing bytes. If
+			nonzero, then the specified number of CRC and gap 
+			bytes follow each copy of the sector itself.</td></tr>
+	<tr><td>0x000E</td><td>2 bytes</td><td>Approximate offset of sector 
+			within track. This is used for some timing-based
+			copy protection schemes. If this value was not 
+			captured it will be zero for all sectors on the track.
+			</td></tr>
+	<tr><td>0x0010</td><td></td><td><b>[LDBS 0.3]</b> Future versions may
+		add extra bytes here. See offset 0x0016 of track header.</td></tr>
 </table>
 
 <h3>Sector data</h3>
@@ -292,18 +360,23 @@ Bit 0: Missing address mark in data field</pre>
 			may not be the same as the values in its ID header.
 	</td></tr>
 	<tr><td>0x0014</td><td>As specified in descriptor</td>
-		<td>The sector data. The length should match the  
-			descriptor in the track header: size * number of 
-			copies. However implementations should be prepared
-			to deal with the data being shorter than the
-			expected size (for example, a sector expected to be
-			8k with only 6k of data recorded).</td></tr>
+		<td><p>The sector data. In normal circumstances the length 
+			should match the descriptor in the track header: 
+			((128 &lt;&lt; id_psh) + trailing bytes) * number of 
+			copies. However implementations should be prepared to 
+			handle the data being either shorter or longer than 
+			the expected size; this may arise if the LDBS file
+			was converted from a disc image file with the same
+			anomaly.</p>
+			</td></tr>
 </table>
 
 <p>Since the track directory does not record the locations of individual
 sectors, the block type field is not required to be unique. If an LDBS file
 contained more than 256 cylinders, for example, sectors on cylinder 256 would
-have the same block type as those on cylinder 0.</p>
+have the same block type as those on cylinder 0. Similarly if a track 
+contained several copies of the same sector, all these copies would have 
+the same block type.</p>
 
 <h3>Comment block</h3>
 
@@ -350,7 +423,7 @@ describing the filesystem.</p>
 <p><b>Rationale:</b> CP/M filesystems are not self-describing. If the 
 disk image was generated by an emulator or utility that is aware of the 
 CP/M filesystem, it may be helpful to record the filesystem parameters used.
-This would also be necessary for round-trip compatibility with the YAZE YDSK 
+This is also necessary for round-trip compatibility with the YAZE YDSK 
 format.</p>
 
 <h3>Geometry block</h3>
@@ -428,13 +501,19 @@ decompress gzipped disk images).</p>
 
 <h2>Reference Implementation</h2>
 
-<p>ldbs.h / ldbs.c in LibDsk 1.5.0 contain an X11-licensed reference 
+<p>ldbs.h / ldbs.c in LibDsk 1.5.4 contain an X11-licensed reference 
 implementation of LDBS. A few sample utilities are also supplied: </p>
 <ul>
 	<li>dsk2ldbs: Converts DSK / EDSK disk images to LDBS.</li>
 	<li>ldbs2dsk: Converts LDBS disk images to DSK / EDSK.</li>
 	<li>ldbstest: Sanity test of block layer functions.</li>
 	<li>ldbsdump: Displays the contents of an LDBS file.</li>
+	<li>ldbscopy: Copies one LDBS file to another using the ldbs_clone()
+		     function. As currently written this happens to reverse 
+		     the order of blocks in the file, so all block offsets 
+                     will change.</li>
+	<li>ldbs_v2: Upgrades a file in LDBS v0.1 or v0.2 format to the 
+		     current specification.</li>
 </ul>
 
 </body>

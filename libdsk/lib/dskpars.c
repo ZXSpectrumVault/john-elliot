@@ -79,6 +79,7 @@ LDPUBLIC32 dsk_err_t  LDPUBLIC16 dsk_set_option(DSK_PDRIVER self, const char *na
 
         dc = self->dr_class;
 /* First, give the driver class a crack at the option. */
+	WALK_VTABLE(dc, dc_option_set)
 	if (dc->dc_option_set) 
 	{
 		err = (*dc->dc_option_set)(self, name, value);	
@@ -103,6 +104,7 @@ LDPUBLIC32 dsk_err_t  LDPUBLIC16 dsk_get_option(DSK_PDRIVER self, const char *na
         dc = self->dr_class;
 
 /* If a driver has a custom option getter/setter, use that */
+	WALK_VTABLE(dc, dc_option_get)
 	if (dc->dc_option_get)
 	{
 		err = (*dc->dc_option_get)(self, name, value);
@@ -146,6 +148,7 @@ LDPUBLIC32 dsk_err_t  LDPUBLIC16 dsk_option_enum(DSK_PDRIVER self, int idx, char
 		++optionals;
 	}
 
+	WALK_VTABLE(dc, dc_option_enum)
 	if (!dc->dc_option_enum) return DSK_ERR_OK;
 	return (*dc->dc_option_enum)(self, idx - optionals, name);	
 }

@@ -1,6 +1,6 @@
 @echo off
 SET CC=pacc
-SET CFLAGS=-Bl -I. -I../include -I../lib -DDOS16FLOPPY
+SET CFLAGS=-Bl -I. -I../include -I../lib -DDOS16FLOPPY -D__MSDOS__
 
 if "%1"=="utils" goto utils
 if "%1"=="lib" goto lib
@@ -32,6 +32,8 @@ if errorlevel 1 goto abort
 if errorlevel 1 goto abort
 %CC% %CFLAGS% -c ../lib/drvint25.c
 if errorlevel 1 goto abort
+%CC% %CFLAGS% -c ../lib/drvldbs.c
+if errorlevel 1 goto abort
 %CC% %CFLAGS% -c ../lib/drvlogi.c
 if errorlevel 1 goto abort
 %CC% %CFLAGS% -c ../lib/drvmyz80.c
@@ -44,6 +46,8 @@ if errorlevel 1 goto abort
 if errorlevel 1 goto abort
 %CC% %CFLAGS% -c ../lib/drvqm.c
 if errorlevel 1 goto abort
+%CC% %CFLAGS% -c ../lib/drvqrst.c
+if errorlevel 1 goto abort
 %CC% %CFLAGS% -c ../lib/drvsimh.c
 if errorlevel 1 goto abort
 %CC% %CFLAGS% -c ../lib/drvtele.c
@@ -54,6 +58,8 @@ if errorlevel 1 goto abort
 if errorlevel 1 goto abort
 %CC% %CFLAGS% -c ../lib/dskcmt.c
 if errorlevel 1 goto abort
+%CC% %CFLAGS% -c ../lib/dskcopy.c
+if errorlevel 1 goto abort
 %CC% %CFLAGS% -c ../lib/dskdirty.c
 if errorlevel 1 goto abort
 %CC% %CFLAGS% -c ../lib/dskerror.c
@@ -61,6 +67,8 @@ if errorlevel 1 goto abort
 %CC% %CFLAGS% -c ../lib/dskfmt.c
 if errorlevel 1 goto abort
 %CC% %CFLAGS% -c ../lib/dskgeom.c
+if errorlevel 1 goto abort
+%CC% %CFLAGS% -c ../lib/dskiconv.c
 if errorlevel 1 goto abort
 %CC% %CFLAGS% -c ../lib/dsklphys.c
 if errorlevel 1 goto abort
@@ -90,6 +98,8 @@ if errorlevel 1 goto abort
 if errorlevel 1 goto abort
 %CC% %CFLAGS% -c ../lib/dskwrite.c
 if errorlevel 1 goto abort
+%CC% %CFLAGS% -c ../lib/ldbs.c
+if errorlevel 1 goto abort
 %CC% %CFLAGS% -c ../lib/remote.c
 if errorlevel 1 goto abort
 %CC% %CFLAGS% -c ../lib/rpccli.c
@@ -112,12 +122,6 @@ rem Modules built. Combine them into a library.
 rem
 
 :lib
-rem libr r libdsk.lib apriboot.obj
-rem if errorlevel 1 goto abort
-rem libr r libdsk.lib bootsec.obj
-rem if errorlevel 1 goto abort
-rem libr r libdsk.lib compdskf.obj
-rem if errorlevel 1 goto abort
 libr r libdsk.lib compress.obj
 if errorlevel 1 goto abort
 libr r libdsk.lib compsq.obj
@@ -144,6 +148,8 @@ libr r libdsk.lib drvimd.obj
 if errorlevel 1 goto abort
 libr r libdsk.lib drvint25.obj
 if errorlevel 1 goto abort
+libr r libdsk.lib drvldbs.obj
+if errorlevel 1 goto abort
 libr r libdsk.lib drvjv3.obj
 if errorlevel 1 goto abort
 libr r libdsk.lib drvlogi.obj
@@ -156,6 +162,8 @@ libr r libdsk.lib drvposix.obj
 if errorlevel 1 goto abort
 libr r libdsk.lib drvqm.obj
 if errorlevel 1 goto abort
+libr r libdsk.lib drvqrst.obj
+if errorlevel 1 goto abort
 libr r libdsk.lib drvsimh.obj
 if errorlevel 1 goto abort
 libr r libdsk.lib drvtele.obj
@@ -166,20 +174,18 @@ libr r libdsk.lib dskcheck.obj
 if errorlevel 1 goto abort
 libr r libdsk.lib dskcmt.obj
 if errorlevel 1 goto abort
+libr r libdsk.lib dskcopy.obj
+if errorlevel 1 goto abort
 libr r libdsk.lib dskdirty.obj
 if errorlevel 1 goto abort
-rem libr r libdsk.lib dskdump.obj
-rem if errorlevel 1 goto abort
 libr r libdsk.lib dskerror.obj
 if errorlevel 1 goto abort
 libr r libdsk.lib dskfmt.obj
 if errorlevel 1 goto abort
-rem libr r libdsk.lib dskform.obj
-rem if errorlevel 1 goto abort
 libr r libdsk.lib dskgeom.obj
 if errorlevel 1 goto abort
-rem libr r libdsk.lib dskid.obj
-rem if errorlevel 1 goto abort
+libr r libdsk.lib dskiconv.obj
+if errorlevel 1 goto abort
 libr r libdsk.lib dsklphys.obj
 if errorlevel 1 goto abort
 libr r libdsk.lib dskopen.obj
@@ -194,8 +200,6 @@ libr r libdsk.lib dskretry.obj
 if errorlevel 1 goto abort
 libr r libdsk.lib dskrtrd.obj
 if errorlevel 1 goto abort
-rem libr r libdsk.lib dskscan.obj
-rem if errorlevel 1 goto abort
 libr r libdsk.lib dsksecid.obj
 if errorlevel 1 goto abort
 libr r libdsk.lib dskseek.obj
@@ -204,19 +208,15 @@ libr r libdsk.lib dsksgeom.obj
 if errorlevel 1 goto abort
 libr r libdsk.lib dskstat.obj
 if errorlevel 1 goto abort
-rem libr r libdsk.lib dsktrans.obj
-rem if errorlevel 1 goto abort
 libr r libdsk.lib dsktread.obj
 if errorlevel 1 goto abort
 libr r libdsk.lib dsktrkid.obj
 if errorlevel 1 goto abort
-rem libr r libdsk.lib dskutil.obj
-rem if errorlevel 1 goto abort
 libr r libdsk.lib dskwrite.obj
 if errorlevel 1 goto abort
-rem libr r libdsk.lib formname.obj
-rem if errorlevel 1 goto abort
 libr r libdsk.lib int25l.obj
+if errorlevel 1 goto abort
+libr r libdsk.lib ldbs.obj
 if errorlevel 1 goto abort
 libr r libdsk.lib remote.obj
 if errorlevel 1 goto abort
@@ -230,10 +230,6 @@ libr r libdsk.lib rpcpack.obj
 if errorlevel 1 goto abort
 libr r libdsk.lib rpcserv.obj
 if errorlevel 1 goto abort
-rem libr r libdsk.lib serslave.obj
-rem if errorlevel 1 goto abort
-rem libr r libdsk.lib utilopts.obj
-rem if errorlevel 1 goto abort
 rem
 rem Build the utilities
 rem
@@ -246,9 +242,13 @@ if errorlevel 1 goto abort
 if errorlevel 1 goto abort
 %CC% %CFLAGS% ../tools/dskid.c utilopts.obj libdsk.lib
 if errorlevel 1 goto abort
+%CC% %CFLAGS% ../tools/dskconv.c utilopts.obj formname.obj libdsk.lib
+if errorlevel 1 goto abort
 %CC% %CFLAGS% ../tools/dskform.c utilopts.obj formname.obj libdsk.lib
 if errorlevel 1 goto abort
-%CC% %CFLAGS% ../tools/dsktrans.c utilopts.obj formname.obj bootsec.obj libdsk.lib
+%CC% %CFLAGS% -c ../tools/dsktrans.c 
+if errorlevel 1 goto abort
+%CC% %CFLAGS% dsktrans.obj utilopts.obj formname.obj bootsec.obj libdsk.lib
 if errorlevel 1 goto abort
 %CC% %CFLAGS% ../tools/dskdump.c utilopts.obj formname.obj libdsk.lib
 if errorlevel 1 goto abort

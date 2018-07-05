@@ -35,7 +35,11 @@ LDPUBLIC32 dsk_err_t LDPUBLIC16 dsk_pread(DSK_DRIVER *self, const DSK_GEOMETRY *
 	dc = self->dr_class;
 
 	/* LDTRACE(("dsk_pread (%d,%d,%d)\n", cylinder, head, sector)); */
-        if (!dc->dc_read) return DSK_ERR_NOTIMPL;
+	WALK_VTABLE(dc, dc_read)
+        if (!dc->dc_read) 
+	{
+		return DSK_ERR_NOTIMPL;
+	}
 	for (n = 0; n < self->dr_retry_count; n++)
 	{
 		e = (dc->dc_read)(self,geom,buf,cylinder,head,sector);
@@ -82,6 +86,7 @@ LDPUBLIC32 dsk_err_t LDPUBLIC16 dsk_xread(DSK_DRIVER *self, const DSK_GEOMETRY *
 
 /*	LDTRACE(("dsk_xread (%d,%d,%d) (%d,%d)\n", cylinder, head, sector,
 				cyl_expect, head_expect)); */
+	WALK_VTABLE(dc, dc_xread)
         if (!dc->dc_xread) 
 	{
 		return DSK_ERR_NOTIMPL;

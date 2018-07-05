@@ -1,6 +1,6 @@
 /* LDBS: LibDsk Block Store access functions
  *
- *  Copyright (c) 2016 John Elliott <seasip.webmaster@gmail.com>
+ *  Copyright (c) 2016, 2017 John Elliott <seasip.webmaster@gmail.com>
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a 
  * copy of this software and associated documentation files (the "Software"),
@@ -25,7 +25,7 @@
  *
  * DSK format as specified at 
  *        http://www.cpcwiki.eu/index.php/Format:DSK_disk_image_file_format 
- * LDBS 0.1 as specified in ldbs.html
+ * LDBS 0.3 as specified in ldbs.html
  */
 
 #define _CRT_SECURE_NO_WARNINGS
@@ -38,6 +38,8 @@
 /* Header of the DSK file being converted */
 unsigned char dsk_header[256];
 
+static unsigned char *offset_rec;
+static unsigned char *offset_ptr;
 
 
 LDBS_DPB ldbs_dpb;		/* CP/M DPB, if we can determine it. 
@@ -169,6 +171,11 @@ dsk_err_t migrate_track(FILE *fpi, PLDBS outfile, int cyl, int head)
 	ldbs_track->recmode  = dsk_track[0x13];	/* Recording mode */
 	ldbs_track->gap3     = dsk_track[0x16];	/* GAP#3 length */
 	ldbs_track->filler   = dsk_track[0x17];	/* Format filler */
+	if (offset_ptr)
+	{
+		ldbs_track->total_len = ldbs_peek2(offset_ptr);
+		offset_ptr += 2;
+	}
 
 	source = 256;
 	/* In theory a DSK could exist with more than 29 sectors, and 
@@ -191,6 +198,11 @@ dsk_err_t migrate_track(FILE *fpi, PLDBS outfile, int cyl, int head)
 		cursec->st2     = dsk_track[0x1D + sector*8]; /* ST2 flags */
 		cursec->copies  = 1;			      /* Copies */
 		cursec->filler  = dsk_track[0x17]; 	      /* Filler byte */
+		if (offset_ptr)
+		{
+			cursec->offset = ldbs_peek2(offset_ptr);
+			offset_ptr += 2;
+		}
 
 		/* If we find cylinder 0 head 0 sector 1 in the right 
 		 * place, do a drive geometry probe on it */
@@ -246,6 +258,7 @@ dsk_err_t migrate_track(FILE *fpi, PLDBS outfile, int cyl, int head)
 		}
 		else
 		{
+			cursec->trail  = dsk_seclen % dsk_secsize;
 			cursec->copies = dsk_seclen / dsk_secsize;
 			if (cursec->copies < 1)
 				cursec->copies = 1; /* Copies */
@@ -348,6 +361,51 @@ int convert_file(const char *filename)
 		/* Add to file */
 		err = ldbs_put_creator(outfile, creator);
 	}
+	/* Find the "Offset-Info" record, if there is one */
+	offset_ptr = NULL;
+	if (!err)
+	{
+		long offset = 0x100;
+
+		if (dsk_header[0] == 'E')
+		{
+			int t = 0;
+			for (c = 0; c < dsk_header[0x30]; c++)
+			{
+				for (h = 0; h < dsk_header[0x31]; h++)
+				{
+					offset += 256L * dsk_header[0x34 + t];
+					++t;
+				}
+			}
+		}
+		else
+		{
+			offset += (long)ldbs_peek2(dsk_header + 0x32)
+					* dsk_header[0x30]	/* *cyls */
+					* dsk_header[0x31];	/* *heads */
+		}
+		if (!fseek(fpi, 0, SEEK_END))
+		{
+			long max = ftell(fpi);
+			if (max > offset && !fseek(fpi, offset, SEEK_SET))
+			{
+				offset_rec = ldbs_malloc(max - offset);
+				if (offset_rec)
+				{
+					memset(offset_rec, 0, max - offset);
+					if (fread(offset_rec, 1, 
+						max - offset, fpi) == max - offset)
+					{
+						if (!memcmp(offset_rec, "Offset-Info\r\n", 13)) offset_ptr = offset_rec + 15;
+
+					}	
+				}
+			}
+		}
+		if (fseek(fpi, 0x100, SEEK_SET)) err = DSK_ERR_SYSERR;
+	}
+
 	/* Migrate the tracks, one by one */
 	if (!err)
 	{

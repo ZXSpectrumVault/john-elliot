@@ -245,6 +245,10 @@ SOURCE=..\lib\drvjv3.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\lib\drvldbs.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\lib\drvlinux.c
 
 !IF  "$(CFG)" == "libdsk - Win32 Release"
@@ -336,6 +340,10 @@ SOURCE=..\lib\drvqm.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\lib\drvqrst.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\lib\drvrcpm.c
 
 !IF  "$(CFG)" == "libdsk - Win32 Release"
@@ -422,6 +430,10 @@ SOURCE=..\lib\dskcmt.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\lib\dskcopy.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\lib\dskerror.c
 
 !IF  "$(CFG)" == "libdsk - Win32 Release"
@@ -458,6 +470,10 @@ SOURCE=..\lib\dskgeom.c
 
 !ENDIF 
 
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\dskiconv.c
 # End Source File
 # Begin Source File
 
@@ -653,6 +669,10 @@ SOURCE=..\lib\dskwrite.c
 
 !ENDIF 
 
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\ldbs.c
 # End Source File
 # Begin Source File
 

@@ -652,9 +652,8 @@ dsk_err_t dsk_r_properties(DSK_PDRIVER self, RPCFUNC func,
 	self->dr_remote->rd_name = NULL;
 	if (desc)
 	{
-		self->dr_remote->rd_name = dsk_malloc(1 + strlen(desc));
+		self->dr_remote->rd_name = dsk_malloc_string(desc);
 		if (!self->dr_remote->rd_name) err2 = DSK_ERR_NOMEM;
-		else strcpy(self->dr_remote->rd_name, desc);
 	}
 	return err2;
 }

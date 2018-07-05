@@ -70,7 +70,7 @@ int help(int argc, char **argv)
 
 static void report(const char *s)
 {
-        printf("%s\r", s);
+        printf("%-79.79s\r", s);
         fflush(stdout);
 }
 
@@ -185,7 +185,10 @@ int do_format(char *outfile, char *outtyp, char *outcomp, int forcehead, dsk_for
 		if (do_bootsec) e = dsk_lwrite(outdr, &dg, bootsec, 0);
 	}
 	printf("\r                                     \r");
-	if (outdr) dsk_close(&outdr);
+	if (outdr) 
+	{
+		if (!e) e = dsk_close(&outdr); else dsk_close(&outdr);
+	}
 	if (e)
 	{
 		fprintf(stderr, "%s\n", dsk_strerror(e));

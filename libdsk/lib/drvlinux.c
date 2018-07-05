@@ -53,7 +53,8 @@
 DRV_CLASS dc_linux = 
 {
 	sizeof(LINUX_DSK_DRIVER),
-	"floppy",
+	NULL,		/* superclass */
+	"floppy\0",
 	"Linux floppy driver",
 	&linux_open,	/* open */
 	&linux_creat,	/* create new */

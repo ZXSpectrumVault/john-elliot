@@ -1,7 +1,7 @@
 /***************************************************************************
  *                                                                         *
  *    LIBDSK: General floppy and diskimage access library                  *
- *    Copyright (C) 2001, 2008  John Elliott <seasip.webmaster@gmail.com>      *
+ *    Copyright (C) 2001, 2008, 2017  John Elliott <seasip.webmaster@gmail.com>      *
  *                                                                         *
  *    This library is free software; you can redistribute it and/or        *
  *    modify it under the terms of the GNU Library General Public          *
@@ -30,6 +30,9 @@ typedef struct
 	int   ydsk_header_dirty;
 	unsigned long  ydsk_filesize;	/* True length of the .DSK file */
 	unsigned char  ydsk_header[128];
+	/* Used only when importing an LDBS image */
+	unsigned char  *ydsk_secbuf;
+	DSK_GEOMETRY   *ydsk_geom;
 } YDSK_DSK_DRIVER;
 
 dsk_err_t ydsk_open(DSK_DRIVER *self, const char *filename);
@@ -53,3 +56,9 @@ dsk_err_t ydsk_status(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
 dsk_err_t ydsk_option_enum(DSK_DRIVER *self, int idx, char **optname);
 dsk_err_t ydsk_option_set(DSK_DRIVER *self, const char *optname, int value);
 dsk_err_t ydsk_option_get(DSK_DRIVER *self, const char *optname, int *value);
+
+/* Convert to LDBS format. */
+dsk_err_t ydsk_to_ldbs(DSK_DRIVER *self, struct ldbs **result, DSK_GEOMETRY *geom);
+
+/* Convert from LDBS format. */
+dsk_err_t ydsk_from_ldbs(DSK_DRIVER *self, struct ldbs *source, DSK_GEOMETRY *geom);

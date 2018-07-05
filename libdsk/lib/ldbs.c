@@ -1,6 +1,6 @@
 /* LDBS: LibDsk Block Store access functions
  *
- *  Copyright (c) 2016 John Elliott <seasip.webmaster@gmail.com>
+ *  Copyright (c) 2016, 2017 John Elliott <seasip.webmaster@gmail.com>
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a 
  * copy of this software and associated documentation files (the "Software"),
@@ -27,11 +27,73 @@
 #include <limits.h>
 #include "ldbs.h"
 
+/* Pacific C doesn't define these */
+#ifndef SEEK_SET
+#define SEEK_SET 0
+#define SEEK_CUR 1
+#define SEEK_END 2
+#define isprint(c) ( (c) >= 0x20 && (c) <= 0x7E)
+#endif
+
+#ifdef __MSDOS__
+#include <sys.h>	/* for mktemp() */
+#endif
+
+#if defined(__MSDOS__) && !defined(PATH_MAX)
+#define PATH_MAX 81
+#endif
+
 #if defined(WINDOWS) && !defined(PATH_MAX)
 #include <windows.h>
 #define PATH_MAX _MAX_PATH
 #endif
 
+/**/
+#define FSEEK fseek
+#define FREAD fread
+#define FWRITE fwrite
+/*
+
+#define FSEEK(fp, o, w) debug_fseek(fp, #fp, o, w)
+#define FREAD(buf, s, c, fp) debug_fread(buf, s, c, fp, #fp)
+#define FWRITE(buf, s, c, fp) debug_fwrite(buf, s, c, fp, #fp)
+
+static int debug_fseek(FILE *fp, const char *s, long offset, int whence)
+{
+	int r;
+	printf("fseek(%s,%lx,%d)=", s, offset, whence);
+	r = fseek(fp, offset, whence);
+	printf("%d\n", r);
+	return r;	
+}
+
+static size_t debug_fread(void *buf, size_t size, size_t count, FILE *fp, const char *s)
+{
+	size_t r;
+	printf("[%08lx] fread(...,%u,%u,%s)=", ftell(fp), size, count, s);
+	r = fread(buf, size, count, fp);
+	printf("%u\n", r);
+	return r;	
+}
+
+
+static size_t debug_fwrite(void *buf, size_t size, size_t count, FILE *fp, const char *s)
+{
+	size_t r;
+
+	printf("[%08lx] fwrite([%02x%02x%02x%02x...],%u,%u,%s)=", 
+		ftell(fp), 
+		0xFF & ((unsigned char *)buf)[0], 
+		0xFF & ((unsigned char *)buf)[1], 
+		0xFF & ((unsigned char *)buf)[2], 
+		0xFF & ((unsigned char *)buf)[3], 
+		size, count, s);
+	r = fwrite(buf, size, count, fp);
+	printf("%u\n", r);
+	return r;	
+}
+
+*/
 
 /* LibDsk Block Store (on-disk implementation)
  * 
@@ -54,7 +116,6 @@
  *
  */
 
-
 #define HEADER_LEN 20		/* On-disk length of file header */
 #define BLOCKHEAD_LEN 20	/* On-disk length of block header */
 
@@ -67,6 +128,8 @@ typedef struct ldbs
 	long filesize;
 	char *filename;
 	int istemp;
+	int version;	/* File format: Version 1 has shorter track/sector */
+			/* headers */
 #if LDBS_TEMP_IN_MEM
 	int ismem;
 	void **idmap;
@@ -183,6 +246,22 @@ static void *decode_ptr(LDBS *self, long l)
 
 
 #if LDBS_TEMP_IN_MEM == 0
+
+#if (!defined(HAVE_MKSTEMP) && !defined(HAVE_GETTEMPFILENAME))
+
+void remktemp(char *s)
+{
+	srand(ldbs_peek2(s));
+	while (*s) 
+	{
+		*s = (rand() % 36) + 'A';
+		if (*s > 'Z') *s = (*s - 'Z' - 1) + '0';
+		++s;
+	}
+}
+#endif
+
+
 /* Create a temporary file */    
 static dsk_err_t ldbs_mktemp(LDBS *self)
 {
@@ -224,9 +303,28 @@ static dsk_err_t ldbs_mktemp(LDBS *self)
 	if (tdir) sprintf(tmpdir, "%s/LBXXXXXX", tdir);
 	else	  sprintf(tmpdir, "./LBXXXXXX");
 
-	strcpy(self->filename, mktemp(tmpdir));
-	self->fp = fopen(self->filename, "w+b");
 	(void)fd;
+	strcpy(self->filename, mktemp(tmpdir));
+	while (1)
+	{
+		FILE *fp;
+
+
+		fp = fopen(self->filename, "rb");
+		if (fp)	/* Chosen temp file already exists! (Pacific C mktemp()
+			 * seems to base temp filenames on the system clock,
+			 * so two temp files created at the same time will
+			 * have the same name). Generate a new temp name and
+			 * repeat. */
+		{
+			char *s = self->filename + strlen(self->filename) - 6;
+			remktemp(s);
+			fclose(fp);
+			continue;		
+		}
+		self->fp = fopen(self->filename, "w+b");
+		break;
+	}
 #endif /* HAVE_MKSTEMP */                  
 #endif /* HAVE_GETTEMPFILENAME */
 	if (!self->fp)   
@@ -247,36 +345,36 @@ static dsk_err_t ldbs_mktemp(LDBS *self)
  * All dwords will be stored little-endian.
  */
 
-void ldbs_poke4(unsigned char *dest, long val)
+void ldbs_poke4(unsigned char *dest, unsigned long val)
 {
-	dest[0] = val & 0xFF;
-	dest[1] = (val >> 8) & 0xFF;
-	dest[2] = (val >> 16) & 0xFF;
-	dest[3] = (val >> 24) & 0xFF;
+	dest[0] = (unsigned char)(val & 0xFF);
+	dest[1] = (unsigned char)((val >> 8) & 0xFF);
+	dest[2] = (unsigned char)((val >> 16) & 0xFF);
+	dest[3] = (unsigned char)((val >> 24) & 0xFF);
 }
 
 
-long ldbs_peek4(unsigned char *src)
+unsigned long ldbs_peek4(unsigned char *src)
 {
 	unsigned long u = src[3];
 	u = (u << 8) | src[2];
 	u = (u << 8) | src[1];
 	u = (u << 8) | src[0];
-	return (long)u;
+	return u;
 }
 
-void ldbs_poke2(unsigned char *dest, short val)
+void ldbs_poke2(unsigned char *dest, unsigned short val)
 {
 	dest[0] = val & 0xFF;
 	dest[1] = (val >> 8) & 0xFF;
 }
 
 
-short ldbs_peek2(unsigned char *src)
+unsigned short ldbs_peek2(unsigned char *src)
 {
 	unsigned short u = src[1];
 	u = (u << 8) | src[0];
-	return (short)u;
+	return u;
 }
 
 
@@ -292,11 +390,11 @@ static dsk_err_t ldbs_read_header(PLDBS self)
 		return DSK_ERR_OK;
 	}
 #endif
-	if (fseek(self->fp, 0L, SEEK_SET))
+	if (FSEEK(self->fp, 0L, SEEK_SET))
 	{
 		return DSK_ERR_SYSERR;
 	}
-	if (fread(header, 1, HEADER_LEN, self->fp) < HEADER_LEN) 
+	if (FREAD(header, 1, HEADER_LEN, self->fp) < HEADER_LEN) 
 	{
 		return DSK_ERR_SYSERR;
 	}
@@ -316,7 +414,7 @@ static dsk_err_t ldbs_read_blockhead(PLDBS self, LDBS_BLOCKHEAD *bh,
 {
 	unsigned char header[BLOCKHEAD_LEN];
 
-	if (blockid == LDBLOCKID_NULL) return DSK_ERR_NOADDR;
+	if (blockid == LDBLOCKID_NULL) return DSK_ERR_BADPARM;
 
 #if LDBS_TEMP_IN_MEM
 	if (self->ismem)
@@ -327,17 +425,17 @@ static dsk_err_t ldbs_read_blockhead(PLDBS self, LDBS_BLOCKHEAD *bh,
 	}
 #endif
 
-	if (fseek(self->fp, blockid, SEEK_SET))
+	if (FSEEK(self->fp, blockid, SEEK_SET))
 	{
 		return DSK_ERR_SYSERR;
 	}
-	if (fread(header, 1, BLOCKHEAD_LEN, self->fp) < BLOCKHEAD_LEN) 
+	if (FREAD(header, 1, BLOCKHEAD_LEN, self->fp) < BLOCKHEAD_LEN) 
 	{
 		return DSK_ERR_SYSERR;
 	}
 	if (memcmp(header, LDBS_BLOCKHEAD_MAGIC, 4))
 	{
-		return DSK_ERR_NOADDR;	/* Not a valid block header */
+		return DSK_ERR_CORRUPT;	/* Not a valid block header */
 	}
 	memcpy(bh->magic,  header, 4);
 	memcpy(bh->type,   header + 4, 4);
@@ -360,7 +458,7 @@ static dsk_err_t ldbs_write_header(PLDBS self)
 	}
 #endif
 
-	if (fseek(self->fp, 0L, SEEK_SET))
+	if (FSEEK(self->fp, 0L, SEEK_SET))
 	{
 		return DSK_ERR_SYSERR;
 	}
@@ -369,7 +467,7 @@ static dsk_err_t ldbs_write_header(PLDBS self)
 	ldbs_poke4 (header + 8,  self->header.used);
 	ldbs_poke4 (header + 12, self->header.free);
 	ldbs_poke4 (header + 16, self->header.trackdir);
-	if (fwrite(header, 1, HEADER_LEN, self->fp) < HEADER_LEN) 
+	if (FWRITE(header, 1, HEADER_LEN, self->fp) < HEADER_LEN) 
 		return DSK_ERR_SYSERR;
 	self->header.dirty = 0;
 	if (self->filesize < HEADER_LEN)
@@ -384,7 +482,7 @@ static dsk_err_t ldbs_write_blockhead(PLDBS self, LDBS_BLOCKHEAD *bh,
 {
 	unsigned char header[BLOCKHEAD_LEN];
 
-	if (blockid == LDBLOCKID_NULL) return DSK_ERR_NOADDR;
+	if (blockid == LDBLOCKID_NULL) return DSK_ERR_BADPARM;
 #if LDBS_TEMP_IN_MEM
 	if (self->ismem)
 	{
@@ -394,7 +492,7 @@ static dsk_err_t ldbs_write_blockhead(PLDBS self, LDBS_BLOCKHEAD *bh,
 	}
 #endif
 
-	if (fseek(self->fp, blockid, SEEK_SET))
+	if (FSEEK(self->fp, blockid, SEEK_SET))
 	{
 		return DSK_ERR_SYSERR;
 	}
@@ -404,7 +502,7 @@ static dsk_err_t ldbs_write_blockhead(PLDBS self, LDBS_BLOCKHEAD *bh,
 	ldbs_poke4(header + 12, bh->ulen);
 	ldbs_poke4(header + 16, bh->next);
 
-	if (fwrite(header, 1, BLOCKHEAD_LEN, self->fp) < BLOCKHEAD_LEN) 
+	if (FWRITE(header, 1, BLOCKHEAD_LEN, self->fp) < BLOCKHEAD_LEN) 
 		return DSK_ERR_SYSERR;
 
 	if (self->filesize < (blockid + BLOCKHEAD_LEN)) 
@@ -433,7 +531,7 @@ static dsk_err_t ldbs_write_payload(PLDBS self,
 	}
 #endif
 
-	if (fwrite(data, 1, len, self->fp) < len)
+	if (FWRITE(data, 1, len, self->fp) < len)
 	{
 		return DSK_ERR_SYSERR;
 	}
@@ -524,13 +622,14 @@ dsk_err_t ldbs_new(PLDBS *result, const char *filename, const char *type)
  	 * This is a layering violation: In theory the block layer shouldn't 
 	 * know about the track directory. But it's more covenient to do it 
 	 * here than at the point the directory is accessed. */
-	if (!memcmp(st, LDBS_DSK_TYPE, 4))
+	if (!memcmp(st, LDBS_DSK_TYPE, 4) || !memcmp(st, LDBS_DSK_TYPE_V1, 4))
 	{
-		/* Allow 175 entries: a disc with 84 tracks, 2 heads and all
-		 * optional blocks will have 172 directory entries, so this
+		/* Allow 176 entries: a disc with 84 tracks, 2 heads and all
+		 * optional blocks will have 173 directory entries, so this
 		 * seems a reasonable figure. The size can always be 
 		 * increased by ldbs_trackdir_add() if necessary. */
-		temp.dir = ldbs_trackdir_alloc(175);
+		temp.version = st[3];
+		temp.dir = ldbs_trackdir_alloc(176);
 		if (!temp.dir) 
 		{
 			free(pres);
@@ -604,7 +703,7 @@ dsk_err_t ldbs_open(PLDBS *result, const char *filename, char *type,
 			ldbs_free(temp.filename);
 			return DSK_ERR_NOTME;
 		}
-		if (fseek(temp.fp, 0, SEEK_END)) 
+		if (FSEEK(temp.fp, 0, SEEK_END)) 
 		{
 			err = DSK_ERR_SYSERR;
 		}
@@ -621,9 +720,11 @@ dsk_err_t ldbs_open(PLDBS *result, const char *filename, char *type,
 /* If this is a DSK type file, load its track directory. 
  * This is a layering violation: In theory the block layer shouldn't 
  * know about the track directory. But it's more covenient to do it here. */
-	if (!err && !memcmp(temp.header.subtype, LDBS_DSK_TYPE, 4) &&
-			temp.header.trackdir != LDBLOCKID_NULL)
+	if (!err && temp.header.trackdir != LDBLOCKID_NULL &&
+		(!memcmp(temp.header.subtype, LDBS_DSK_TYPE, 4) ||
+		 !memcmp(temp.header.subtype, LDBS_DSK_TYPE_V1, 4)))
 	{
+		temp.version = temp.header.subtype[3];
 		err = ldbs_get_trackdir(&temp, &temp.dir, temp.header.trackdir);
 	}
 	if (err)
@@ -646,7 +747,7 @@ dsk_err_t ldbs_open(PLDBS *result, const char *filename, char *type,
 static dsk_err_t zero_range(PLDBS self, long pos, long len)
 {
 	/* Seek to the first byte to remove */
-	if (fseek(self->fp, pos, SEEK_SET)) return DSK_ERR_SYSERR;
+	if (FSEEK(self->fp, pos, SEEK_SET)) return DSK_ERR_SYSERR;
 	while (len)
 	{
 		if (fputc(0, self->fp) == EOF) return DSK_ERR_SYSERR;
@@ -655,51 +756,49 @@ static dsk_err_t zero_range(PLDBS self, long pos, long len)
 	return DSK_ERR_OK;
 }
 
-/* Close block store. If it is temporary the backing file will be deleted. */
-
-dsk_err_t ldbs_close(PLDBS *self)
+/* Write back any pending data to the block store. */
+dsk_err_t ldbs_sync(PLDBS self)
 {
 	LDBS_BLOCKHEAD blockhead;
-
 	dsk_err_t result = DSK_ERR_OK;
 
-	if (self == NULL || *self == NULL) return DSK_ERR_BADPTR;
+	if (self == NULL) return DSK_ERR_BADPTR;
 
 	/* If there is a directory, write it */
-	if (self[0]->dir && !self[0]->istemp)
+	if (self->dir)
 	{
-		result = ldbs_put_trackdir(self[0], self[0]->dir,
-				&self[0]->header.trackdir);
+		result = ldbs_put_trackdir(self, self->dir,
+				&self->header.trackdir);
 	}
 
-	/* Scrub any blank areas */
-	if (!self[0]->istemp)
+	/* Scrub any blank areas (but don't bother on a temporary blockstore) */
+	if (!self->istemp)
 	{
-		LDBLOCKID blockid = self[0]->header.free;
+		LDBLOCKID blockid = self->header.free;
 
 		while (0 != blockid)
 		{
-			result = ldbs_read_blockhead(self[0], &blockhead, blockid);
+			result = ldbs_read_blockhead(self, &blockhead, blockid);
 			if (result) break;
 
 			if (!memcmp(blockhead.type, FREEBLOCK, 4))
 			{
-				zero_range(self[0], 
+				zero_range(self, 
 					blockid + BLOCKHEAD_LEN, 
 					blockhead.dlen);
 			}
 			blockid = blockhead.next;
 		}
-		blockid = self[0]->header.used;
+		blockid = self->header.used;
 
 		while (0 != blockid)
 		{
-			result = ldbs_read_blockhead(self[0], &blockhead, blockid);
+			result = ldbs_read_blockhead(self, &blockhead, blockid);
 			if (result) break;
 
 			if (blockhead.dlen > blockhead.ulen)
 			{
-				zero_range(self[0], 
+				zero_range(self, 
 					blockid + BLOCKHEAD_LEN + blockhead.ulen, 
 					blockhead.dlen - blockhead.ulen);
 			}
@@ -709,10 +808,20 @@ dsk_err_t ldbs_close(PLDBS *self)
 	}
 
 	/* Flush the header if it needs updating */
-	if (self[0]->header.dirty && !self[0]->istemp)
+	if (self->header.dirty)
 	{
-		result = ldbs_write_header(self[0]);
+		result = ldbs_write_header(self);
 	}
+	return result;
+}
+
+/* Close block store. If it is temporary the backing file will be deleted. */
+dsk_err_t ldbs_close(PLDBS *self)
+{
+	LDBS_BLOCKHEAD blockhead;
+	dsk_err_t result = DSK_ERR_OK;
+
+	ldbs_sync(self[0]);
 
 #if LDBS_TEMP_IN_MEM
 	/* Free all blocks */
@@ -722,7 +831,6 @@ dsk_err_t ldbs_close(PLDBS *self)
 
 		while (0 != blockid)
 		{	
-
 			result = ldbs_read_blockhead(self[0], &blockhead, blockid);
 			if (result) break;
 
@@ -751,15 +859,52 @@ dsk_err_t ldbs_close(PLDBS *self)
 	/* If this is a temporary file, remove the backing file */
 	if (self[0]->istemp && self[0]->filename)
 	{
-		if (remove(self[0]->filename)) result = DSK_ERR_SYSERR;
+		if (remove(self[0]->filename)) 
+		{
+		/* Failure to delete a temporary file is not sufficient cause
+		 * to return an error */
+		/*	result = DSK_ERR_SYSERR; */
+		}
 	}
+	if (self[0]->dir)   ldbs_free(self[0]->dir);
+#if LDBS_TEMP_IN_MEM
 	if (self[0]->idmap) ldbs_free(self[0]->idmap);
-
+#endif
 	ldbs_free(self[0]->filename);
 	ldbs_free(self[0]);
 	self[0] = NULL;
 
 	return result;
+}
+
+
+/* Get the size/type of a block from the store. */
+dsk_err_t ldbs_get_blockinfo(PLDBS self, LDBLOCKID blockid, char type[4],
+					size_t *len)
+{
+	dsk_err_t err;
+	LDBS_BLOCKHEAD blockhead;
+
+	if (self == NULL)
+	{
+		return DSK_ERR_BADPTR;
+	}
+
+	/* Assume blockid is correct. */
+	err = ldbs_read_blockhead(self, &blockhead, blockid);
+	if (err) return err;
+	/* Block not found */
+	if (!memcmp(blockhead.type, FREEBLOCK, 4)) return DSK_ERR_CORRUPT;
+
+	if (type != NULL)
+	{
+		memcpy(type, blockhead.type, 4);
+	}
+	if (len != NULL)
+	{
+		*len = blockhead.ulen;
+	}
+	return DSK_ERR_OK;
 }
 
 
@@ -781,7 +926,7 @@ dsk_err_t ldbs_getblock(PLDBS self, LDBLOCKID blockid, char type[4],
 	err = ldbs_read_blockhead(self, &blockhead, blockid);
 	if (err) return err;
 	/* Block not found */
-	if (!memcmp(blockhead.type, FREEBLOCK, 4)) return DSK_ERR_NOADDR;
+	if (!memcmp(blockhead.type, FREEBLOCK, 4)) return DSK_ERR_CORRUPT;
 
 	if (type != NULL)
 	{
@@ -789,8 +934,28 @@ dsk_err_t ldbs_getblock(PLDBS self, LDBLOCKID blockid, char type[4],
 	}
 
 	/* Are we just getting its size? */
-	if (data == NULL || (long)(*len) < blockhead.ulen)	
+	if (data == NULL || *len == 0)
 	{
+		*len = blockhead.ulen;
+		return DSK_ERR_OVERRUN;
+	}
+	/* The buffer is too small. Read what can be read. */
+ 	if ((long)(*len) < blockhead.ulen)
+	{
+#if LDBS_TEMP_IN_MEM
+		if (self->ismem)
+		{
+			unsigned char *src = decode_ptr(self, blockid);
+			memcpy(data, src + sizeof(LDBS_BLOCKHEAD), *len);
+			*len = blockhead.ulen;
+			return DSK_ERR_OVERRUN;
+		}
+#endif
+		if (FREAD(data, 1, *len, self->fp) < *len)
+		{
+			return DSK_ERR_SYSERR;
+		}
+
 		*len = blockhead.ulen;
 		return DSK_ERR_OVERRUN;
 	}
@@ -805,7 +970,7 @@ dsk_err_t ldbs_getblock(PLDBS self, LDBLOCKID blockid, char type[4],
 		return DSK_ERR_OK;
 	}
 #endif
-	if (fread(data, 1, *len, self->fp) < *len)
+	if (FREAD(data, 1, *len, self->fp) < *len)
 	{
 		return DSK_ERR_SYSERR;
 	}
@@ -836,8 +1001,13 @@ dsk_err_t ldbs_getblock_a(PLDBS self, LDBLOCKID blockid, char *type,
 	/* Assume blockid is correct. */
 	err = ldbs_read_blockhead(self, &blockhead, blockid);
 	if (err) return err;
+
+/*	printf("ldbs_getblock_a(%lx): blockhead.type=%02x%02x%02x%02x\n",
+			blockid, blockhead.type[0], blockhead.type[1],
+			blockhead.type[2], blockhead.type[3]);
+*/
 	/* Block not found */
-	if (!memcmp(blockhead.type, FREEBLOCK, 4)) return DSK_ERR_NOADDR;
+	if (!memcmp(blockhead.type, FREEBLOCK, 4)) return DSK_ERR_CORRUPT;
 
 	if (type != NULL)
 	{
@@ -855,7 +1025,7 @@ dsk_err_t ldbs_getblock_a(PLDBS self, LDBLOCKID blockid, char *type,
 		return DSK_ERR_OK;
 	}
 #endif
-	if (fread(*data, 1, *len, self->fp) < *len)
+	if (FREAD(*data, 1, *len, self->fp) < *len)
 	{
 		return DSK_ERR_SYSERR;
 	}
@@ -909,7 +1079,7 @@ static dsk_err_t ldbs_addblock(PLDBS self, LDBLOCKID *result, const char *type,
 			blockid = blockhead.next;
 			continue;	
 		}
-		if (blockhead.dlen == len)	/* Block is just the right */
+		if ((unsigned)blockhead.dlen == len)	/* Block is just the right */
 		{				/* size! */
 			found = blockid;
 			break;
@@ -982,6 +1152,7 @@ static dsk_err_t ldbs_addblock(PLDBS self, LDBLOCKID *result, const char *type,
 	else	/* No suitable block found */
 	{
 		err = ldbs_newblock(self, len, &blockid);
+		if (err) return err;
 
 		memset(&blockhead, 0, sizeof(blockhead));
 		blockhead.dlen = blockhead.ulen = len;
@@ -1008,7 +1179,7 @@ static dsk_err_t ldbs_addblock(PLDBS self, LDBLOCKID *result, const char *type,
  * On success returns DSK_ERR_OK.
  * On failure returns error, including:
  * 	DSK_ERR_OVERRUN: Trying to write more data than will fit
- *	DSK_ERR_NOADDR:  Invalid block ID
+ *	DSK_ERR_CORRUPT: Invalid block ID
  *
  */
 static dsk_err_t ldbs_rewriteblock(PLDBS self, LDBLOCKID blockid, 
@@ -1101,7 +1272,7 @@ dsk_err_t ldbs_fsck(PLDBS self, FILE *logfile)
 	self->header.dirty = 1;
 
 	/* See if there's another block header; if so, read it */
-	while (fread(buf, 1, BLOCKHEAD_LEN, self->fp) == BLOCKHEAD_LEN)
+	while (FREAD(buf, 1, BLOCKHEAD_LEN, self->fp) == BLOCKHEAD_LEN)
 	{
 		/* Oh dear, block header not where it should be. Let's try
 		 * for a manual resync: creep ahead, one byte at a time,
@@ -1114,7 +1285,7 @@ dsk_err_t ldbs_fsck(PLDBS self, FILE *logfile)
 					"at 0x%08lx, attempting resync\n", 
 					pos);
 			}
-			if (fseek(self->fp, 1 - BLOCKHEAD_LEN, SEEK_CUR)) 
+			if (FSEEK(self->fp, 1 - BLOCKHEAD_LEN, SEEK_CUR)) 
 				return DSK_ERR_SYSERR;
 			continue;
 		}
@@ -1139,14 +1310,14 @@ dsk_err_t ldbs_fsck(PLDBS self, FILE *logfile)
 		}
 		/* Skip over the block header and the block */
 		pos += (BLOCKHEAD_LEN + blockhead.dlen);
-		if (fseek(self->fp, pos, SEEK_SET))
+		if (FSEEK(self->fp, pos, SEEK_SET))
 		{
 			return DSK_ERR_SYSERR;
 		}	
 	}
 	/* See if the track directory is valid */
 	err = ldbs_read_blockhead(self, &blockhead, self->header.trackdir);
-	if (err == DSK_ERR_NOADDR)
+	if (err == DSK_ERR_CORRUPT)
 	{
 		if (logfile) fprintf(logfile, "Root pointer 0x%08lx is "
 			"not valid, clearing.\n", self->header.trackdir);
@@ -1166,7 +1337,7 @@ dsk_err_t ldbs_fsck(PLDBS self, FILE *logfile)
  *
  * Enter with: blockid is the block's identity
  *
- * Returns DSK_ERR_OK on success, DSK_ERR_NOADDR if block ID not recognised
+ * Returns DSK_ERR_OK on success, DSK_ERR_BADPARM if block ID is LDBLOCKID_NULL
  * 
  */
 dsk_err_t ldbs_delblock(PLDBS self, LDBLOCKID blockid)
@@ -1176,6 +1347,7 @@ dsk_err_t ldbs_delblock(PLDBS self, LDBLOCKID blockid)
 	LDBLOCKID pos = LDBLOCKID_NULL;
 
 	if (!self) return DSK_ERR_BADPTR;	
+	if (blockid == LDBLOCKID_NULL) return DSK_ERR_BADPARM;
 
 	/* Load the requested block header */
 	err = ldbs_read_blockhead(self, &blockhead, blockid);
@@ -1237,6 +1409,253 @@ dsk_err_t ldbs_setroot(PLDBS self, LDBLOCKID blockid)
 	return DSK_ERR_OK;
 }
 
+/* Delete all blocks in a blockstore */
+dsk_err_t ldbs_clear(PLDBS self)
+{
+	LDBS_BLOCKHEAD blockhead;
+	LDBLOCKID blockid = self->header.used;
+	dsk_err_t err = DSK_ERR_OK;
+
+	/* For each block... */
+	while (0 != blockid)
+	{
+		/* Load its header */
+		err = ldbs_read_blockhead(self, &blockhead, blockid);
+		if (err) break;
+
+		/* And erase it */
+		err = ldbs_delblock(self, blockid);
+		if (err) break;
+
+		blockid = blockhead.next;
+	}
+	/* If there was a track directory, there isn't now */
+	if (self->dir) 
+	{
+		ldbs_free(self->dir);
+		self->dir = NULL;
+	}
+	self->header.trackdir = 0;	
+	self->header.dirty = 1;
+	return err;
+}
+
+static LDBLOCKID remap(LDBLOCKID *map, unsigned maplen, LDBLOCKID id)
+{
+	unsigned n;
+
+	if (id == LDBLOCKID_NULL) 
+	{
+/*		printf("remap(NULL)=NULL\n"); */
+		return LDBLOCKID_NULL;
+	}
+
+	for (n = 0; n < maplen; n += 2)
+	{
+/*		printf("{%ld:%ld}", map[n], map[n+1]); */
+		if (map[n] == id) 
+		{
+/*			printf("remap(%ld)=%ld\n", map[n], map[n+1]); */
+			return map[n+1];
+		}
+	}
+#ifndef WIN16
+	fprintf(stderr, "Internal error: remap(%lx)=NULL\n", id); 
+#endif
+/* Should never happen: A valid ID is not found in the list. All we 
+ * can do is return null. */
+	return LDBLOCKID_NULL;
+}
+
+dsk_err_t remap_track_header(PLDBS self, unsigned char *th, unsigned thlen,
+				LDBLOCKID *mapping, unsigned maplen)
+{
+	unsigned se_offset, se_len;
+	unsigned ns;
+	unsigned sectors;
+
+	if (self->version < 2)
+	{
+		se_offset = 6;
+		se_len = 12;
+		sectors = ldbs_peek2(th);
+	}
+	else
+	{
+		se_offset = ldbs_peek2(th);
+		se_len    = ldbs_peek2(th + 2);
+		sectors   = ldbs_peek2(th + 4);
+	}
+	for (ns = 0; ns < sectors; ns++)
+	{
+		LDBLOCKID id;
+
+		/* Corrupt source file */
+		if (se_offset + 12 + ns * se_len > thlen) 
+		{ 
+			return DSK_ERR_CORRUPT; 
+		}	
+		id = ldbs_peek4(th + se_offset + 8 + ns * se_len);
+		if (id == LDBLOCKID_NULL) continue;
+		id = remap(mapping, maplen, id);
+		ldbs_poke4(th + se_offset + 8 + ns * se_len, id);
+	}
+	return DSK_ERR_OK;
+}
+
+/* Copy all blocks from one blockstore to another. 
+ * The cloning process isn't just a matter of copying blocks from one file
+ * to the other, because the track directory and track headers contain 
+ * block IDs. So we do two passes: the first to migrate the blocks 
+ * themselves, the second to fix up the block IDs. */
+dsk_err_t ldbs_clone(PLDBS source, PLDBS dest)
+{
+	LDBLOCKID *mapping;
+	unsigned maplen, mapmax;
+	LDBS_BLOCKHEAD blockhead;
+	LDBLOCKID blockid = source->header.used;
+	LDBLOCKID newid = LDBLOCKID_NULL;
+	dsk_err_t err = DSK_ERR_OK;
+	void *buf;
+	char type[4];
+	size_t len;
+
+	/* Build a mapping of block IDs: old, new, old, new... */
+	mapmax = 400;	/* So 400 entries can map 200 IDs */
+	mapping = ldbs_malloc(mapmax * sizeof(LDBLOCKID));
+	if (!mapping) return DSK_ERR_NOMEM;
+	maplen = 0;
+
+	/* Delete everything out of the destination file. */
+	err = ldbs_clear(dest);
+	if (err) 
+	{
+		ldbs_free(mapping);
+		return err;
+	}
+	/* First, move the data blocks across. This happens to reverse 
+	 * their order, just to be fun. */
+	while (LDBLOCKID_NULL != blockid)
+	{
+	/* Load the block header so we know the next entry in the list */
+		err = ldbs_read_blockhead(source, &blockhead, blockid);
+		if (err) 
+		{
+			break;
+		}
+	/* Load the block proper */
+		err = ldbs_getblock_a(source, blockid, type, &buf, &len);
+		if (err) 
+		{
+			break;
+		}
+
+	/* Write it out to the destination file */	
+		newid = LDBLOCKID_NULL;	
+		err = ldbs_putblock(dest, &newid, type, buf, len);
+		ldbs_free(buf);
+		if (err) 
+		{
+			break;
+		}
+	/* Add (blockid, newid) to the mapping array */	
+		if (maplen == mapmax)
+		{
+			mapmax *= 2;
+			mapping = ldbs_realloc(mapping, 
+				mapmax * sizeof(LDBLOCKID));
+			if (!mapping) return DSK_ERR_NOMEM;
+		}
+/*
+fprintf(stderr, "%08lx -> %08lx %c%c%c%c maplen=%d\n", blockid, newid, 
+			isprint(type[0]) ? type[0] : '.',
+			isprint(type[1]) ? type[1] : '.',
+			isprint(type[2]) ? type[2] : '.',
+			isprint(type[3]) ? type[3] : '.', maplen);
+*/
+		mapping[maplen++] = blockid;
+		mapping[maplen++] = newid;
+	/* And go to the next block */
+		blockid = blockhead.next;
+	}
+	if (err) 
+	{
+		ldbs_free(mapping);
+		return err;
+	}
+/* Remap the block IDs. The first one is the ID of the track directory. */
+	if (source->header.trackdir)
+	{
+		dest->header.trackdir = remap(mapping, maplen, 
+						source->header.trackdir);
+
+	}
+/* Up to now, ldbs_clone() has been working at blockstore level. If the 
+ * file it is processing is a disc image, it now needs to remap the IDs 
+ * in its directory and track headers */
+	if (!memcmp(source->header.subtype, LDBS_DSK_TYPE, 4) ||
+	    !memcmp(source->header.subtype, LDBS_DSK_TYPE_V1, 4))
+	{
+		dest->version = source->version;
+		memcpy(dest->header.subtype, source->header.subtype, 4);
+		if (dest->dir)
+		{
+			ldbs_free(dest->dir);
+			dest->dir = NULL;
+		}
+
+/* Remap the block IDs in the directory */
+		err = ldbs_get_trackdir(dest, &dest->dir, 
+				dest->header.trackdir);
+		if (!err)
+		{
+			unsigned n;	
+			for (n = 0; n < dest->dir->count; n++)
+			{
+				dest->dir->entry[n].blockid = 
+					remap(mapping, maplen, 
+						dest->dir->entry[n].blockid);	
+/* If it's a track, we need to redo that track's header too */
+				if (dest->dir->entry[n].id[0] == 'T')
+				{
+					unsigned char *th;
+					size_t thlen;
+					char type[4];
+
+/* So load the track header (using the newly-remapped block id)  */
+					err = ldbs_getblock_a(dest, 
+						dest->dir->entry[n].blockid,
+						type, (void **)&th, &thlen);
+/* Remap the sector references within it... */
+					if (!err)
+					{
+						err = remap_track_header(dest, th, thlen, mapping, maplen);
+/* ... and save it */
+						if (!err) err = ldbs_rewriteblock(dest, 
+						  dest->dir->entry[n].blockid,
+						  th, thlen); 
+					}
+					ldbs_free(th);
+				}
+				if (err) break;
+			}
+			dest->dir->dirty = 1;
+			
+		}
+	}
+	if (!err)
+	{
+		err = ldbs_sync(dest);
+	}
+	memcpy(dest->header.subtype, source->header.subtype, 4);
+	ldbs_free(mapping);
+	return err;
+}
+
+
+
+
+
 /***************************************************************************/
 /************************* DISK IMAGE FUNCTIONS ****************************/
 /***************************************************************************/
@@ -1249,7 +1668,7 @@ dsk_err_t ldbs_setroot(PLDBS self, LDBLOCKID blockid)
 void ldbs_encode_trackid(char *trackid, dsk_pcyl_t cylinder, dsk_phead_t head)
 {
 	trackid[0] = 'T';
-	ldbs_poke2((unsigned char *)trackid + 1, cylinder);
+	ldbs_poke2((unsigned char *)trackid + 1, (unsigned short)cylinder);
 	trackid[3] = head;
 }
 
@@ -1380,7 +1799,8 @@ static dsk_err_t ldbs_put_trackdir(PLDBS self, LDBS_TRACKDIR *dir, LDBLOCKID *bl
 	bufsize = count * 8 + 2;
 	buf = ldbs_malloc(bufsize);
 	if (!buf) return DSK_ERR_NOMEM;
-	ldbs_poke2(buf, count);
+	memset(buf, 0, bufsize);
+	ldbs_poke2(buf, (unsigned short)count);
 	for (n = count = 0; n < dir->count; n++)
 	{
 		if (memcmp(dir->entry[n].id, FREEBLOCK, 4))
@@ -1408,6 +1828,8 @@ dsk_err_t ldbs_get_trackhead(PLDBS self, LDBS_TRACKHEAD **trkh,
 	char tbuf[4];
 	LDBS_TRACKHEAD *result;
 	char type[4];
+	unsigned se_offset;	/* Offset to sector entries */
+	unsigned se_size;	/* Length of a sector entry */
 
 	ldbs_encode_trackid(type, cylinder, head);
 	/* See if the requested track exists */
@@ -1428,30 +1850,74 @@ dsk_err_t ldbs_get_trackhead(PLDBS self, LDBS_TRACKHEAD **trkh,
 	err = ldbs_getblock_a(self, blkid, tbuf, (void **)&buf, &bufsize);
 	if (err) return err;
 
+	/* Track header must be at least 6 bytes */
+	if (bufsize < 6)
+	{
+		ldbs_free(buf);
+		return DSK_ERR_CORRUPT;
+	}
+
 	/* Disk structure is loaded in buf */
-	result = ldbs_trackhead_alloc(ldbs_peek2(buf));
+	if (self->version < 2)	/* Sector count is in different places */
+	{			/* in v1 and v2 files */
+		result = ldbs_trackhead_alloc(ldbs_peek2(buf));
+	}
+	else
+	{
+		result = ldbs_trackhead_alloc(ldbs_peek2(buf + 4));
+	}
 	if (!result) 
 	{
 		ldbs_free(buf);
 		return DSK_ERR_NOMEM;
 	}
-	result->count    = ldbs_peek2(buf);
-	result->datarate = buf[2];
-	result->recmode  = buf[3];
-	result->gap3     = buf[4];
-	result->filler   = buf[5];
+	if (self->version < 2)	/* V1 has fixed size track & sector headers */
+	{
+		se_offset = 6;
+		se_size = 12;
+		result->count    = ldbs_peek2(buf);
+		result->datarate = buf[2];
+		result->recmode  = buf[3];
+		result->gap3     = buf[4];
+		result->filler   = buf[5];
+	}
+	else	/* In V2 their size is specified in the file */
+	{
+		se_offset        = ldbs_peek2(buf);
+		se_size          = ldbs_peek2(buf + 2);
+		result->count    = ldbs_peek2(buf + 4);
+		result->datarate = buf[6];
+		result->recmode  = buf[7];
+		result->gap3     = buf[8];
+		result->filler   = buf[9];
+		if (se_offset >= 12)
+		{
+			result->total_len = ldbs_peek2(buf + 10);
+		}
+	}
+	/* Indicated size exceeds actual size */
+	if (se_offset + result->count * se_size > bufsize)
+	{
+		ldbs_free(buf);
+		return DSK_ERR_CORRUPT;
+	}
 
 	for (n = 0; n < result->count; n++)
 	{
-		result->sector[n].id_cyl  = buf[n * 12 + 6];
-		result->sector[n].id_head = buf[n * 12 + 7];
-		result->sector[n].id_sec  = buf[n * 12 + 8];
-		result->sector[n].id_psh  = buf[n * 12 + 9];
-		result->sector[n].st1     = buf[n * 12 + 10];
-		result->sector[n].st2     = buf[n * 12 + 11];
-		result->sector[n].copies  = buf[n * 12 + 12];
-		result->sector[n].filler  = buf[n * 12 + 13];
-		result->sector[n].blockid = ldbs_peek4(buf + n * 12 + 14);
+		result->sector[n].id_cyl  = buf[n * se_size + se_offset];
+		result->sector[n].id_head = buf[n * se_size + se_offset + 1];
+		result->sector[n].id_sec  = buf[n * se_size + se_offset + 2];
+		result->sector[n].id_psh  = buf[n * se_size + se_offset + 3];
+		result->sector[n].st1     = buf[n * se_size + se_offset + 4];
+		result->sector[n].st2     = buf[n * se_size + se_offset + 5];
+		result->sector[n].copies  = buf[n * se_size + se_offset + 6];
+		result->sector[n].filler  = buf[n * se_size + se_offset + 7];
+		result->sector[n].blockid = ldbs_peek4(buf + n * se_size + se_offset + 8);
+		if (se_size >= 16)
+		{
+			result->sector[n].trail  = ldbs_peek2(buf + n * se_size + se_offset + 12);
+			result->sector[n].offset = ldbs_peek2(buf + n * se_size + se_offset + 14);
+		}
 	}
 	ldbs_free(buf);
 	*trkh = result;
@@ -1459,7 +1925,7 @@ dsk_err_t ldbs_get_trackhead(PLDBS self, LDBS_TRACKHEAD **trkh,
 }
 
 
-dsk_err_t ldbs_put_trackhead(PLDBS self, LDBS_TRACKHEAD *trkh, 
+dsk_err_t ldbs_put_trackhead(PLDBS self, const LDBS_TRACKHEAD *trkh, 
 				dsk_pcyl_t cylinder, dsk_phead_t head)
 {
 	size_t n;
@@ -1467,36 +1933,107 @@ dsk_err_t ldbs_put_trackhead(PLDBS self, LDBS_TRACKHEAD *trkh,
 	size_t bufsize;
 	dsk_err_t err;
 	char type[4];
+	unsigned short se_offset;	/* Offset to sector entries */
+	unsigned short se_size;	/* Length of a sector entry */
 
 	ldbs_encode_trackid(type, cylinder, head);
 
 	if (trkh == NULL) return ldbs_putblock_d(self, type, NULL, 0);
 
-	bufsize = (trkh->count * 12) + 6;	
+	if (self->version < 2)
+	{
+		se_offset = 6;
+		se_size = 12;
+	}
+	else
+	{
+		se_offset = 12;
+		se_size = 16;
+	}
+	bufsize = (trkh->count * se_size) + se_offset;	
 	buf = ldbs_malloc(bufsize);
 	if (!buf) return DSK_ERR_NOMEM;
-	ldbs_poke2(buf, trkh->count);
-	buf[2] = trkh->datarate;
-	buf[3] = trkh->recmode;
-	buf[4] = trkh->gap3;
-	buf[5] = trkh->filler;
 
+	if (self->version < 2)
+	{
+		ldbs_poke2(buf, trkh->count);
+		buf[2] = trkh->datarate;
+		buf[3] = trkh->recmode;
+		buf[4] = trkh->gap3;
+		buf[5] = trkh->filler;
+	}
+	else
+	{
+		ldbs_poke2(buf,     se_offset);
+		ldbs_poke2(buf + 2, se_size);
+		ldbs_poke2(buf + 4, trkh->count);
+		buf[6] = trkh->datarate;
+		buf[7] = trkh->recmode;
+		buf[8] = trkh->gap3;
+		buf[9] = trkh->filler;
+		ldbs_poke2(buf + 10, trkh->total_len);
+	}
 	for (n = 0; n < trkh->count; n++)
 	{
-		buf[n * 12 +  6] = trkh->sector[n].id_cyl;
-		buf[n * 12 +  7] = trkh->sector[n].id_head;
-		buf[n * 12 +  8] = trkh->sector[n].id_sec;
-		buf[n * 12 +  9] = trkh->sector[n].id_psh;
-		buf[n * 12 + 10] = trkh->sector[n].st1;
-		buf[n * 12 + 11] = trkh->sector[n].st2;
-		buf[n * 12 + 12] = trkh->sector[n].copies;
-		buf[n * 12 + 13] = trkh->sector[n].filler;
-		ldbs_poke4(buf + n * 12 + 14, trkh->sector[n].blockid);
+		buf[n * se_size + se_offset] = trkh->sector[n].id_cyl;
+		buf[n * se_size + se_offset +  1] = trkh->sector[n].id_head;
+		buf[n * se_size + se_offset +  2] = trkh->sector[n].id_sec;
+		buf[n * se_size + se_offset +  3] = trkh->sector[n].id_psh;
+		buf[n * se_size + se_offset +  4] = trkh->sector[n].st1;
+		buf[n * se_size + se_offset +  5] = trkh->sector[n].st2;
+		buf[n * se_size + se_offset +  6] = trkh->sector[n].copies;
+		buf[n * se_size + se_offset +  7] = trkh->sector[n].filler;
+		ldbs_poke4(buf + n * se_size + se_offset + 8, trkh->sector[n].blockid);
+		if (se_size >= 16)
+		{
+			ldbs_poke2(buf + n * se_size + se_offset + 12, trkh->sector[n].trail);
+			ldbs_poke2(buf + n * se_size + se_offset + 14, trkh->sector[n].offset);
+		}
 	}
 	err = ldbs_putblock_d(self, type, buf, bufsize);
 
 	ldbs_free(buf);
 	return err;
+}
+
+
+
+
+dsk_err_t ldbs_getblock_d(PLDBS self, const char *type,
+				void *data, size_t *len)
+{
+	/* Look up that block in the directory */
+	LDBLOCKID blkid = LDBLOCKID_NULL;
+	dsk_err_t err;
+
+	if (!self || !type) return DSK_ERR_BADPTR;
+	/* See if the object already exists in the directory 
+	 * (there must be a directory) */
+	if (!self->dir) return DSK_ERR_NOTME;
+
+	err = ldbs_trackdir_find(self->dir, type, &blkid);
+	if (err) return err;
+
+	return ldbs_getblock(self, blkid, NULL, data, len);
+}
+
+
+dsk_err_t ldbs_getblock_da(PLDBS self, const char *type,
+				void **data, size_t *len)
+{
+	/* Look up that block in the directory */
+	LDBLOCKID blkid = LDBLOCKID_NULL;
+	dsk_err_t err;
+
+	if (!self || !type) return DSK_ERR_BADPTR;
+	/* See if the object already exists in the directory 
+	 * (there must be a directory) */
+	if (!self->dir) return DSK_ERR_NOTME;
+
+	err = ldbs_trackdir_find(self->dir, type, &blkid);
+	if (err) return err;
+
+	return ldbs_getblock_a(self, blkid, NULL, data, len);
 }
 
 
@@ -1639,6 +2176,29 @@ LDBS_TRACKHEAD *ldbs_trackhead_alloc(unsigned entries)
 }
 
 
+LDBS_TRACKHEAD *ldbs_trackhead_realloc(LDBS_TRACKHEAD *t, unsigned short entries)
+{
+	size_t newsize = sizeof(LDBS_TRACKHEAD) + entries * sizeof(LDBS_SECTOR_ENTRY);
+	unsigned oldcount = t->count;
+	unsigned n;
+
+	LDBS_TRACKHEAD *result = ldbs_realloc(t, newsize);
+	if (!result) return NULL;
+
+	/* If structure extended, blank the new bit */
+	if (entries > oldcount)
+	{
+		for (n = oldcount; n < entries; n++)
+			memset(&result->sector[n], 0, sizeof(LDBS_SECTOR_ENTRY));
+	}	
+	result->count = entries;
+	
+	return result;
+}
+
+
+
+
 
 
 dsk_err_t ldbs_get_asciiz(PLDBS self, const char type[4], char **buffer)
@@ -1684,6 +2244,10 @@ dsk_err_t ldbs_get_creator(PLDBS self, char **buffer)
 
 dsk_err_t ldbs_put_creator(PLDBS self, const char *creator)
 {
+	if (!creator)
+	{
+		return ldbs_putblock_d(self, LDBS_CREATOR_TYPE, NULL, 0);
+	}
 	return ldbs_putblock_d(self, LDBS_CREATOR_TYPE, creator, 
 		strlen(creator));
 }
@@ -1696,6 +2260,10 @@ dsk_err_t ldbs_get_comment(PLDBS self, char **buffer)
 
 dsk_err_t ldbs_put_comment(PLDBS self, const char *comment)
 {
+	if (!comment)
+	{
+		return ldbs_putblock_d(self, LDBS_INFO_TYPE, NULL, 0);
+	}
 	return ldbs_putblock_d(self, LDBS_INFO_TYPE, comment, 
 		strlen(comment));
 }
@@ -1746,7 +2314,7 @@ dsk_err_t ldbs_get_geometry(PLDBS self, DSK_GEOMETRY *dg)
 
 
 
-dsk_err_t ldbs_put_geometry(PLDBS self, DSK_GEOMETRY *dg)
+dsk_err_t ldbs_put_geometry(PLDBS self, const DSK_GEOMETRY *dg)
 {
 	unsigned char buf[15];
 
@@ -1755,15 +2323,15 @@ dsk_err_t ldbs_put_geometry(PLDBS self, DSK_GEOMETRY *dg)
 	if (!dg) return ldbs_putblock_d(self, LDBS_GEOM_TYPE, NULL, 0);
 
 	buf[0] = dg->dg_sidedness;
-	ldbs_poke2(buf +1, dg->dg_cylinders);
+	ldbs_poke2(buf +1, (unsigned short)dg->dg_cylinders);
 	buf[3] = dg->dg_heads;
 	buf[4] = dg->dg_sectors;
 	buf[5] = dg->dg_secbase;
-	ldbs_poke2(buf + 6, dg->dg_secsize);
+	ldbs_poke2(buf + 6, (unsigned short)dg->dg_secsize);
 	buf[8] = dg->dg_datarate;
 	buf[9] = dg->dg_rwgap;
 	buf[10] = dg->dg_fmtgap;
-	ldbs_poke2(buf + 11, dg->dg_fm);
+	ldbs_poke2(buf + 11, (unsigned short)dg->dg_fm);
 	buf[13] = dg->dg_nomulti;
 	buf[14] = dg->dg_noskip;
 
@@ -1815,7 +2383,7 @@ dsk_err_t ldbs_get_dpb(PLDBS self, LDBS_DPB *dpb)
 
 
 
-dsk_err_t ldbs_put_dpb(PLDBS self, LDBS_DPB *dpb)
+dsk_err_t ldbs_put_dpb(PLDBS self, const LDBS_DPB *dpb)
 {
 	unsigned char buf[17];
 
@@ -1868,32 +2436,79 @@ dsk_err_t ldbs_max_cyl_head(PLDBS self, dsk_pcyl_t *cyls, dsk_phead_t *heads)
 	return DSK_ERR_OK;
 }
 
+static dsk_err_t ldbs_all_tracks_body(PLDBS self, dsk_pcyl_t cyl, 
+	dsk_phead_t head, LDBS_TRACK_CALLBACK cbk, void *param)
+{
+	LDBS_TRACKHEAD *trackhead;
+	dsk_err_t err = DSK_ERR_OK;
 
-/* Iterate over all tracks in order */
-dsk_err_t ldbs_all_tracks(PLDBS self, LDBS_TRACK_CALLBACK cbk, void *param)
+	err = ldbs_get_trackhead(self, &trackhead, cyl, head);
+	if (err) return err;
+
+	if (trackhead != NULL)
+	{
+		err = (*cbk)(self, cyl, head, trackhead, param);
+		ldbs_free(trackhead);
+	}
+	return err;
+}
+
+
+/* Iterate over all tracks in specified order */
+dsk_err_t ldbs_all_tracks(PLDBS self, LDBS_TRACK_CALLBACK cbk, 
+	dsk_sides_t sides, void *param)
 {
 	dsk_pcyl_t  cyl, maxc;
 	dsk_phead_t head, maxh;
 	dsk_err_t err;
-	LDBS_TRACKHEAD *trackhead;
 
 	err = ldbs_max_cyl_head(self, &maxc, &maxh);
 	if (err) return err;
 
-	for (cyl = 0; cyl < maxc; cyl++)
-		for (head = 0; head < maxh; head++)
+	switch (sides)
+	{
+		default:
+		case SIDES_EXTSURFACE:
+		case SIDES_ALT:
+		for (cyl = 0; cyl < maxc; cyl++) 
 		{
-			err = ldbs_get_trackhead(self, &trackhead, cyl, head);
-			if (err) return err;
-
-			if (trackhead != NULL)
+			for (head = 0; head < maxh; head++)
 			{
-				err = (*cbk)(self, cyl, head, trackhead, param);
-				ldbs_free(trackhead);
-				if (err != DSK_ERR_OK) break;
+				err = ldbs_all_tracks_body(self, cyl, head, 
+					cbk, param);
+				if (err) break;
 			}
 		}
-	
+		break;
+		case SIDES_OUTOUT:
+		for (head = 0; head < maxh; head++)
+		{
+			for (cyl = 0; cyl < maxc; cyl++) 
+			{
+				err = ldbs_all_tracks_body(self, cyl, head, 
+					cbk, param);
+				if (err) break;
+			}
+		}
+		break;
+		case SIDES_OUTBACK:
+		for (head = 0; head < maxh; head += 2)
+		{
+			for (cyl = 0; cyl < maxc; cyl++) 
+			{
+				err = ldbs_all_tracks_body(self, cyl, head, 
+					cbk, param);
+				if (err) break;
+			}
+			for (cyl = maxc; cyl > 0; cyl--) 
+			{
+				err = ldbs_all_tracks_body(self, cyl-1, head+1, 
+					cbk, param);
+				if (err) break;
+			}
+		}
+		break;
+	}	
 	return err;	
 }
 
@@ -1908,21 +2523,22 @@ static dsk_err_t sector_callback_wrap(PLDBS self, dsk_pcyl_t cyl,
 
 	for (n = 0; n < th->count; n++)
 	{
-		err = (*cbk)(self, cyl, head, &th->sector[n], p[1]);
+		err = (*cbk)(self, cyl, head, &th->sector[n], th, p[1]);
 		if (err) break;
 	}
 	return err;	
 }
 
 /* Iterate over all sectors in the file, in cylinder / head order */
-dsk_err_t ldbs_all_sectors(PLDBS self, LDBS_SECTOR_CALLBACK cbk, void *param)
+dsk_err_t ldbs_all_sectors(PLDBS self, LDBS_SECTOR_CALLBACK cbk, 
+	dsk_sides_t sides, void *param)
 {
 	void *p[2];	
 
 	p[0] = cbk;
 	p[1] = param;
 
-	return ldbs_all_tracks(self, sector_callback_wrap, &p[0]);
+	return ldbs_all_tracks(self, sector_callback_wrap, sides, &p[0]);
 }
 
 static dsk_err_t track_stat_callback(PLDBS self, 
@@ -1972,6 +2588,88 @@ dsk_err_t ldbs_get_stats(PLDBS self, LDBS_STATS *stats)
 	memset(stats, 0, sizeof(*stats));
 	stats->drive_empty = 1;
 
-	return ldbs_all_tracks(self, track_stat_callback, stats);
+	return ldbs_all_tracks(self, track_stat_callback, SIDES_ALT, stats);
+}
+
+
+
+
+
+dsk_err_t ldbs_load_track(PLDBS self, const LDBS_TRACKHEAD *trkh, void **buf, 
+			size_t *buflen, size_t sector_size)
+{
+	size_t tracklen;
+	unsigned n;
+	int last_id = -1;
+	unsigned sectors_done = 0;
+	unsigned char *offset;
+	dsk_err_t err;
+
+	if (self == NULL || buf == NULL || buflen == NULL) 
+		return DSK_ERR_BADPTR;
+
+	/* Empty track, return empty buffer */
+	if (trkh->count == 0)
+	{
+		*buflen = 0;
+		*buf = NULL;
+		return DSK_ERR_OK;
+	}
+	/* Calculate buffer size */
+	if (sector_size)
+	{
+		tracklen = trkh->count * sector_size;
+	}
+	else
+	{
+		for (n = 0, tracklen = 0; n < trkh->count; n++)
+		{
+			tracklen += (128 << trkh->sector[n].id_psh);	
+		}
+	}
+	*buf    = ldbs_malloc(tracklen);
+	*buflen = tracklen;
+	if (!*buf) return DSK_ERR_NOMEM;
+	memset(*buf, trkh->filler, tracklen);
+
+	/* Populate buffer */
+	offset = (*buf);
+	while (sectors_done < trkh->count)
+	{
+		int candidate = -1;
+		size_t secsize;
+
+		/* Find the lowest-numbered sector that hasn't been processed */
+		for (n = 0; n < trkh->count; n++)
+		{
+			if (trkh->sector[n].id_sec <= last_id) continue;
+			if (candidate < 0 || 
+			    trkh->sector[candidate].id_sec > trkh->sector[n].id_sec)
+				candidate = n;
+		}
+		if (candidate < 0) break;	/* Should never happen! */
+
+		if (sector_size) secsize = sector_size;
+		else	 secsize = 128 << trkh->sector[candidate].id_psh;
+		if (trkh->sector[candidate].copies)
+		{
+			size_t ssiz = secsize;
+
+			err = ldbs_getblock(self, 
+				trkh->sector[candidate].blockid, 
+				NULL, offset, &ssiz);
+/* DSK_ERR_OVERRUN will be returned if there are multiple copies of the 
+ * sector. We just use the first one in such cases. */
+			if (err && err != DSK_ERR_OVERRUN) return err;
+		}
+		else
+		{
+			memset(offset, trkh->sector[candidate].filler, secsize);
+		}
+		offset += secsize;	
+		last_id = trkh->sector[candidate].id_sec;
+		++sectors_done;
+	}
+	return DSK_ERR_OK;	
 }
 

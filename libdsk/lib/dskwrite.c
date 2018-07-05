@@ -39,6 +39,7 @@ LDPUBLIC32 dsk_err_t LDPUBLIC16 dsk_pwrite(DSK_DRIVER *self, const DSK_GEOMETRY 
 	if (self && self->dr_compress && self->dr_compress->cd_readonly)
 		return DSK_ERR_RDONLY;
 
+	WALK_VTABLE(dc, dc_write)
 	if (!dc->dc_write) return DSK_ERR_NOTIMPL;
 
 	/* If we are storing the complement, generate complemented sector */
@@ -104,6 +105,7 @@ LDPUBLIC32 dsk_err_t LDPUBLIC16 dsk_xwrite(DSK_DRIVER *self, const DSK_GEOMETRY 
         if (self && self->dr_compress && self->dr_compress->cd_readonly)
                 return DSK_ERR_RDONLY;
 
+	WALK_VTABLE(dc, dc_xwrite)
         if (!dc->dc_xwrite) return DSK_ERR_NOTIMPL;
 	/* If we are storing the complement, generate complemented sector */
 	if (geom->dg_fm & RECMODE_COMPLEMENT)

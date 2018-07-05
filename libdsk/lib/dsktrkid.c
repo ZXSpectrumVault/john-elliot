@@ -42,11 +42,15 @@ LDPUBLIC32 dsk_err_t  LDPUBLIC16 dsk_ptrackids(DSK_PDRIVER self,
 
 	dc = self->dr_class;
 
+	WALK_VTABLE(dc, dc_trackids)
         if (dc->dc_trackids) 
 	{
 		err = (dc->dc_trackids)(self,geom,cylinder,head,count,results);
 		if (err != DSK_ERR_NOTIMPL) return err;
 	}
+
+	dc = self->dr_class;
+	WALK_VTABLE(dc, dc_secid)
 	if (dc->dc_secid)
 	{
 /* The driver doesn't provide a 'bulk' sector ID function, but we can 

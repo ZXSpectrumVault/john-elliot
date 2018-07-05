@@ -20,39 +20,20 @@
  *                                                                         *
  ***************************************************************************/
 
-/* Declarations for the CFI driver */
-
 typedef struct
 {
-	unsigned       cfit_length;
-	unsigned char *cfit_data;
-} CFI_TRACK;
-
-typedef struct
-{
-        DSK_DRIVER cfi_super;
+	LDBSDISK_DSK_DRIVER cfi_super;
 	char *cfi_filename;
-	int   cfi_readonly;
-	CFI_TRACK *cfi_tracks;
-	dsk_ltrack_t cfi_ntracks;
-	int   cfi_dirty;
+
+	/* These variables hold state when loading, and have no meaning
+	 * outside cfi_open() */
+	DSK_GEOMETRY cfi_geom;
+	/* These variables hold state when saving, and have no meaning
+	 * outside cfi_close() */
+	FILE *cfi_fp;
 
 } CFI_DSK_DRIVER;
 
 dsk_err_t cfi_open(DSK_DRIVER *self, const char *filename);
 dsk_err_t cfi_creat(DSK_DRIVER *self, const char *filename);
 dsk_err_t cfi_close(DSK_DRIVER *self);
-dsk_err_t cfi_read(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
-                              void *buf, dsk_pcyl_t cylinder,
-                              dsk_phead_t head, dsk_psect_t sector);
-dsk_err_t cfi_write(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
-                              const void *buf, dsk_pcyl_t cylinder,
-                              dsk_phead_t head, dsk_psect_t sector);
-dsk_err_t cfi_format(DSK_DRIVER *self, DSK_GEOMETRY *geom,
-                                dsk_pcyl_t cylinder, dsk_phead_t head,
-                                const DSK_FORMAT *format, unsigned char filler);
-dsk_err_t cfi_xseek(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
-                                dsk_pcyl_t cylinder, dsk_phead_t head);
-dsk_err_t cfi_status(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
-                                dsk_phead_t head, unsigned char *result);
-
