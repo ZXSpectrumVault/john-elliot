@@ -70,14 +70,13 @@ static void put_newline(PSFIO *io)
 
 int write_printf(PSFIO *io, psf_byte b)
 {
-	static psf_dword charbase, ch, x, cb;
+	static psf_dword ch, x, cb;
 	int ct = 0;
 	static psf_byte pch;
 
 	if (!filepos) 
 	{
 		put_newline(io);
-		charbase = io->psf->psf_hdrlen;
 		ch = 0;
 		x = 0;
 		cb = 0;

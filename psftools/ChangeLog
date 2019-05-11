@@ -1,3 +1,9 @@
+2019-03-19 John Elliott
+
+	* fnt2psf: Changed the Windows 1.x font extract to seek to the
+	 character bitmap rather than assuming it directly follows the
+	 widths table.
+
 2017-03-17 John Elliott
 
 	* cpi2psf: Was unable to parse LCD.CPI from Toshiba MS-DOS 3.30, 

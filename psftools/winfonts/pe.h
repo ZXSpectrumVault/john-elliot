@@ -21,7 +21,7 @@ typedef struct pefile
 	long m_hdr_end;		/* End of PE header */	
 } PEFILE;
 
-void new_PEFILE(PEFILE *self, FILE *fp);
+int new_PEFILE(PEFILE *self, FILE *fp);
 RESDIR *pe_open_resdir(MZFILE *self);
 RESDIR *pe_load_resdir(PEFILE *self, long offs);
 
