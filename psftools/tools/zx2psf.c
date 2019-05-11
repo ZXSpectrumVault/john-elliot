@@ -27,6 +27,7 @@
 #define MD_LATIN1 1	/* Spectrum chars over Latin-1 */
 #define MD_MERGE1 2	/* Spectrum chars over Latin-1, re-mapped */
 #define MD_SYNTH1 3	/* Synthesize an entire Latin-1 font from Spectrum */
+#define MD_MOVE1  4	/* Spectrum chars only, move sterling and copyright to Latin-1 */
 
 /* Treatment of chars 128-160 */
 
@@ -66,6 +67,7 @@ char *cnv_set_option(int ddash, char *variable, char *value)
         else if (!stricmp(value, "latin1")) mode = MD_LATIN1;
         else if (!stricmp(value, "merge1")) mode = MD_MERGE1;
         else if (!stricmp(value, "synth1")) mode = MD_SYNTH1;
+        else if (!stricmp(value, "move1")) mode = MD_MOVE1;
         else return "Invalid value for --mode option. Use the --help option for the help screen.";
         return NULL;
     }
@@ -170,7 +172,7 @@ static void lcaccent(PSF_FILE *dst, int from1, int from2, int to, int shift)
     for (x = 0; x < 8; x++) *dptr++ = *sptr1++ | *sptr2++;
 }
 
-/* Squeeze two characters into horizontal space for one (eg: A,E -> Æ) */
+/* Squeeze two characters into horizontal space for one (eg: A,E -> ï¿½) */
 static void hcrush(PSF_FILE *dst, int from1, int from2, int to)
 {
 	int x;
@@ -359,17 +361,17 @@ void add_unicode_dir(PSF_FILE *psf)
 		switch(ch)
 		{
 			case 0x5E:	// Uparrow 
-				if (mode == MD_BARE || mode == MD_LATIN1)
+				if (mode == MD_BARE || mode == MD_LATIN1 || mode == MD_MOVE1)
 					psf_unicode_add(psf, ch, 0x2191);
 				else	psf_unicode_add(psf, ch, ch);
 				break;
 			case 0x60:	// Pound 
-				if (mode == MD_BARE || mode == MD_LATIN1)
+				if (mode == MD_BARE || mode == MD_LATIN1 || mode == MD_MOVE1)
 					psf_unicode_add(psf, ch, 0xA3);
 				else	psf_unicode_add(psf, ch, ch);
 				break;
 			case 0x7F:	// Copyright 
-				if (mode == MD_BARE || mode == MD_LATIN1)
+				if (mode == MD_BARE || mode == MD_LATIN1 || mode == MD_MOVE1)
 					psf_unicode_add(psf, ch, 0xA9);
 				else	psf_unicode_add(psf, ch, ch);
 				break;
@@ -382,7 +384,7 @@ void add_unicode_dir(PSF_FILE *psf)
 	psf_unicode_add(psf, 0x4B, 0x212A);	/* K -> Kelvin */
 	psf_unicode_add(psf, 0x5F, 0xF804);	/* _ -> Private use */
 
-	if (mode == MD_BARE)
+	if (mode == MD_BARE || mode == MD_MOVE1)
 	{
 		switch(graphics)
 		{
@@ -449,13 +451,16 @@ char *cnv_execute(FILE *infile, FILE *outfile)
     rv = zxf_file_read(&zxf, infile, format);	
     if (rv != ZXF_E_OK) return zxf_error_string(rv);
     
-    if (mode == MD_BARE) switch(graphics)
+    if (mode == MD_BARE || mode == MD_MOVE1) switch(graphics)
     {
     	case GFX_NONE:  nchars = 128; break;
     	case GFX_BLOCK: nchars = 144; break;
     	case GFX_1252:  nchars = 160; break;
     	case GFX_UDG:   nchars = 165; break;
     }
+
+	if (mode == MD_MOVE1)
+		nchars += 42; // Reach the copyright
 
 	/* Load the latin-1 template from memory */
     psf_file_new(&psflatin1);
@@ -465,22 +470,38 @@ char *cnv_execute(FILE *infile, FILE *outfile)
     if (rv == PSF_E_OK)
     {
         /* Initialise the PSF */
-        if (mode > MD_BARE) memcpy(psf.psf_data, psflatin1.psf_data, 2048);
-        else                memset(psf.psf_data, 0, nchars * 8);
+		switch(mode) {
+			case MD_BARE:
+			case MD_MOVE1:
+				memset(psf.psf_data, 0, nchars * 8);
+				break;
+			default:
+				memcpy(psf.psf_data, psflatin1.psf_data, 2048);
+		}
 
-        if (mode < MD_MERGE1)
-        {
-            for (x = 32; x <= 127; x++) copychar(&zxf, &psf, x, x);
-        }
-        else
-        {
-            for (x = 32; x <= 127; x++) switch(x)
-            {
-                case 0x5E: copychar(&zxf, &psf, x, 0x18); break; 
-                case 0x60: copychar(&zxf, &psf, x, 0xA3); break;
-                case 0x7F: copychar(&zxf, &psf, x, 0xA9); break;
-                default:   copychar(&zxf, &psf, x, x);    break;
-            }
+		switch(mode) {
+			case MD_MERGE1: {
+				for (x = 32; x <= 127; x++) switch(x)
+				{
+					case 0x5E: copychar(&zxf, &psf, x, 0x18); break; 
+					case 0x60: copychar(&zxf, &psf, x, 0xA3); break;
+					case 0x7F: copychar(&zxf, &psf, x, 0xA9); break;
+					default:   copychar(&zxf, &psf, x, x);    break;
+				}
+				break;
+			}
+			case MD_MOVE1: {
+				for (x = 32; x <= 127; x++) switch(x)
+				{
+					case 0x60: copychar(&zxf, &psf, x, 0xA3); break;
+					case 0x7F: copychar(&zxf, &psf, x, 0xA9); break;
+					default:   copychar(&zxf, &psf, x, x);    break;
+				}
+				break;
+			}
+			default: {
+	            for (x = 32; x <= 127; x++) copychar(&zxf, &psf, x, x);
+    	    }
         }	
 	if (mode == MD_SYNTH1) synth1(&zxf, &psf);
        
