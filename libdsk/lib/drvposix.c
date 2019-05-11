@@ -301,7 +301,8 @@ dsk_err_t posix_write(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
 	unsigned long offset;
 	dsk_err_t err;
 
-	if (!buf || !self || !geom)
+	if (!buf || !self || !geom) return DSK_ERR_BADPTR;
+
 	CHECK_CLASS(self);
 
 	if (!pxself->px_fp) return DSK_ERR_NOTRDY;

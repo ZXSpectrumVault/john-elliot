@@ -65,15 +65,14 @@ LDPUBLIC32 dsk_err_t LDPUBLIC16  dg_ls2ps(const DSK_GEOMETRY *self,
 		if (self->dg_sidedness == SIDES_EXTSURFACE)
 		{
 			dsk_phead_t h;
+			dsk_ltrack_t lt;
 
-			logical /= self->dg_sectors;
-			err = dg_lt2pt(self, (dsk_ltrack_t)logical, cyl, &h);
+			lt = (dsk_ltrack_t)(logical / self->dg_sectors);
+			err = dg_lt2pt(self, lt, cyl, &h);
 			if (err) return err;
-		
-			*sec = (dsk_psect_t)((logical % self->dg_sectors) 
-				+ h * self->dg_sectors 
-				+ self->dg_secbase);
-
+	
+			*sec = dg_x_sector(self, h,
+			     (logical % self->dg_sectors) + self->dg_secbase);
 		}
 		else
 		{
@@ -165,6 +164,7 @@ LDPUBLIC32 dsk_err_t LDPUBLIC16 dg_lt2pt(const DSK_GEOMETRY *self,
  * we have to translate the physical location to the expected sector ID rather 
  * than assuming a 1:1 mapping. */
 
+/* So, on an EXTSURFACE disk, the head ID will always be 0... */
 dsk_phead_t dg_x_head(const DSK_GEOMETRY *dg, dsk_phead_t h)
 {
 	if (dg == NULL) return h;
@@ -172,6 +172,8 @@ dsk_phead_t dg_x_head(const DSK_GEOMETRY *dg, dsk_phead_t h)
 	return (dg->dg_sidedness == SIDES_EXTSURFACE) ? 0 : h;
 }
 
+/* ... and the sector ID on side 1 will be increased by the number of 
+ * sectors on side 0. */
 dsk_phead_t dg_x_sector(const DSK_GEOMETRY *dg, dsk_phead_t h, dsk_psect_t sec)
 {
 	if (dg == NULL) return sec;

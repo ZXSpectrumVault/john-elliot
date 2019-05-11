@@ -7,15 +7,18 @@ CLASSPATH=@CLASSPATH@
 JAVAC=@JAVAC@ 
 
 bin_PROGRAMS=dsktrans dskform dskid dskdump dskscan dskutil md3serial apriboot \
-	     dskconv
+	     dskconv lsgotek dsklabel
+lsgotek_SOURCES=lsgotek.c utilopts.c utilopts.h labelopt.c labelopt.h
 dskconv_SOURCES=dskconv.c utilopts.c utilopts.h formname.c formname.h
 dsktrans_SOURCES=dsktrans.c utilopts.c utilopts.h formname.c formname.h \
 		 apriboot.h bootsec.c
 apriboot_SOURCES=apriboot.c bootsec.c apriboot.h formname.c formname.h \
 		 utilopts.c utilopts.h
-dskform_SOURCES=dskform.c utilopts.c utilopts.h formname.c formname.h
+dskform_SOURCES=dskform.c utilopts.c utilopts.h formname.c formname.h \
+		 apriboot.h bootsec.c labelopt.c labelopt.h 
 dskid_SOURCES=dskid.c utilopts.c utilopts.h
 md3serial_SOURCES=md3serial.c utilopts.c utilopts.h
+dsklabel_SOURCES=dsklabel.c utilopts.c utilopts.h labelopt.c labelopt.h
 dskscan_SOURCES=dskscan.c utilopts.c utilopts.h formname.c formname.h
 dskdump_SOURCES=dskdump.c utilopts.c utilopts.h formname.c formname.h
 dskutil_SOURCES=dskutil.c utilopts.c utilopts.h formname.c formname.h

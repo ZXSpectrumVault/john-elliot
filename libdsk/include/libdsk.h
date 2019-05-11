@@ -58,7 +58,7 @@
 extern "C" {
 #endif
 
-#define LIBDSK_VERSION "1.5.8"
+#define LIBDSK_VERSION "1.5.10"
 
 /************************* TYPES ********************************/
 
@@ -400,6 +400,7 @@ LDPUBLIC32 dsk_err_t  LDPUBLIC16 dg_pcwgeom(DSK_GEOMETRY *self, const unsigned c
 LDPUBLIC32 dsk_err_t  LDPUBLIC16 dg_cpm86geom(DSK_GEOMETRY *self, const unsigned char *bootsect);
 LDPUBLIC32 dsk_err_t  LDPUBLIC16 dg_aprigeom(DSK_GEOMETRY *self, const unsigned char *bootsect);
 LDPUBLIC32 dsk_err_t  LDPUBLIC16 dg_opusgeom(DSK_GEOMETRY *self, const unsigned char *bootsect);
+LDPUBLIC32 dsk_err_t  LDPUBLIC16 dg_dfsgeom(DSK_GEOMETRY *self, const unsigned char *sector0, const unsigned char *sector1);
 
 /* Tries all the above, in approximate order of detectability. This is 
  * intended to assist in parsing flat file disc images that contain no

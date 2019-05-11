@@ -1,7 +1,7 @@
 /***************************************************************************
  *                                                                         *
  *    LIBDSK: General floppy and diskimage access library                  *
- *    Copyright (C) 2001,2005  John Elliott <seasip.webmaster@gmail.com>       *
+ *    Copyright (C) 2001,2019  John Elliott <seasip.webmaster@gmail.com>   *
  *                                                                         *
  *    This library is free software; you can redistribute it and/or        *
  *    modify it under the terms of the GNU Library General Public          *
@@ -26,6 +26,15 @@
 #include "config.h"
 #include "utilopts.h"
 #include "libdsk.h"
+#ifdef HAVE_WINDOWS_H
+#include <windows.h>
+# ifdef HAVE_WINIOCTL_H
+#  include <winioctl.h>
+# endif
+# define FDRAWCMD_VERSION		0x0100000f
+# define IOCTL_FD_BASE                   FILE_DEVICE_UNKNOWN
+# define IOCTL_FDRAWCMD_GET_VERSION	CTL_CODE(IOCTL_FD_BASE, 0x888, METHOD_BUFFERED, FILE_READ_DATA|FILE_WRITE_DATA)
+#endif
 
 int version(void)
 {
@@ -298,3 +307,73 @@ void args_complete(int *argc, char **argv)
 	}
 }
 
+static const char *known_exts[] =
+{
+	"td0", "tele",		/* Teledisk */
+	"cqm", "copyqm",	/* CopyQM */
+	"ldbs", "ldbs",		/* LDBS */
+	"cfi", "cfi",		/* CFI */
+	"ufi", "rawalt",	/* Raw floppy */
+	"floppyimage", "rawalt",/* Raw floppy */
+	"vfd", "rawalt",	/* VirtualBox virtual floppy */
+	"ssd", "rawalt",	/* BBC Micro single-sided */
+	"dsd", "rawalt",	/* BBC Micro double-sided */
+	"imd", "imd",		/* IMD */
+	NULL, NULL
+};
+
+
+const char *guess_type(const char *arg)
+{
+	const char *ext;
+	int n;
+
+/* Attempt to guess the output file type based on the filename */
+	if (!strncmp(arg, "gotek:", 6) ||
+	    !strncmp(arg, "gotek144:", 9)) return "gotek";
+
+#ifdef HAVE_LINUX_FDREG_H
+	if (!strncmp(arg, "/dev/fd", 7)) return "floppy";
+#endif
+
+#ifdef HAVE_WINDOWS_H
+	if (strlen(arg) == 2 && arg[1] == ':')
+	{
+/* See if ntwdm driver is present */
+		HANDLE hDriver;
+		DWORD dwVersion, dwRet;
+		BOOL ret;
+
+		hDriver = CreateFile("\\\\.\\fdrawcmd", 
+			GENERIC_READ|GENERIC_WRITE, FILE_SHARE_READ, 
+			NULL, OPEN_EXISTING, 0, NULL);
+		if (hDriver == INVALID_HANDLE_VALUE) return "floppy";
+
+		ret = DeviceIoControl(hDriver, IOCTL_FDRAWCMD_GET_VERSION,
+			NULL, 0, &dwVersion, sizeof(dwVersion), &dwRet, NULL);
+	
+		CloseHandle(hDriver);
+		if (!ret || (dwVersion ^ FDRAWCMD_VERSION) & 0xffff0000)
+			return "floppy";
+		return "ntwdm";
+	}
+#endif
+
+#ifdef __MSDOS__
+	if (strlen(arg) == 2 && arg[1] == ':') return "floppy";
+#endif
+
+	if (!strncmp(arg, "fork:", 5) || !strncmp(arg, "serial:", 7))
+		return "remote";
+
+	/* Check for known file extensions */
+	ext = strrchr(arg, '.');
+	if (!ext) return "dsk";
+	++ext;
+	for (n = 0; known_exts[n]; n += 2)
+	{
+		if (!strcmpi(ext, known_exts[n])) return known_exts[n + 1];
+	}
+	/* All else fails, default to dsk */
+	return "dsk";
+}

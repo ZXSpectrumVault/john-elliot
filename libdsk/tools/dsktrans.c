@@ -1,7 +1,7 @@
 /***************************************************************************
  *                                                                         *
  *    LIBDSK: General floppy and diskimage access library                  *
- *    Copyright (C) 2001-2,2005  John Elliott <seasip.webmaster@gmail.com>     *
+ *    Copyright (C) 2001-2,2019  John Elliott <seasip.webmaster@gmail.com> *
  *                                                                         *
  *    This library is free software; you can redistribute it and/or        *
  *    modify it under the terms of the GNU Library General Public          *
@@ -55,7 +55,8 @@ static int stubborn = 0;
 static int logical = 0;
 static int noformat = 0;
 static dsk_format_t format = -1;
-static char *intyp = NULL, *outtyp = NULL;
+static const char *intyp = NULL;
+static const char *outtyp = NULL;
 static char *incomp = NULL, *outcomp = NULL;
 static int inside = -1, outside = -1;
 static int idstep =  0, odstep  =  0;
@@ -194,9 +195,9 @@ int main(int argc, char **argv)
 		logical = 1;
 		fprintf(stderr, "The -logical option is deprecated. Use -otype logical instead.\n");
 	}
-	if (!outtyp) outtyp = "dsk";
         format    = check_format("-format", &argc, argv);
 	args_complete(&argc, argv);
+	if (!outtyp) outtyp = guess_type(argv[2]);
 	return do_copy(argv[1], argv[2]);
 }
 
@@ -212,22 +213,23 @@ int do_copy(char *infile, char *outfile)
 	char *buf = NULL;
 	char *cmt = NULL;
 	DSK_GEOMETRY dg;
-	char *op = "Opening";
+	char *op = "Opening input file";
 
         dsk_reportfunc_set(report, report_end);
 
 	        e = dsk_open (&indr,  infile,  intyp, incomp);
 	if (!e) e = dsk_set_retry(indr, retries);
 	if (!e && inside >= 0) e = dsk_set_option(indr, "HEAD", inside);
+	if (!e) op = "Opening output file";
 	if (!e) e = dsk_creat(&outdr, outfile, outtyp, outcomp);
 	if (!e && outside >= 0) e = dsk_set_option(outdr, "HEAD", outside);
 	if (!e && idstep) e = dsk_set_option(indr, "DOUBLESTEP", 1);
 	if (!e && odstep) e = dsk_set_option(outdr, "DOUBLESTEP", 1);
 	if (!e) e = dsk_set_retry(outdr, retries);
-	if (format == -1)
+	if (!e && format == -1)
 	{
 		op = "Identifying disc";
-		if (!e) e = dsk_getgeom(indr, &dg);
+		e = dsk_getgeom(indr, &dg);
 	}
 	else if (!e) e = dg_stdformat(&dg, format, NULL, NULL);
 	if (!e)

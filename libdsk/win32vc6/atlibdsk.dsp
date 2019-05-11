@@ -464,6 +464,10 @@ SOURCE=..\lib\drvdos32.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\lib\drvgotek.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\lib\drvimd.c
 
 !IF  "$(CFG)" == "atlibdsk - Win32 Debug"
@@ -548,6 +552,10 @@ SOURCE=..\lib\drvqrst.c
 
 SOURCE=..\lib\drvrcpm.c
 # SUBTRACT CPP /YX /Yc /Yu
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\drvsap.c
 # End Source File
 # Begin Source File
 
@@ -830,6 +838,10 @@ SOURCE=..\lib\drvdos16.h
 # Begin Source File
 
 SOURCE=..\lib\drvdos32.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\lib\drvgotek.h
 # End Source File
 # Begin Source File
 

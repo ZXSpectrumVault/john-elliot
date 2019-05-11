@@ -38,15 +38,20 @@ if errorlevel 1 goto abort
 if errorlevel 1 goto abort
 %CC% %CFLAGS% -c ../lib/drvmyz80.c
 if errorlevel 1 goto abort
+%CC% %CFLAGS% -c ../lib/drvgotek.c
+if errorlevel 1 goto abort
 %CC% %CFLAGS% -c ../lib/drvjv3.c
 if errorlevel 1 goto abort
-%CC% %CFLAGS% -c ../lib/drvnwasp.c
-if errorlevel 1 goto abort
+rem This crashes the compiler!
+rem %CC% %CFLAGS% -c ../lib/drvnwasp.c
+rem if errorlevel 1 goto abort
 %CC% %CFLAGS% -c ../lib/drvposix.c
 if errorlevel 1 goto abort
 %CC% %CFLAGS% -c ../lib/drvqm.c
 if errorlevel 1 goto abort
 %CC% %CFLAGS% -c ../lib/drvqrst.c
+if errorlevel 1 goto abort
+%CC% %CFLAGS% -c ../lib/drvsap.c
 if errorlevel 1 goto abort
 %CC% %CFLAGS% -c ../lib/drvsimh.c
 if errorlevel 1 goto abort
@@ -152,17 +157,21 @@ libr r libdsk.lib drvldbs.obj
 if errorlevel 1 goto abort
 libr r libdsk.lib drvjv3.obj
 if errorlevel 1 goto abort
+libr r libdsk.lib drvgotek.obj
+if errorlevel 1 goto abort
 libr r libdsk.lib drvlogi.obj
 if errorlevel 1 goto abort
 libr r libdsk.lib drvmyz80.obj
 if errorlevel 1 goto abort
-libr r libdsk.lib drvnwasp.obj
-if errorlevel 1 goto abort
+rem libr r libdsk.lib drvnwasp.obj
+rem if errorlevel 1 goto abort
 libr r libdsk.lib drvposix.obj
 if errorlevel 1 goto abort
 libr r libdsk.lib drvqm.obj
 if errorlevel 1 goto abort
 libr r libdsk.lib drvqrst.obj
+if errorlevel 1 goto abort
+libr r libdsk.lib drvsap.obj
 if errorlevel 1 goto abort
 libr r libdsk.lib drvsimh.obj
 if errorlevel 1 goto abort
@@ -244,7 +253,7 @@ if errorlevel 1 goto abort
 if errorlevel 1 goto abort
 %CC% %CFLAGS% ../tools/dskconv.c utilopts.obj formname.obj libdsk.lib
 if errorlevel 1 goto abort
-%CC% %CFLAGS% ../tools/dskform.c utilopts.obj formname.obj libdsk.lib
+%CC% %CFLAGS% ../tools/dskform.c bootsec.obj utilopts.obj formname.obj libdsk.lib
 if errorlevel 1 goto abort
 %CC% %CFLAGS% -c ../tools/dsktrans.c 
 if errorlevel 1 goto abort

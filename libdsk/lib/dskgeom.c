@@ -167,6 +167,14 @@ static void set_fixed_fs(DSK_DRIVER *self, dsk_format_t fmt)
 	}
 }
 
+/* We have detected an Acorn DFS master directory. */
+static void set_dfs_fs(DSK_DRIVER *self, DSK_GEOMETRY *geom, 
+			unsigned char *sector1)
+{
+	unsigned sectors = ((sector1[6] & 3) << 8) | sector1[7];
+
+	dsk_isetoption(self, "FS:DFS:SECTORS", sectors, 1);
+}
 
 
 
@@ -274,15 +282,13 @@ dsk_err_t dsk_defgetgeom(DSK_DRIVER *self, DSK_GEOMETRY *geom)
 			/* BBC Micro FM floppy? */
 			if ((geom->dg_fm & RECMODE_MASK) == RECMODE_FM)
 			{
-				unsigned int tot_sectors;
-				e = dsk_lread(self, geom, secbuf, 1);
-
-				tot_sectors = secbuf[7] + 256 * (secbuf[6] & 3);
-			
-/* If disc is FM recorded but does not have 400 or 800 sectors, fail. */	
-				if (e == DSK_ERR_OK && tot_sectors != 400 && tot_sectors != 800) e = DSK_ERR_BADFMT; 
-
-				geom->dg_cylinders = tot_sectors / (geom->dg_heads * geom->dg_sectors);	
+/* Load the first two sectors */
+				e = dsk_lread(self, geom, secbuf, 0);
+				if (!e) e = dsk_lread(self, geom, 
+							secbuf + 256, 1);
+				if (!e) e = dg_dfsgeom(geom, secbuf, 
+						secbuf + 256);
+				if (!e) set_dfs_fs(self, geom, secbuf + 256);
 				dsk_free(secbuf);
 				return e;
 			}
@@ -415,12 +421,6 @@ dsk_err_t dsk_defgetgeom(DSK_DRIVER *self, DSK_GEOMETRY *geom)
 			set_dos_fs(self, geom, secbuf + 80);
 		}
 	}
-	if (e == DSK_ERR_BADFMT) 
-	{
-		e = dg_cpm86geom(geom, secbuf);
-		if (e == DSK_ERR_OK)
-			set_cpm86_fs(self, geom, secbuf);
-	}
 /* Check for Opus Discovery 1 */
 	if (e == DSK_ERR_BADFMT) 
 	{
@@ -428,6 +428,20 @@ dsk_err_t dsk_defgetgeom(DSK_DRIVER *self, DSK_GEOMETRY *geom)
 /*		if (e == DSK_ERR_OK)
 			set_opus_fs(self, geom, secbuf); */
 	}
+/* The DFS check is now more comprehensive, so put it before the CP/M-86 one */
+	if (e == DSK_ERR_BADFMT)
+	{
+		e = dg_dfsgeom(geom, secbuf, secbuf + 256);
+		if (e == DSK_ERR_OK)
+			set_dfs_fs(self, geom, secbuf + 256);
+	}
+	if (e == DSK_ERR_BADFMT) 
+	{
+		e = dg_cpm86geom(geom, secbuf);
+		if (e == DSK_ERR_OK)
+			set_cpm86_fs(self, geom, secbuf);
+	}
+
 	/* [1.5.6] If we are reading a floppy, LDBS file, DSK file or 
 	 * anything with metadata, then the data rate used to read the
 	 * boot sector will be the correct one. If, however, we are reading 
@@ -502,20 +516,17 @@ LDPUBLIC32 dsk_err_t LDPUBLIC16 dg_bootsecgeom(DSK_GEOMETRY *geom,
 	{
 		return dg_stdformat(geom, FMT_ACORN800, NULL, NULL);
 	}
+/* The DFS check is now more comprehensive, so put it before the CP/M-86 one */
+	err = dg_dfsgeom(geom, secbuf, secbuf + 256);
+	if (err != DSK_ERR_BADFMT) return err;
+
 	err = dg_cpm86geom(geom, secbuf);
 	if (err != DSK_ERR_BADFMT) return err;
 
-	/* Check for Oups Discovery 1 */
+	/* Check for Opus Discovery 1 */
 	err = dg_opusgeom(geom, secbuf);
 	if (err != DSK_ERR_BADFMT) return err;
 
-	/* The check for DFS is pretty weak, so put it last */
-	dsksize = secbuf[7] + 256 * (secbuf[6] & 3);
-	switch (dsksize)
-	{
-		case 400: return dg_stdformat(geom, FMT_BBC100, NULL, NULL);
-		case 800: return dg_stdformat(geom, FMT_BBC200, NULL, NULL);
-	}
 	/* OK, I give up */
 	return DSK_ERR_BADFMT;	
 }
@@ -711,4 +722,93 @@ LDPUBLIC32 dsk_err_t LDPUBLIC16  dg_opusgeom(DSK_GEOMETRY *dg,
 	return DSK_ERR_OK;
 }
 
+
+/* Interpret an Acorn DFS directory */
+
+/* Look at the first 2 sectors of a disc and see if it resembles the start 
+ * of an Acorn DFS filesystem. Uses the validation method given at 
+ * <http://beebwiki.mdfs.net/index.php/Acorn_DFS_disc_format> 
+ *
+ * Returns the number of sectors in the filesystem if the file is possibly
+ * a valid DFS image, 0 if the file is not.
+ */
+LDPUBLIC32 dsk_err_t LDPUBLIC16 dg_dfsgeom(DSK_GEOMETRY *geom, 
+	const unsigned char *sector0, const unsigned char *sector1)
+{
+	int n, m, files;
+	unsigned char label[12];
+	unsigned tot_sectors;
+	dsk_err_t err;
+
+	/* Check that all bytes of the disc label are 0x20-0x7E or zero */
+	memcpy(label, sector0, 8);
+	memcpy(label + 8, sector1, 4);
+	for (n = 0; n < 12; n++) 
+	{
+		if (label[n] >= 0x7F) return DSK_ERR_BADFMT;
+		if (label[n] > 0 && label[n] < 0x1F) return DSK_ERR_BADFMT;
+	}
+	/* Check that the disc descriptor is valid */
+	if (sector1[5] & 7) return DSK_ERR_BADFMT;	
+	if (sector1[6] & 0xCC) return DSK_ERR_BADFMT;
+	files = sector1[5] >> 3;
+	tot_sectors = ((sector1[6] & 3) << 8) | sector1[7];
+	if (tot_sectors < 2 || tot_sectors > 800) return DSK_ERR_BADFMT;
+	/* Check each filename entry */
+	for (n = 0; n < files; n++)
+	{
+		const unsigned char *filename = sector0 + 8 * (n + 1);
+		const unsigned char *data = sector1 + 8 * (n + 1);
+		unsigned long length, startlba, lenlba;
+	       
+		length   = data[4] + 256 * data[5] + 65536 * ((data[6] >> 4) & 3);
+		startlba = data[7] + 256 * (data[6] & 3);
+		lenlba   = (length + 255) / 256;		
+
+		/* Check filename character set */
+		for (m = 0; m < 8; m++)
+		{
+			unsigned char ch = filename[m];
+			if (m == 7) ch &= 0x7F;	/* Ignore lock bit */
+
+			if (ch < 0x20 || ch > 0x7E || ch == '.' || ch == ':' ||
+			    ch == '"' || ch == '#' || ch == '*') return DSK_ERR_BADFMT;
+		}
+		/* Compare filename to previous filenames to check 
+		 * that it's unique */
+		for (m = 0; m < (n - 1); m++)
+		{
+			const unsigned char *other = sector0 + 8 * (m + 1);
+
+			if ((other[7] & 0x7F) == (filename[7] & 0x7F) &&
+			    !memcmp(filename, other, 7))
+			{
+				return DSK_ERR_BADFMT;
+			}
+		}
+		/* Check that file is within the filesystem */
+		if (startlba < 2 || startlba + lenlba > tot_sectors) return DSK_ERR_BADFMT;
+		/* Check that the file does not overlap the previous
+		 * file in the catalogue */
+		if (n > 0 && length > 0)
+		{
+			unsigned long startlba2 = data[-1] + 256 * (data[-2] & 3);
+			if (startlba >= startlba2) return DSK_ERR_BADFMT;
+			if (startlba + lenlba > startlba2) return DSK_ERR_BADFMT;
+		}	
+	}
+	if (tot_sectors <= 400)
+	{
+		err = dg_stdformat(geom, FMT_BBC100, NULL, NULL);
+	}
+	else
+	{
+		err = dg_stdformat(geom, FMT_BBC200, NULL, NULL);
+	}
+	if (!err)
+	{
+		geom->dg_cylinders = tot_sectors / (geom->dg_heads * geom->dg_sectors);
+	}
+	return err;
+}
 

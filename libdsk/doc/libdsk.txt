@@ -1,4 +1,4 @@
-LibDsk v1.5.8
+LibDsk v1.5.10
 
 John Elliott
 
@@ -73,89 +73,90 @@ Table of Contents
                 5.2.2 Win32
                 5.2.3 Win16
                 5.2.4 DOS
-        6 Reverse CP/M-FS (rcpmfs) backend
-            6.1 In Use
-            6.2 rcpmfs initialisation file
-            6.3 Bugs
-        7 LibDsk under Windows
-            7.1 Windows 3.x
-            7.2 Windows 4.x (95, 98 and ME)
-            7.3 Windows NT (NT 3.x, NT 4.x, 2000, XP
-            7.4 Windows 2000 and XP with ntwdm drive
-            7.5 General comments on programming flop
-                7.5.1 The Win16 driver. 
-                7.5.2 The Win32c driver.
-                7.5.3 The Win32 driver.
-                7.5.4 The ntwdm driver.
-                7.5.5 Other floppy APIs
-            7.6 LDSERVER
-                7.6.1 Compiling LDSERVER
-                7.6.2 Using LDSERVER
-                7.6.3 Important Security Warning
-            7.7 LibDsk and COM
-                7.7.1 General points
-                7.7.2 Library
-                7.7.3 Geometry
-                7.7.4 Disk
-                7.7.5 IReporter
-        8 LibDsk RPC system
-            8.1 The 'serial' driver
-                8.1.1 Servers for the serial driver
-            8.2 The 'fork' driver
-        9 Writing new drivers
-            9.1 The driver header 
-            9.2 The driver source file
-            9.3 Driver functions
-                9.3.1 dc_open
-                9.3.2 dc_creat
-                9.3.3 dc_close
-                9.3.4 dc_read 
-                9.3.5 dc_write 
-                9.3.6 dc_format 
-                9.3.7 dc_getgeom
-                9.3.8 dc_secid 
-                9.3.9 dc_xseek 
-                9.3.10 dc_xread, dc_xwrite 
-                9.3.11 dc_status 
-                9.3.12 dc_tread 
-                9.3.13 dc_xtread
-                9.3.14 dc_option_enum
-                9.3.15 dc_option_set, dc_option_get
-                9.3.16 dc_trackids
-                9.3.17 dc_rtread
-                9.3.18 dc_to_ldbs
-                9.3.19 dc_from_ldbs
-        10 Writing new drivers (derived from LDB
+        6 The Gotek backend
+        7 Reverse CP/M-FS (rcpmfs) backend
+            7.1 In Use
+            7.2 rcpmfs initialisation file
+            7.3 Bugs
+        8 LibDsk under Windows
+            8.1 Windows 3.x
+            8.2 Windows 4.x (95, 98 and ME)
+            8.3 Windows NT (NT 3.x, NT 4.x, 2000, XP
+            8.4 Windows 2000 and later with ntwdm dr
+            8.5 General comments on programming flop
+                8.5.1 The Win16 driver. 
+                8.5.2 The Win32c driver.
+                8.5.3 The Win32 driver.
+                8.5.4 The ntwdm driver.
+                8.5.5 Other floppy APIs
+            8.6 LDSERVER
+                8.6.1 Compiling LDSERVER
+                8.6.2 Using LDSERVER
+                8.6.3 Important Security Warning
+            8.7 LibDsk and COM
+                8.7.1 General points
+                8.7.2 Library
+                8.7.3 Geometry
+                8.7.4 Disk
+                8.7.5 IReporter
+        9 LibDsk RPC system
+            9.1 The 'serial' driver
+                9.1.1 Servers for the serial driver
+            9.2 The 'fork' driver
+        10 Writing new drivers
             10.1 The driver header 
             10.2 The driver source file
             10.3 Driver functions
                 10.3.1 dc_open
                 10.3.2 dc_creat
                 10.3.3 dc_close
-        11 Adding new compression methods
-            11.1 Driver header 
-            11.2 Driver implementation 
-            11.3 Compression functions
-                11.3.1 cc_open 
-                11.3.2 cc_creat
-                11.3.3 cc_commit
-                11.3.4 cc_abort 
-        12 Adding new remote transports.
+                10.3.4 dc_read 
+                10.3.5 dc_write 
+                10.3.6 dc_format 
+                10.3.7 dc_getgeom
+                10.3.8 dc_secid 
+                10.3.9 dc_xseek 
+                10.3.10 dc_xread, dc_xwrite 
+                10.3.11 dc_status 
+                10.3.12 dc_tread 
+                10.3.13 dc_xtread
+                10.3.14 dc_option_enum
+                10.3.15 dc_option_set, dc_option_get
+                10.3.16 dc_trackids
+                10.3.17 dc_rtread
+                10.3.18 dc_to_ldbs
+                10.3.19 dc_from_ldbs
+        11 Writing new drivers (derived from LDB
+            11.1 The driver header 
+            11.2 The driver source file
+            11.3 Driver functions
+                11.3.1 dc_open
+                11.3.2 dc_creat
+                11.3.3 dc_close
+        12 Adding new compression methods
             12.1 Driver header 
             12.2 Driver implementation 
-            12.3 Remote communication functions
-                12.3.1 rc_open 
-                12.3.2 rc_close
-                12.3.3 rc_call
-        M The CopyQM File Format
-            M.1 Introduction
-            M.2 Header
-            M.3 CRC
-            M.4 Image comment
-            M.5 Image data
-        N DQK Files 
-        O LibDsk with cpmtools
-        P DSK / EDSK recording mode extension
+            12.3 Compression functions
+                12.3.1 cc_open 
+                12.3.2 cc_creat
+                12.3.3 cc_commit
+                12.3.4 cc_abort 
+        13 Adding new remote transports.
+            13.1 Driver header 
+            13.2 Driver implementation 
+            13.3 Remote communication functions
+                13.3.1 rc_open 
+                13.3.2 rc_close
+                13.3.3 rc_call
+        N The CopyQM File Format
+            N.1 Introduction
+            N.2 Header
+            N.3 CRC
+            N.4 Image comment
+            N.5 Image data
+        O DQK Files 
+        P LibDsk with cpmtools
+        Q DSK / EDSK recording mode extension
                     Byte 12h: Data rate. 
                     Byte 13h: Recording mode. 
 
@@ -179,6 +180,8 @@ formats:
 • Raw “dd if=foo of=bar” images;
 
 • Raw images in logical filesystem order;
+
+• Raw images within a Gotek-formatted USB device;
 
 • CPCEMU-format .DSK images (normal and extended); 
 
@@ -205,6 +208,8 @@ formats:
 
 • Disc images created by the Sydex imaging programs Teledisk and 
   CopyQM (Not supported in the 16-bit Windows version).
+
+• SAP disc images used in emulation of Thomson computers.
 
 • The floppy drive under Linux; 
 
@@ -240,6 +245,29 @@ of drivers which make their changes in memory and don't try to
 commit them until dsk_close() is called.
 
 For full details, see the file ChangeLog.
+
+• New utility: 'dsklabel' allows the drive label to be viewed and 
+  changed on disk images where LibDsk detects a DOS, CP/M or DFS 
+  filesystem.
+
+• New utility: 'lsgotek' lists the drive images on a USB drive or 
+  file in the format used by Gotek floppy emulators.
+
+• New 'gotek' driver for accessing raw disc images within 
+  Gotek-format floppy archives.
+
+• If an output filetype is not provided to the dsktrans, dskform 
+  and dskdump utilities, they will attempt to guess one from the 
+  passed filename rather than defaulting to 'dsk'.
+
+• Fixed some memory corruption issues (thanks to Mark Ogden for 
+  discovering these).
+
+• dskform can now format disc images with a blank PCDOS or 
+  Apricot MSDOS filesystem.
+
+• Added a new 'sap' driver for SAP-format disc images (thanks to 
+  Emulix75 for information).
 
 • When converting to Teledisk TD0 format, attempt to come up with 
   a plausible value for the drive type (3.5” / 5.25”).
@@ -325,6 +353,9 @@ The following disc image file formats are supported by LibDsk.
   versions of LibDsk could generate such images (for example, by 
   using the now-deprecated -logical option to dsktrans) but 
   couldn't then write them back or use them in emulators.
+
+  “gotek” : Raw 1.4M disc image on a USB drive (or ordinary file) 
+  in the format used by Gotek floppy emulators.
 
   “floppy” : Host system's floppy drive (under Linux, DOS or 
   Windows). 
@@ -931,11 +962,11 @@ dsk_err_t dsk_getgeom(DSK_PDRIVER self, DSK_GEOMETRY *geom)
 
 This attempts to determine the geometry of a disc (number of 
 cylinders, tracks, sectors etc.) by loading the boot sector. It 
-understands DOS, Apricot, CP/M-86 and PCW boot sectors. If the 
-geometry could be guessed, then “geom” will be initialised and 
-DSK_ERR_OK will be returned. If no guess could be made, then 
-DSK_ERR_BADFMT will be returned. Other values will result if the 
-disc could not be read.
+understands DOS, Apricot, CP/M-86, PCW and Acorn DFS boot 
+sectors. If the geometry could be guessed, then “geom” will be 
+initialised and DSK_ERR_OK will be returned. If no guess could be 
+made, then DSK_ERR_BADFMT will be returned. Other values will 
+result if the disc could not be read.
 
 Some drivers (in particular the MYZ80 driver, and the Win32 
 driver under NT) only support certain fixed disc geometries. In 
@@ -956,6 +987,9 @@ dsk_err_t dg_cpm86geom(DSK_GEOMETRY *self, const unsigned char
 dsk_err_t dg_aprigeom(DSK_GEOMETRY *self, const unsigned char 
 *bootsect)
 
+dsk_err_t dg_dfsgeom(DSK_GEOMETRY *self, const unsigned char 
+*bootsect0, const unsigned char *bootsect1)
+
 These functions are used by dsk_getgeom(), but can also be called 
 independently. Enter them with: 
 
@@ -973,6 +1007,10 @@ disc specification, or DSK_ERR_OK otherwise.
   dg_cpm86geom will check for a CP/M-86 boot sector.
 
   dg_aprigeom will check for an Apricot DOS boot sector.
+
+  dg_dfsgeom will check for an Acorn DFS boot sector and 
+  directory. It needs to be passed two buffers, containing the 
+  first two sectors of the disc.
 
 4.20 dg_stdformat : Initialise disc geometry from a standard 
   LibDsk format.
@@ -1170,9 +1208,11 @@ filesystem options supported by LibDsk are:
 
   FS:FAT:SECFAT Number of sectors per FAT
 
-Note that it is theoretically possible for a disc to have FS:CP/M 
-and FS:FAT information - for example, a CP/M filesystem saved in 
-a disc image that also contains FAT metadata, or vice versa.
+Note that it is possible for a disc to have FS:CP/M and FS:FAT 
+information - for example, a CP/M filesystem saved in a disc 
+image that also contains FAT metadata, or vice versa. LDBS-format 
+disc images will also return FS:CP/M properties; for a non-CP/M 
+disc these will all be zero.
 
 4.23 dsk_option_enum: Get list of driver options
 
@@ -1546,7 +1586,41 @@ environment variable is set; if it is set, it is assumed to be
 the name of the directory containing libdskrc. There is no 
 user-specific file.
 
-6 <sec:rcpmfs>Reverse CP/M-FS (rcpmfs) backend
+6 The Gotek backend
+
+This backend is new in version 1.5.10, and should be treated with 
+the caution appropriate to new, untried code. It can directly 
+access a USB drive containing floppy images, but it's safer to 
+back the drive up to a file (under Windows this can be done with 
+a tool like Win32DiskImager) and work on a copy of that file.
+
+To access a disk image within the drive / file, pass a filename 
+to LibDsk of the form:
+
+gotek:device,number
+
+Where device is a USB device (or file) in the format used by the 
+Gotek floppy emulator, and number is the number of the disc image 
+within it, 0 to 999. In my very limited experience, when 
+accessing a device the correct file to use is the first partition 
+(for example /dev/sdh1) rather than the device as a whole 
+(/dev/sdh). On Windows this relies on the first drive image on 
+the USB device having a FAT filesystem and being mounted as a 
+drive by Windows; you can then use a filename like gotek:F:,6 to 
+access it.
+
+The format of disc images supported by the Gotek driver is 
+sharply limited: it is restricted to high-density disc images 
+with up to 18 sectors per track (numbered 1-18). This allows it 
+to support 1.4M and 1.2M DOS formats, and non-DOS formats with 
+similar disc geometry.
+
+The utility lsgotek can be used to list the contents of a device 
+/ file in Gotek format. dsklabel can be used to change the labels 
+of the disk images within the file, to help you keep track of 
+what is where.
+
+7 <sec:rcpmfs>Reverse CP/M-FS (rcpmfs) backend
 
 The rcpmfs backend is designed to present a host directory as a 
 read/write CP/M disk image. This has a number of uses:
@@ -1566,7 +1640,7 @@ filenames; it also needs a system call that can set the size of a
 file (such as truncate() under Unix). It therefore remains 
 unimplemented in the DOS and Win16 versions of the library. 
 
-6.1 In Use
+7.1 In Use
 
 To use an rcpmfs directory in LibDsk, pass a directory name 
 instead of a filename. Files in the directory which match CP/M 
@@ -1593,7 +1667,7 @@ stamps are used, because they map nicely to the utime() system
 call. It can also emulate the filesystem used by the ISX 
 emulator, which stores file sizes slightly differently.
 
-6.2 rcpmfs initialisation file
+7.2 rcpmfs initialisation file
 
 For a directory to be usable by rcpmfs, it should contain a file 
 called .libdsk.ini describing the format to use. This file is in 
@@ -1661,7 +1735,7 @@ filesystem version:
 
 dsk_set_option(dsk, “FS:CP/M:VERSION”, -2);
 
-6.3 Bugs
+7.3 Bugs
 
 rcpmfs is not without its bugs and missing features:
 
@@ -1685,7 +1759,7 @@ rcpmfs is not without its bugs and missing features:
   listed above to set up the correct filesystem parameters. Or 
   create the .libdsk.ini by other means.
 
-7 <ldwindows>LibDsk under Windows
+8 <ldwindows>LibDsk under Windows
 
 This section mainly deals with the subject of direct floppy drive 
 access. Other aspects of LibDsk remain relatively consistent 
@@ -1712,11 +1786,11 @@ the resulting behaviour:
 |      NT, 2000, XP        |              Very limited               |
                            +-----------------------------------------+
 +--------------------------+-----------------------------------------+
-| 2000, XP + ntwdm driver  |                  Good                   |
+| 2000+ with ntwdm driver  |                  Good                   |
 +--------------------------+-----------------------------------------+
 
 
-7.1 Windows 3.x
+8.1 Windows 3.x
 
 Only the 16-bit build of LibDsk will run. The floppy support in 
 Win16 is pretty much the same as in DOS; there is support for 
@@ -1724,7 +1798,7 @@ discs with arbitrary numbers of tracks and sectors, and arbitrary
 sector sizes. This means that LibDsk can, for example, read Acorn 
 ADFS floppies. 
 
-7.2 Windows 4.x (95, 98 and ME)
+8.2 Windows 4.x (95, 98 and ME)
 
 Both the 16-bit and 32-bit versions of LibDsk will run. The 
 16-bit version is more capable, but less stable; it can read 
@@ -1735,13 +1809,13 @@ And no, the Generic Thunk isn't good enough. I've tried it.
 ], but there is a workaround (described below) involving the use 
 of LDSERVER.
 
-7.3 Windows NT (NT 3.x, NT 4.x, 2000, XP) without ntwdm driver
+8.3 Windows NT (NT 3.x, NT 4.x, 2000, XP) without ntwdm driver
 
 The floppy drive can only read/write formats which are supported 
 by the floppy driver. This is the case using either version of 
 LibDsk.
 
-7.4 Windows 2000 and XP with ntwdm driver
+8.4 Windows 2000 and later with ntwdm driver
 
 Simon Owen's enhancement to the Windows 2000 floppy driver can be 
 downloaded from <http://simonowen.com/fdrawcmd/>. Once it is 
@@ -1749,12 +1823,12 @@ installed, LibDsk (using its 'ntwdm' driver rather than 'floppy')
 has pretty much carte blanche regarding floppy formats, and can 
 access discs in many formats including Acorn ADFS.
 
-7.5 General comments on programming floppy access for Windows
+8.5 General comments on programming floppy access for Windows
 
 LibDsk has four independent drivers for accessing floppies under 
 Windows. They are:
 
-7.5.1 The Win16 driver. 
+8.5.1 The Win16 driver. 
 
 This uses INT 0x13 to do the reads and writes, just as in MSDOS. 
 Again as in MSDOS, there is a diskette parameter table pointed to 
@@ -1764,7 +1838,7 @@ implement it. You can, fortunately, tell if this is the case; if
 the first two bytes are both 0xC4, then what you have is a 
 Windows 2000 trap rather than a diskette parameter table. 
 
-7.5.2 The Win32c driver.
+8.5.2 The Win32c driver.
 
 This driver uses VWIN32 services to make INT 0x13-style calls 
 under Windows9x. However, there is no VWIN32 call to change the 
@@ -1773,7 +1847,7 @@ things the Win32 drivers can't. It isn't possible to get round
 this by thunking to a 16-bit DLL either; the INT 0x1E vector is 
 zero for 16-bit DLLs in 32-bit processes.
 
-7.5.3 The Win32 driver.
+8.5.3 The Win32 driver.
 
 Windows NT gets close (but not close enough) to the UNIX idea 
 that everything is a file. So while in theory it would be enough 
@@ -1781,17 +1855,17 @@ to use the normal “raw” driver on “\\.\A:“ , in practice there
 are a number of nasty subtleties relating to such things as 
 memory alignment and file locking.
 
-7.5.4 The ntwdm driver.
+8.5.4 The ntwdm driver.
 
 This driver is a wrapper around fdrawcmd.sys, which allows 
 commands to be issued to the floppy controller. 
 
-7.5.5 Other floppy APIs
+8.5.5 Other floppy APIs
 
 Sydex produce a replacement floppy driver for 32-bit versions of 
 Windows (SydexFDD) which is not supported by LibDsk. 
 
-7.6 <ldserver>LDSERVER
+8.6 <ldserver>LDSERVER
 
 LDSERVER is a program that makes the 16-bit LibDsk DLL available 
 to 32-bit programs. It does this by creating a mailslot (“
@@ -1801,7 +1875,7 @@ corresponds to a LibDsk call.
 The 32-bit LibDsk library checks for this mailslot and, if it 
 finds it, uses it in preference to its own floppy support.
 
-7.6.1 Compiling LDSERVER
+8.6.1 Compiling LDSERVER
 
 A compiled version of LDSERVER is not supplied. You will need to 
 build it yourself from the files in the rpcserv directory; 
@@ -1816,7 +1890,7 @@ IMPLIB NETAPI.LIB NETAPI.DLL
 
 or the equivalent utility for your compiler.
 
-7.6.2 Using LDSERVER
+8.6.2 Using LDSERVER
 
 Just run LDSERVER.EXE, and then use a 32-bit LibDsk program. The 
 server window shows a reference count (0 if it is idle, nonzero 
@@ -1825,7 +1899,7 @@ Active” when it is performing disc access.
 
 LDSERVER does not shut down automatically. 
 
-7.6.3 Important Security Warning
+8.6.3 Important Security Warning
 
 LDSERVER is a 16-bit program, written using APIs intended for use 
 on a local area network. These APIs have no security support. It 
@@ -1840,7 +1914,7 @@ If you have a firewall, then make sure that the NetBIOS ports
 not run LDSERVER while your computer is connected to the 
 Internet!
 
-7.7 LibDsk and COM
+8.7 LibDsk and COM
 
 If you are building the 32-bit version of LibDsk with Visual C++ 
 6.0, you can also build the accompanying 'atlibdsk' project, 
@@ -1848,7 +1922,7 @@ which builds a version of LibDsk that exports its API through
 COM. This allows relatively easy use of LibDsk from languages 
 that support COM binding, such as Visual BASIC or .NET languages.
 
-7.7.1 General points
+8.7.1 General points
 
 Where LibDsk functions return a dsk_err_t, ATLIBDSK returns a COM 
 HRESULT. This will be S_OK for success, a general COM error (such 
@@ -1868,7 +1942,7 @@ sector shift (0 for 128, 1 for 256 etc.)
 
 ATLIBDSK exports four object classes: 
 
-7.7.2 Library
+8.7.2 Library
 
 This contains LibDsk functions not associated with a particular 
 disk image. Its methods are:
@@ -1904,7 +1978,7 @@ disk image. Its methods are:
 +------------------+---------------------------+--------------------------------------------------------+
 
 
-7.7.3 Geometry
+8.7.3 Geometry
 
 This corresponds to the DSK_GEOMETRY structure. The following 
 properties correspond to the structure members:
@@ -1946,7 +2020,7 @@ sector conversions:
 
 and the last is stdformat(), which wraps dg_stdformat().
 
-7.7.4 Disk
+8.7.4 Disk
 
 The Disk object corresponds to a LibDsk DSK_PDRIVER value. You 
 should not create one yourself (method calls will fail with 
@@ -2020,14 +2094,14 @@ are also the following properties:
 
 • compdesc 
 
-7.7.5 IReporter
+8.7.5 IReporter
 
 IReporter is used for the LibDsk message callback. It is an 
 interface that should be implemented by an object in your 
 program. Set the library's "reporter" property to your object; 
 then its report() and endreport() methods will be called.
 
-8 LibDsk RPC system
+9 LibDsk RPC system
 
 The LibDsk RPC system is designed to make disc drives on remote 
 computers transparently available to LibDsk applications. It 
@@ -2038,7 +2112,7 @@ implement a server.
 The on-the-wire protocol is described in protocol.txt in the 
 documentation directory.
 
-8.1 The 'serial' driver
+9.1 The 'serial' driver
 
 This is designed for using LibDsk over a serial connection - say 
 from a 3.5” computer to a 5.25” computer. The filename 
@@ -2084,7 +2158,7 @@ The various parts of this filename specification are:
 
   remotecompress The compression to use on the remote computer. 
 
-8.1.1 Servers for the serial driver
+9.1.1 Servers for the serial driver
 
 One of the sample utilities supplied with LibDsk is called 
 serslave (serslave.exe under DOS / Windows). This is a server 
@@ -2105,7 +2179,7 @@ serslave 0,19200
 I have written a similar server for CP/M systems, called AUXD. 
 This is a separate download from the LibDsk web page.
 
-8.2 The 'fork' driver
+9.2 The 'fork' driver
 
 The 'fork' driver is used (on any system which supports the 
 fork() system call) to send LibDsk requests to a local program 
@@ -2137,7 +2211,7 @@ An example of a server for this protocol is the example
 dsk_rpc_server() which reads RPC packets from its standard input 
 and writes them to its standard output.
 
-9 Writing new drivers
+10 Writing new drivers
 
 The interface between LibDsk and its drivers is defined by the 
 DRV_CLASS structure. To add a new driver, you create a new 
@@ -2155,7 +2229,7 @@ section [sec:LDBSdrivers].
 Assuming you want to create a full driver that rewrites in-place, 
 proceed as follows:
 
-9.1 The driver header 
+10.1 The driver header 
 
 Firstly, create a header for this driver, basing it on (for 
 example) lib/drvposix.h. The first thing in the header (after the 
@@ -2184,7 +2258,7 @@ first member of this structure must be of type DSK_DRIVER.
 The rest of this header consists of function prototypes, which I 
 will come back to later.
 
-9.2 The driver source file
+10.2 The driver source file
 
 Secondly, create a .c file for your driver. Again, it's probably 
 easiest to base this on lib/drvposix.c. At the start of this 
@@ -2262,9 +2336,9 @@ pxself = (POSIX_DSK_DRIVER *)self;
 
 and you're in business.
 
-9.3 Driver functions
+10.3 Driver functions
 
-9.3.1 dc_open
+10.3.1 dc_open
 
 dsk_err_t (*dc_open )(DSK_PDRIVER self, const char *filename)
 
@@ -2289,7 +2363,7 @@ Return:
 If the file has a comment, record it here using 
 dsk_set_comment().
 
-9.3.2 dc_creat
+10.3.2 dc_creat
 
 dsk_err_t (*dc_creat)(DSK_PDRIVER self, const char *filename)
 
@@ -2298,7 +2372,7 @@ behaves exactly as dc_open. Parameters and results are the same
 as for dc_open, except that DSK_ERR_NOTME is treated like any 
 other error.
 
-9.3.3 dc_close
+10.3.3 dc_close
 
 dsk_err_t (*dc_close)(DSK_PDRIVER self)
 
@@ -2307,7 +2381,7 @@ receive for a given disc image file, and it should free any
 resources it is using. Whether it returns DSK_ERR_OK or an error, 
 this disc image will not be used again.
 
-9.3.4 dc_read 
+10.3.4 dc_read 
 
 dsk_err_t (*dc_read)(DSK_PDRIVER self, const DSK_GEOMETRY *geom, 
 void *buf, dsk_pcyl_t cylinder, dsk_phead_t head, dsk_psect_t 
@@ -2324,7 +2398,7 @@ the results from the driver before returning them to the caller.
 Similarly, any buffer passed for a write will already be 
 complemented if appropriate.
 
-9.3.5 dc_write 
+10.3.5 dc_write 
 
 dsk_err_t (*dc_write)(DSK_PDRIVER self, const DSK_GEOMETRY *geom, 
 const void *buf, dsk_pcyl_t cylinder, dsk_phead_t head, 
@@ -2334,7 +2408,7 @@ Write a sector. This function has the same parameters and return
 values as dsk_pwrite(). If your driver is read-only, leave this 
 function pointer NULL.
 
-9.3.6 dc_format 
+10.3.6 dc_format 
 
 dsk_err_t (*dc_format)(DSK_PDRIVER self, const DSK_GEOMETRY 
 *geom, dsk_pcyl_t cylinder, dsk_phead_t head, const DSK_FORMAT 
@@ -2344,7 +2418,7 @@ Format a track. This function has the same parameters and return
 values as dsk_pformat(). If your driver cannot format tracks, 
 leave this function pointer NULL.
 
-9.3.7 dc_getgeom
+10.3.7 dc_getgeom
 
 dsk_err_t (*dc_getgeom)(DSK_PDRIVER self, DSK_GEOMETRY *geom)
 
@@ -2369,7 +2443,7 @@ Returns DSK_ERR_OK if successful; DSK_ERR_NOTME or
 DSK_ERR_NOTIMPL to fall back to the standard LibDsk geometry 
 probe; other values to indicate failure.
 
-9.3.8 dc_secid 
+10.3.8 dc_secid 
 
 dsk_err_t (*dc_secid)(DSK_PDRIVER self, const DSK_GEOMETRY *geom, 
 dsk_pcyl_t cylinder, dsk_phead_t head, DSK_FORMAT *result)
@@ -2382,7 +2456,7 @@ to test for discs in CPC format (which have oddly-numbered
 physical sectors); if the disc image can't support this (eg: the “
 raw” or Win32 drivers) then leave the function pointer NULL. 
 
-9.3.9 dc_xseek 
+10.3.9 dc_xseek 
 
 dsk_err_t (*dc_xseek)(DSK_PDRIVER self, const DSK_GEOMETRY *geom, 
 dsk_pcyl_t cylinder, dsk_phead_t head);
@@ -2392,7 +2466,7 @@ DSK_ERR_OK if the cylinder/head are in range, or DSK_ERR_SEEKFAIL
 otherwise. For a floppy driver, only implement this function if 
 your FDC can perform a seek by itself.
 
-9.3.10 dc_xread, dc_xwrite 
+10.3.10 dc_xread, dc_xwrite 
 
 dsk_err_t (*dc_xread)(DSK_PDRIVER self, const DSK_GEOMETRY *geom, 
 void *buf, dsk_pcyl_t cylinder, dsk_phead_t head, dsk_pcyl_t 
@@ -2412,7 +2486,7 @@ NTWDM and CPCEMU drivers, plus those using LDBS as their internal
 storage (LDBS itself, DSK, EDSK, ApriDisk, CFI, JV3, CopyQM, 
 QRST, Teledisk).
 
-9.3.11 dc_status 
+10.3.11 dc_status 
 
 dsk_err_t (*dc_status)(DSK_PDRIVER self, const DSK_GEOMETRY 
 &geom, dsk_phead_t head, unsigned char *result); 
@@ -2422,7 +2496,7 @@ return). “*result” will contain the value calculated by the
 default implementation; for most image file drivers, all you have 
 to do is set the read-only bit if appropriate.
 
-9.3.12 dc_tread 
+10.3.12 dc_tread 
 
 dsk_err_t (*dc_tread)(DSK_PDRIVER self, const DSK_GEOMETRY *geom, 
 void *buf, dsk_pcyl_t cylinder, dsk_phead_t head);
@@ -2432,7 +2506,7 @@ exposes the relevant functionality; if you don't, the library
 will use multiple calls to dc_read() instead. This function has 
 the same parameters and return values as dsk_ptread().
 
-9.3.13 dc_xtread
+10.3.13 dc_xtread
 
 dsk_err_t (*dc_xread)(DSK_PDRIVER self, const DSK_GEOMETRY *geom, 
 void *buf, dsk_pcyl_t cylinder, dsk_phead_t head, dsk_pcyl_t 
@@ -2444,7 +2518,7 @@ parameters and return values as dsk_xtread(). As with dc_tread(),
 you need only implement this function if your floppy driver has a 
 special READ TRACK command.
 
-9.3.14 dc_option_enum
+10.3.14 dc_option_enum
 
 dsk_err_t (*dc_option_enum)(DSK_DRIVER *self, int idx, char 
 **optname);
@@ -2452,7 +2526,7 @@ dsk_err_t (*dc_option_enum)(DSK_DRIVER *self, int idx, char
 List numerical options which your driver supports. If your driver 
 does not support any, you need not implement this.
 
-9.3.15 dc_option_set, dc_option_get
+10.3.15 dc_option_set, dc_option_get
 
 dsk_err_t (*dc_option_set)(DSK_DRIVER *self, const char *optname, 
 int value); 
@@ -2498,7 +2572,7 @@ return DSK_ERR_BADOPT if the variable is not present.
 
 To read a value back, use dsk_get_option() as normal.
 
-9.3.16 dc_trackids
+10.3.16 dc_trackids
 
 dsk_err_t (*dc_trackids)(DSK_DRIVER *self,  const DSK_GEOMETRY 
 *geom, dsk_pcyl_t cylinder, dsk_phead_t head, dsk_psect_t *count, 
@@ -2509,7 +2583,7 @@ the correct order and starting at the index hole. If you leave
 this function pointer as NULL, LibDsk will use a default 
 implementation.
 
-9.3.17 dc_rtread
+10.3.17 dc_rtread
 
 dsk_err_t (*dc_rtread)(DSK_DRIVER *self, const DSK_GEOMETRY 
 *geom, void *buf, dsk_pcyl_t cylinder,  dsk_phead_t head, int 
@@ -2517,7 +2591,7 @@ reserved);
 
 For future expansion. Leave this function pointer as NULL.
 
-9.3.18 dc_to_ldbs
+10.3.18 dc_to_ldbs
 
 dsk_err_t (*dc_to_ldbs)(DSK_DRIVER *self, struct ldbs **result, 
 DSK_GEOMETRY *geom);
@@ -2526,7 +2600,7 @@ Export the current disk image file as an LDBS blockstore. If this
 driver is not for a disk image file, there's no need to implement 
 this function.
 
-9.3.19 dc_from_ldbs
+10.3.19 dc_from_ldbs
 
 dsk_err_t (*dc_from_ldbs)(DSK_DRIVER *self, struct ldbs *source, 
 DSK_GEOMETRY *geom);
@@ -2535,7 +2609,7 @@ Replace the entire contents of this disk image with the provided
 LDBS blockstore. If this driver is not for a disk image file, 
 there's no need to implement this function.
 
-10 <sec:LDBSdrivers>Writing new drivers (derived from LDBS)
+11 <sec:LDBSdrivers>Writing new drivers (derived from LDBS)
 
 The technique when creating an LDBS-based driver is similar to a 
 standalone driver, with a few important differences. A good 
@@ -2545,7 +2619,7 @@ An LDBS-based driver will need to make extensive use of the
 functions in lib/ldbs.h. Currently the best documentation for 
 these functions is in the comments of ldbs.h itself. 
 
-10.1 The driver header 
+11.1 The driver header 
 
 As for a standalone driver, create a header, basing it on (for 
 example) lib/drvqrst.h. The first thing in the header (after the 
@@ -2576,7 +2650,7 @@ The major difference here is that the first member of the
 structure is a LDBSDISK_DSK_DRIVER rather than a plain 
 DSK_DRIVER.
 
-10.2 The driver source file
+11.2 The driver source file
 
 Secondly, create a .c file for your driver. Again, it's probably 
 easiest to base this on lib/drvqrst.c. At the start of this file, 
@@ -2590,7 +2664,7 @@ DRV_CLASS dc_qrst =
 
     &dc_ldbsdisk,
 
-    "QRST", 
+    "qrst\0QRST\0", 
 
     "Quick Release Sector Transfer", 
 
@@ -2609,7 +2683,7 @@ The first four entries in this structure are:
 • The driver's superclass. This needs to be set to &dc_ldbsdisk, 
   rather than NULL as it would be in a standalone driver.
 
-• The driver's name (as passed to dsk_open() / dsk_creat() ) 
+• The driver's name(s) (as passed to dsk_open() / dsk_creat() ) 
 
 • The driver's description string. 
 
@@ -2651,9 +2725,9 @@ qrstself = (QRST_DSK_DRIVER *)self;
 
 and you're in business.
 
-10.3 Driver functions
+11.3 Driver functions
 
-10.3.1 dc_open
+11.3.1 dc_open
 
 dsk_err_t (*dc_open )(DSK_PDRIVER self, const char *filename)
 
@@ -2714,7 +2788,7 @@ Once the blockstore is completely populated, end with
 
 return ldbsdisk_attach(self); 
 
-10.3.2 dc_creat
+11.3.2 dc_creat
 
 dsk_err_t (*dc_creat)(DSK_PDRIVER self, const char *filename)
 
@@ -2723,7 +2797,7 @@ hold of either its filename or file handle. It should then behave
 as 'open', except that you don't do anything with the blockstore 
 created by ldbs_new() before calling ldbsdisk_attach(). 
 
-10.3.3 dc_close
+11.3.3 dc_close
 
 dsk_err_t (*dc_close)(DSK_PDRIVER self)
 
@@ -2786,7 +2860,7 @@ given disc image file, and it should free any resources it is
 using. Whether it returns DSK_ERR_OK or an error, this disc image 
 will not be used again.
 
-11 Adding new compression methods
+12 Adding new compression methods
 
 Adding a new compression method is very similar to adding a 
 driver, though you only have to implement four functions.
@@ -2794,14 +2868,14 @@ driver, though you only have to implement four functions.
 To add a new driver, you create a new COMPRESS_CLASS structure 
 and add it to various files.
 
-11.1 Driver header 
+12.1 Driver header 
 
 This is done as for disc drivers. If you don't need any extra 
 variables (for example, gzip and bzip2 compression don't) then 
 you don't have to declare a new structure type - see lib/compgz.h 
 for an example.
 
-11.2 Driver implementation 
+12.2 Driver implementation 
 
 Secondly, create a .c file for your driver. It's probably easiest 
 to base this on lib/compgz.c. At the start of this file, create a 
@@ -2872,9 +2946,9 @@ sqself = (SQ_COMPRESS_DATA *)self;
 
 and you're in business.
 
-11.3 Compression functions
+12.3 Compression functions
 
-11.3.1 cc_open 
+12.3.1 cc_open 
 
 dsk_err_t (*cc_open )(COMPRESS_DATA *self)
 
@@ -2908,7 +2982,7 @@ dsk_err_t comp_mktemp(COMPRESS_DATA *self, FILE **pfp);
 Create a temporary file and store its name at self->cd_ufilename. 
 You should use this to create the file that you decompress into.
 
-11.3.2 cc_creat
+12.3.2 cc_creat
 
 dsk_err_t (*cc_creat)(COMPRESS_DATA *cd)
 
@@ -2917,7 +2991,7 @@ created, and when closed it will be compressed. The filename is
 stored at self->cd_cfilename. Normally this just returns 
 DSK_ERR_OK.
 
-11.3.3 cc_commit
+12.3.3 cc_commit
 
 dsk_err_t (*cc_commit)(COMPRESS_DATA *cd)
 
@@ -2925,7 +2999,7 @@ Compress an uncompressed file. self->cd_ufilename is the name of
 the file to compress. self->cd_cfilename is the name of the 
 output file.
 
-11.3.4 cc_abort 
+12.3.4 cc_abort 
 
 dsk_err_t (*cc_abort)(COMPRESS_DATA *cd)
 
@@ -2933,7 +3007,7 @@ This is used if a file was decompressed and it's now being closed
 without having been changed. There is therefore no need to 
 compress it again. This normally just returns DSK_ERR_OK.
 
-12 Adding new remote transports.
+13 Adding new remote transports.
 
 Adding a new remote transport is also very similar to adding a 
 driver.
@@ -2941,13 +3015,13 @@ driver.
 To add a new driver, you create a new REMOTE_CLASS structure and 
 add it to various files.
 
-12.1 Driver header 
+13.1 Driver header 
 
 This is done as for disc drivers. Create a structure based on 
 REMOTE_DATA to hold your class's data -- see lib/rpctios.h and 
 lib/rpcfork.h for examples.
 
-12.2 Driver implementation 
+13.2 Driver implementation 
 
 Create a .c file for your driver. It's probably easiest to base 
 this on lib/rpcfork.c. At the start of this file, create a 
@@ -3020,9 +3094,9 @@ if (self == NULL || self->super.rd_class != &rpc_fork)
 
 
 
-12.3 Remote communication functions
+13.3 Remote communication functions
 
-12.3.1 rc_open 
+13.3.1 rc_open 
 
 dsk_err_t (*rc_open )(DSK_PDRIVER pDriver, const char *name, char 
 *nameout)
@@ -3052,13 +3126,13 @@ Return:
 
   other: An error such as out-of-memory occurred.
 
-12.3.2 rc_close
+13.3.2 rc_close
 
 dsk_err_t (*rc_close)(DSK_PDRIVER pDriver)
 
 Close the connection to the remote server.
 
-12.3.3 rc_call
+13.3.3 rc_call
 
 dsk_err_t (*rc_call)(DSK_PDRIVER pDriver, unsigned char *input, 
 int inp_len, unsigned char *output, int *out_len)
@@ -3084,16 +3158,16 @@ the wire, wait for a response, and unpack the response into
 'serial' driver waits 30 seconds) and DSK_ERR_ABORT if the user 
 deliberately broke the connection.
 
-M <sec:copyqm>The CopyQM File Format
+N <sec:copyqm>The CopyQM File Format
 
-M.1 Introduction
+N.1 Introduction
 
 This section describes the file format of files created by 
 CopyQM. A lot of the information has been extracted by looking at 
 hex-dumps of the files, so there might be some errors in the 
 description. 
 
-M.2 Header
+N.2 Header
 
 The CopyQM files consist of a header, an optional comment (if 
 indicated by the header) followed by the tracks of the image 
@@ -3168,7 +3242,7 @@ are added together in a byte, the result should be zero.
 +---------+-------+-----------------------------------------------------------------+
 
 
-M.3 CRC
+N.3 CRC
 
 The CRC is calculated for the unpacked data for all tracks that 
 are used in the image. The CRC value is initialized with 0 and 
@@ -3177,12 +3251,12 @@ algorithm. Due to a feature in CopyQM (8 bit register as an index
 into a 1024 byte table) all bytes must have their top two bits 
 removed before added to the CRC.
 
-M.4 Image comment
+N.4 Image comment
 
 The image comment follows the header. It has a variable size 
 found in the header. The image comment can contain \0-bytes.
 
-M.5 Image data
+N.5 Image data
 
 The image data is run length encoded. Each run is preceded by a 
 16-bit length. If the length is negative, the byte after the 
@@ -3193,7 +3267,7 @@ new track. Older versions of CopyQM always alternates between
 runs of differing data and repeating data, even if the length of 
 one of them is zero.
 
-N <sec: dqk>DQK Files 
+O <sec: dqk>DQK Files 
 
 A DQK file is a .DSK file compressed using Richard Greenlaw's 
 Squeeze file format (originally from CP/M as SQ.COM, and later 
@@ -3232,7 +3306,7 @@ LibDsk has been given .DQK support (use the “dsk” driver with “sq”
  compression) so that .DQK files don't have to be created and 
 compressed in a two-state process. 
 
-O LibDsk with cpmtools
+P LibDsk with cpmtools
 
 cpmtools v1.9 and later <http://www.moria.de/~michael/cpmtools/> 
 can be configured to use LibDsk for all disc access, thus 
@@ -3318,7 +3392,7 @@ microbee  512 80  10 2048 128  1 2 2.2
 
 
 
-P DSK / EDSK recording mode extension
+Q DSK / EDSK recording mode extension
 
 This extension was proposed by me on the comp.sys.sinclair and 
 comp.sys.amstrad.8bit newsgroups on 10 January 2004. It was 

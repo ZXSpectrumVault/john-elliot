@@ -413,10 +413,10 @@ dsk_err_t ldbsdisk_read(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
 		      void *buf, dsk_pcyl_t cylinder,
 		      dsk_phead_t head, dsk_psect_t sector)
 {
+/* Don't dg_x_sector() here; if required it will have been done in dg_ls2ps() */
 	return ldbsdisk_xread(self, geom, buf, cylinder, head, cylinder,
 				dg_x_head(geom, head), 
-				dg_x_sector(geom, head, sector), 
-				geom->dg_secsize, 0);
+				sector, geom->dg_secsize, 0);
 }
 
 
@@ -581,10 +581,10 @@ dsk_err_t ldbsdisk_write(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
 			const void *buf, dsk_pcyl_t cylinder,
 			dsk_phead_t head, dsk_psect_t sector)
 {
+/* Don't dg_x_sector() here; if required it will have been done in dg_ls2ps() */
 	return ldbsdisk_xwrite(self, geom, buf, cylinder, head, cylinder,
 				dg_x_head(geom, head),
-				dg_x_sector(geom, head, sector), 
-				geom->dg_secsize, 0);
+				sector, geom->dg_secsize, 0);
 }
 
 dsk_err_t ldbsdisk_xwrite(DSK_DRIVER *pdriver, const DSK_GEOMETRY *geom, 
@@ -796,7 +796,7 @@ static dsk_err_t getgeom_callback(PLDBS ldbs, dsk_pcyl_t cyl, dsk_phead_t head,
 	if (cyl + 1 > stats->dg.dg_cylinders)
 		stats->dg.dg_cylinders = cyl + 1;	
 	if (head + 1 > stats->dg.dg_heads)
-		stats->dg.dg_heads = cyl + 1;	
+		stats->dg.dg_heads = head + 1;	
 	if (th->count > stats->dg.dg_sectors)
 		stats->dg.dg_sectors = th->count;
 	
@@ -806,8 +806,9 @@ static dsk_err_t getgeom_callback(PLDBS ldbs, dsk_pcyl_t cyl, dsk_phead_t head,
 	}
 
 	h = head ? 1 : 0;
-	if (se->id_psh < stats->minsec[h]) stats->minsec[h] = se->id_psh;	
-	if (se->id_psh > stats->maxsec[h]) stats->maxsec[h] = se->id_psh;	
+	/* [1.5.10] We want sector ID here, not sector size */
+	if (se->id_sec < stats->minsec[h]) stats->minsec[h] = se->id_sec;	
+	if (se->id_sec > stats->maxsec[h]) stats->maxsec[h] = se->id_sec;	
 
 	/* Possibly 'extended surface' geometry if sectors on head 1 
 	 * have head IDs of 0 */

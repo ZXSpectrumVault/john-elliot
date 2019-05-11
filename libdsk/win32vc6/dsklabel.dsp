@@ -1,24 +1,24 @@
-# Microsoft Developer Studio Project File - Name="dskform" - Package Owner=<4>
+# Microsoft Developer Studio Project File - Name="dsklabel" - Package Owner=<4>
 # Microsoft Developer Studio Generated Build File, Format Version 6.00
 # ** DO NOT EDIT **
 
 # TARGTYPE "Win32 (x86) Application" 0x0101
 
-CFG=dskform - Win32 Debug
+CFG=dsklabel - Win32 Debug
 !MESSAGE This is not a valid makefile. To build this project using NMAKE,
 !MESSAGE use the Export Makefile command and run
 !MESSAGE 
-!MESSAGE NMAKE /f "dskform.mak".
+!MESSAGE NMAKE /f "dsklabel.mak".
 !MESSAGE 
 !MESSAGE You can specify a configuration when running NMAKE
 !MESSAGE by defining the macro CFG on the command line. For example:
 !MESSAGE 
-!MESSAGE NMAKE /f "dskform.mak" CFG="dskform - Win32 Debug"
+!MESSAGE NMAKE /f "dsklabel.mak" CFG="dsklabel - Win32 Debug"
 !MESSAGE 
 !MESSAGE Possible choices for configuration are:
 !MESSAGE 
-!MESSAGE "dskform - Win32 Release" (based on "Win32 (x86) Application")
-!MESSAGE "dskform - Win32 Debug" (based on "Win32 (x86) Application")
+!MESSAGE "dsklabel - Win32 Release" (based on "Win32 (x86) Application")
+!MESSAGE "dsklabel - Win32 Debug" (based on "Win32 (x86) Application")
 !MESSAGE 
 
 # Begin Project
@@ -29,7 +29,7 @@ CPP=cl.exe
 MTL=midl.exe
 RSC=rc.exe
 
-!IF  "$(CFG)" == "dskform - Win32 Release"
+!IF  "$(CFG)" == "dsklabel - Win32 Release"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 0
@@ -56,12 +56,12 @@ LINK32=link.exe
 # ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib release/libdsk.lib /nologo /subsystem:console /machine:I386
 # SUBTRACT LINK32 /pdb:none
 
-!ELSEIF  "$(CFG)" == "dskform - Win32 Debug"
+!ELSEIF  "$(CFG)" == "dsklabel - Win32 Debug"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 1
-# PROP BASE Output_Dir "dskform___Win32_Debug"
-# PROP BASE Intermediate_Dir "dskform___Win32_Debug"
+# PROP BASE Output_Dir "Debug"
+# PROP BASE Intermediate_Dir "Debug"
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 1
@@ -87,22 +87,18 @@ LINK32=link.exe
 
 # Begin Target
 
-# Name "dskform - Win32 Release"
-# Name "dskform - Win32 Debug"
+# Name "dsklabel - Win32 Release"
+# Name "dsklabel - Win32 Debug"
 # Begin Group "Source Files"
 
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE=..\tools\bootsec.c
+SOURCE=..\tools\dsklabel.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\tools\dskform.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\tools\formname.c
+SOURCE=..\tools\labelopt.c
 # End Source File
 # Begin Source File
 
@@ -114,7 +110,7 @@ SOURCE=..\tools\utilopts.c
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
 # Begin Source File
 
-SOURCE=..\tools\formname.h
+SOURCE=..\tools\labelopt.h
 # End Source File
 # Begin Source File
 

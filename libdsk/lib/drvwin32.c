@@ -133,7 +133,7 @@ static dsk_err_t translate_win32_error(void)
 }
 
 
-static BOOL LockVolume( HANDLE hDisk ) /*{{{*/
+BOOL win32_lock_volume( HANDLE hDisk ) /*{{{*/
 {
     DWORD ReturnedByteCount;
 
@@ -141,7 +141,7 @@ static BOOL LockVolume( HANDLE hDisk ) /*{{{*/
                 0, &ReturnedByteCount, NULL );
 }
 /*}}}*/
-static BOOL UnlockVolume( HANDLE hDisk )  /*{{{*/
+BOOL win32_unlock_volume( HANDLE hDisk )  /*{{{*/
 {
     DWORD ReturnedByteCount;
 
@@ -149,7 +149,7 @@ static BOOL UnlockVolume( HANDLE hDisk )  /*{{{*/
                 0, &ReturnedByteCount, NULL );
 }
 /*}}}*/
-static BOOL DismountVolume( HANDLE hDisk ) /*{{{*/
+BOOL win32_dismount_volume ( HANDLE hDisk ) /*{{{*/
 {
     DWORD ReturnedByteCount;
 
@@ -290,12 +290,56 @@ dsk_err_t win32_creat(DSK_DRIVER *self, const char *filename)
 	return win32_open(self, filename);
 }                                                                                        
 
+BOOL win32_is_device(const char *filename)
+{
+	/* Of the form drive: */
+	if (strlen(filename) == 2 && filename[1] == ':') return TRUE;
+
+	/* Of the form \\?\[NT namespace name] */
+	if (!_strnicmp(filename, "\\\\?\\", 4)) return TRUE;
+
+	return FALSE;
+}
+
+
+HANDLE win32_open_device(const char *filename, int *readonly)
+{
+	char vname[20];
+	HANDLE hDisk;
+
+	/* Convert bare driveletters to "\\.\X:" */
+
+	if (strlen(filename) == 2 && filename[1] == ':') 
+	{
+		sprintf(vname, "\\\\.\\%s", filename);
+		filename = vname;
+	}
+	hDisk  = CreateFile(filename,	/* Name */
+			GENERIC_READ | GENERIC_WRITE,	/* Access mode */
+			FILE_SHARE_READ|FILE_SHARE_WRITE, /*Sharing*/
+			NULL,		/* Security attributes */ 
+			OPEN_EXISTING,	/* See MSDN */
+			0,		/* Flags & attributes */
+			NULL);		/* Template file */
+	if (hDisk == INVALID_HANDLE_VALUE)
+	{
+		*readonly = 1;
+		hDisk = CreateFile(filename,	/* Name */
+			GENERIC_READ,	/* Access mode */
+			FILE_SHARE_READ|FILE_SHARE_WRITE, /*Sharing*/
+			NULL,		/* Security attributes */ 
+			OPEN_EXISTING,	/* See MSDN */
+			0,		/* Flags & attributes */
+			NULL);		/* Template file */
+	}	
+	return hDisk;
+}
+
 
 dsk_err_t win32_open(DSK_DRIVER *self, const char *filename)
 {
 	WIN32_DSK_DRIVER *w32self;
 	DWORD dwVers;
-	char vname[20];
 	
 	/* Sanity check: Is this meant for our driver? */
 	if (self->dr_class != &dc_win32) return DSK_ERR_BADPTR;
@@ -338,29 +382,10 @@ dsk_err_t win32_open(DSK_DRIVER *self, const char *filename)
 	dc_win32.dc_getgeom = win32_getgeom;
 	dc_win32.dc_status  = win32_status;
 
-	/* This is as near as NT lets us get to "/dev/fd0". */
-	sprintf(vname, "\\\\.\\%s", filename);
-	w32self->w32_hdisk   = CreateFile(vname,	/* Name */
-					GENERIC_READ | GENERIC_WRITE,	/* Access mode */
-					FILE_SHARE_READ|FILE_SHARE_WRITE, /*Sharing*/
-					NULL,		/* Security attributes */ 
-					OPEN_EXISTING,	/* See MSDN */
-					0,		/* Flags & attributes */
-					NULL);		/* Template file */
-	if (w32self->w32_hdisk == INVALID_HANDLE_VALUE)
-	{
-		w32self->w32_readonly = 1;
-		w32self->w32_hdisk   = CreateFile(vname,	/* Name */
-						GENERIC_READ,	/* Access mode */
-						FILE_SHARE_READ|FILE_SHARE_WRITE, /*Sharing*/
-						NULL,		/* Security attributes */ 
-						OPEN_EXISTING,	/* See MSDN */
-						0,		/* Flags & attributes */
-						NULL);		/* Template file */
-	}
+	w32self->w32_hdisk = win32_open_device(filename, &w32self->w32_readonly);
 	if (w32self->w32_hdisk == INVALID_HANDLE_VALUE) return DSK_ERR_NOTME;
 
-	if (LockVolume(w32self->w32_hdisk) == FALSE)    /* Lock drive */
+	if (win32_lock_volume(w32self->w32_hdisk) == FALSE)    /* Lock drive */
 	{
 		return DSK_ERR_ACCESS;
 	}
@@ -378,8 +403,8 @@ dsk_err_t win32_close(DSK_DRIVER *self)
 
 	if (w32self->w32_hdisk != INVALID_HANDLE_VALUE)
 	{
-		DismountVolume(w32self->w32_hdisk);
-		UnlockVolume  (w32self->w32_hdisk);
+		win32_dismount_volume(w32self->w32_hdisk);
+		win32_unlock_volume  (w32self->w32_hdisk);
 		CloseHandle   (w32self->w32_hdisk);
 		w32self->w32_hdisk = INVALID_HANDLE_VALUE;
 	}
@@ -553,6 +578,14 @@ dsk_err_t win32_format(DSK_DRIVER *self, DSK_GEOMETRY *geom,
 }
 
 
+BOOL win32_get_geometry(HANDLE hDisk, DISK_GEOMETRY *dg)
+{
+    DWORD  bytesread;
+
+	return DeviceIoControl(hDisk, IOCTL_DISK_GET_DRIVE_GEOMETRY,
+			NULL, 0, dg, sizeof(DISK_GEOMETRY), &bytesread, NULL);
+}
+
 
 /* Windows NT does not allow a program to set the disc geometry; it forces
  * the issue. */
@@ -560,7 +593,6 @@ dsk_err_t win32_format(DSK_DRIVER *self, DSK_GEOMETRY *geom,
 dsk_err_t win32_getgeom(DSK_DRIVER *self, DSK_GEOMETRY *geom)
 {
 	WIN32_DSK_DRIVER *w32self;
-        DWORD  bytesread;
 	int res;
 	DISK_GEOMETRY dg;	/* This is NT's DISK_GEOMETRY, not ours */
 	unsigned char buf[512];
@@ -568,9 +600,7 @@ dsk_err_t win32_getgeom(DSK_DRIVER *self, DSK_GEOMETRY *geom)
 	if (!self || !geom || self->dr_class != &dc_win32) return DSK_ERR_BADPTR;
 	w32self = (WIN32_DSK_DRIVER *)self;
 
-	res = DeviceIoControl(w32self->w32_hdisk, IOCTL_DISK_GET_DRIVE_GEOMETRY,
-			NULL, 0, &dg, sizeof(dg), &bytesread, NULL);
-
+	res = win32_get_geometry(w32self->w32_hdisk, &dg);
 	geom->dg_cylinders = (unsigned)dg.Cylinders.QuadPart;
 	geom->dg_heads     = dg.TracksPerCylinder;
 	geom->dg_sectors   = dg.SectorsPerTrack;

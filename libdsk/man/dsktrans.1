@@ -21,7 +21,7 @@
 .\" Author contact information:
 .\" John Elliott: email: seasip.webmaster@gmail.com
 .\"
-.TH dsktrans 1 "27 December, 2007" "Version 1.2.1" "Emulators"
+.TH dsktrans 1 "17 September 2018" "Version 1.5.9" "Emulators"
 .\"
 .\"------------------------------------------------------------------
 .\"
@@ -60,10 +60,14 @@ dsktrans - Copy from one floppy or image file to another
 .\"------------------------------------------------------------------
 .\"
 .SH DESCRIPTION
-Dsktrans copies floppy discs or images, optionally converting image types.
-This is a high-level copy which assumes that the disc has a straightforward
-geometry; all the tracks are assumed to have the same layout of sectors,
-and interleave is not preserved. See
+Dsktrans copies floppy discs or disc images, optionally converting the image 
+file type. This simulates the process of copying a floppy disc (read a track, 
+write a track). It requires that the disc or image file has a straightforward 
+geometry where all the tracks are have the same layout of sectors. Interleave 
+is not preserved. See also
+.I dskconv(1) 
+for a conversion that can transform one disc image file format to another 
+and does not require a regular geometry; and 
 .I dskdump(1)
 for a slower but more accurate copy which may preserve more of these 
 details.
@@ -114,10 +118,10 @@ formats (such as ADFS) where the mapping of tracks to cylinders/heads does
 not match the way it's done on the PC.
 .TP
 .B qm
-Sydex's CopyQM format (can only be read, not written).
+Sydex's CopyQM format
 .TP
 .B tele
-Sydex's Teledisk format (can only be read, not written).
+Sydex's Teledisk format
 .RE
 
 .TP
@@ -128,7 +132,9 @@ drivers are as for -itype.
 .TP
 .B -icomp COMP
 Select the compression method used on the source disc image file (has no
-effect when reading a floppy disc).
+effect when reading a floppy disc). Use 'none' to disable transparent 
+decompression of gzipped disc images (for example, the Slackware installer
+rootdisks).
 .RS
 .TP 8
 .B auto
@@ -241,7 +247,7 @@ already.
 .\"------------------------------------------------------------------
 .\"
 .SH SEE ALSO
-dskdump(1)
+dskconv(1), dskdump(1)
 .\"
 .\"------------------------------------------------------------------
 .\"

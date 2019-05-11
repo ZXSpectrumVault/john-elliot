@@ -128,7 +128,7 @@ LDPUBLIC32 dsk_err_t LDPUBLIC16 dsk_creat(DSK_DRIVER **self, const char *filenam
 	if (!self || !filename || !type) return DSK_ERR_BADPTR;
 
 	dg_custom_init();
-	if (compress)
+	if (compress && strcmp(compress, "none"))
 	{	
 		e = comp_creat(&cd, filename, compress);
 		if (e) return e;
@@ -156,29 +156,32 @@ LDPUBLIC32 dsk_err_t LDPUBLIC16 dsk_open(DSK_DRIVER **self, const char *filename
 {
 	int ndrv;
 	dsk_err_t e;
-	COMPRESS_DATA *cd;
+	COMPRESS_DATA *cd = NULL;
 
 	if (!self || !filename) return DSK_ERR_BADPTR;
 
 	dg_custom_init();
 
 	/* See if it's compressed */
-	e = comp_open(&cd, filename, compress);
-	if (e != DSK_ERR_OK && e != DSK_ERR_NOTME) return e;
-	
-	if (type)
+	if (compress == NULL || strcmp(compress, "none"))
 	{
-		for (ndrv = 0; classes[ndrv]; ndrv++)
+		e = comp_open(&cd, filename, compress);
+		if (e != DSK_ERR_OK && e != DSK_ERR_NOTME) return e;
+		
+		if (type)
 		{
-			if (match_drvname(type, classes[ndrv]))
+			for (ndrv = 0; classes[ndrv]; ndrv++)
 			{
-				e = dsk_iopen(self, filename, ndrv, cd);
-				if (e && cd) comp_abort(&cd);
-				return e;
+				if (match_drvname(type, classes[ndrv]))
+				{
+					e = dsk_iopen(self, filename, ndrv, cd);
+					if (e && cd) comp_abort(&cd);
+					return e;
+				}
 			}
+			if (cd) comp_abort(&cd);
+			return DSK_ERR_NODRVR;
 		}
-		if (cd) comp_abort(&cd);
-		return DSK_ERR_NODRVR;
 	}
 	for (ndrv = 0; classes[ndrv]; ndrv++)
 	{
