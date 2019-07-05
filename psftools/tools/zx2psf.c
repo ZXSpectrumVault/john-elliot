@@ -100,6 +100,7 @@ char *cnv_help(void)
                     "        --mode=latin1    - Leave non-Spectrum characters as ISO Latin-1\n"
                     "        --mode=merge1    - As latin1, but move pound sign, arrow and copyright\n"
                     "        --mode=synth1    - Synthesise Latin-1 characters from Spectrum ones\n"
+                    "        --mode=move1     - As latin1, but move pound sign, arrow and copyright\n"
                     "        --graphics=none  - Spectrum graphics characters not transferred\n"
                     "        --graphics=block - Spectrum block graphics transferred\n"
                     "        --graphics=udg   - Spectrum block graphics transferred & UDGs simulated\n"
