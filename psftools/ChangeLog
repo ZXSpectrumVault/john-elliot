@@ -1,4 +1,16 @@
+2019-07-05 John Elliott
+
+	* psftools-1.0.13 released.
+
+2019-05-17 John Elliott
+
+	* zx2psf: Added 'move1' mode to zx2psf - like 'bare' but remaps the
+	         pound and copyright to their ISO-8859-1 positions. [Damien 
+		 Guard]
+
 2019-03-19 John Elliott
+
+	* psftools-1.0.12 released.
 
 	* fnt2psf: Changed the Windows 1.x font extract to seek to the
 	 character bitmap rather than assuming it directly follows the

@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
-UPDATED='March 19, 2019'
-AC_INIT(psftools, 1.0.12)
+UPDATED='July 5, 2019'
+AC_INIT(psftools, 1.0.13)
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CANONICAL_SYSTEM

@@ -1,6 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
-AM_CPPFLAGS=-I$(top_srcdir)/include
+AM_CPPFLAGS=-I$(top_srcdir) -I$(top_srcdir)/include
 LDADD=../lib/libpsf.la
 
 bin_PROGRAMS=psf2bbc psf2bsd psf2inc psf2pbms psf2raw psf2wof psf2xbm psf2zx \
