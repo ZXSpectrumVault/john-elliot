@@ -17,7 +17,20 @@
     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 #include "psfio.h"
+#include "config.h"
 #include <ctype.h>
+
+#ifndef HAVE_STRICMP
+ #ifdef HAVE_STRCMPI
+  #define stricmp strcmpi
+ #else
+  #ifdef HAVE_STRCASECMP
+   #define stricmp strcasecmp
+  #else
+   extern int stricmp(char *s, char *t);
+  #endif
+ #endif
+#endif 
 
 /* Maximum number of "external" codepages to load */
 #define MAX_CODEPAGES 64
@@ -85,8 +98,8 @@ static inline psf_dword peek4(psf_byte *b)
 #endif
 
 
-/* Allocate a codepage with room for 'count' entries */
-int cp_alloc(psf_dword count, const char *cpname)
+/* Allocate a codepage with room for 'count' entries and 'tokens' tokens */
+int cp_alloc(psf_dword count, psf_dword tokens, const char *cpname)
 /* Allocate space for the header and data */
 {
 	int n, m;
@@ -99,15 +112,19 @@ int cp_alloc(psf_dword count, const char *cpname)
 
 /* Work out how big it should be. */
 	memreq =  count * sizeof(psf_dword);
-	memreq += 1 + strlen(cpname);
 	memreq += sizeof(PSF_MAPPING);
+	memreq += tokens * sizeof(psf_dword *);
+	memreq += 1 + strlen(cpname);
 	codepages[n] = malloc(memreq);
 	if (!codepages[n]) return -1;
 /* Set up the pointers */
-	codepages[n]->psfm_name = (((char *)codepages[n])+ sizeof(PSF_MAPPING));
+	codepages[n]->psfm_name = (((char *)codepages[n])
+		+ sizeof(PSF_MAPPING)
+		+ tokens * sizeof(psf_dword *));
 	strcpy(codepages[n]->psfm_name, cpname);
+	codepages[n]->psfm_count = tokens;
 	value = (psf_dword *)(codepages[n]->psfm_name + 1 + strlen(cpname));
-	for (m = 0; m < 256; m++)
+	for (m = 0; m < tokens; m++)
 	{
 		codepages[n]->psfm_tokens[m] = value;
 	}
@@ -122,6 +139,7 @@ static PSF_MAPPING *psf_load_cp2(char *pathname, char *cpname)
 {
 	int n, m;
 	FILE *fp;
+	psf_dword tokens;
 	psf_dword count;
 	psf_dword *value;
 	psf_byte header[128];
@@ -132,8 +150,22 @@ static PSF_MAPPING *psf_load_cp2(char *pathname, char *cpname)
 /* OK. Now try to load it */
 	fp = fopen(pathname, "rb");
 	if (fp == NULL) return NULL;
-	if (fread(header, 1, 128, fp) < 128 ||
-	    strcmp((const char *)header, "PSFTOOLS CODEPAGE MAP\r\n\032"))
+	if (fread(header, 1, 128, fp) < 128)
+	{
+		fclose(fp);
+		return NULL;
+	}
+	if (!strcmp((const char *)header, "PSFTOOLS CODEPAGE MAP\r\n\032"))
+	{
+/* Fixed 256 entries */
+		tokens = 256;
+	}
+	else if (!strcmp((const char *)header, "PSFTOOLS CODEPAGE MAP 2\r\n\032"))
+	{
+/* Number of entries defined in file */
+		tokens = peek4(header + 0x44);
+	}
+	else
 	{
 		fclose(fp);
 		return NULL;
@@ -141,18 +173,18 @@ static PSF_MAPPING *psf_load_cp2(char *pathname, char *cpname)
 /* Retrieve the count of Unicode characters */
 	count = peek4(header + 0x40);
 /* Allocate space for the header and data */
-	n = cp_alloc(count, cpname);
+	n = cp_alloc(count, tokens, cpname);
 	if (n < 0) return NULL;
 	value = codepages[n]->psfm_tokens[0];
 /* Load the data */
-	for (m = 0; m < 256; )
+	for (m = 0; m < tokens; )
 	{
 		if (fread(header, 1, 4, fp) < 4)
 		{
 			*value = 0xFFFF;
 			m++;
 			value++;
-			if (m < 256) codepages[n]->psfm_tokens[m] = value;
+			if (m < tokens) codepages[n]->psfm_tokens[m] = value;
 		}
 		else
 		{
@@ -161,7 +193,7 @@ static PSF_MAPPING *psf_load_cp2(char *pathname, char *cpname)
 			{
 				++m;
 				value++;	
-				if (m < 256) codepages[n]->psfm_tokens[m] = value;
+				if (m < tokens) codepages[n]->psfm_tokens[m] = value;
 			}
 			else value++;	
 		}
@@ -190,18 +222,20 @@ static PSF_MAPPING *psf_load_uni(char *pathname, char *cpname)
 	psf_dword count, uni;
 	FILE *fp;
 	int pass, from, to, ncp = -1;
-	psf_dword *ptr;
+	psf_dword *ptr = NULL;
 	char *tmp, *p, *right_half;
 	int lineno;
+	int tokens;
 
 	count = 0;
+	tokens = 0;
 	for (pass = 0; pass < 2; pass++)
 	{
 		switch(pass)
 		{
 			case 0: count = 0; 
 				break;
-			case 1: ncp = cp_alloc(count, cpname);
+			case 1: ncp = cp_alloc(count, tokens, cpname);
 				if (ncp < 0) return NULL;
 				count = 0; 
 				ptr = codepages[ncp]->psfm_tokens[0];
@@ -247,6 +281,7 @@ static PSF_MAPPING *psf_load_uni(char *pathname, char *cpname)
 				return NULL;
 			}
 /* Now split the two halves. */
+			++tokens;
 			p = linebuf;
 			while (p[0] != ' ' && p[0] != '\t' && p[0] != 0)
 			{
@@ -286,7 +321,7 @@ numerr:
 				}
 				to = from;
 			}
-			while(from <= to && from < 256) 
+			while(from <= to && from < codepages[ncp]->psfm_count) 
 			{
 				if (pass == 1)
 				{
@@ -376,6 +411,19 @@ static PSF_MAPPING *psf_load_cp(char *pathname, char *cpname)
  *
  * -- Remainder of file is 256 sequences of long integers, each terminated
  *    with 0x0000FFFF. Again, little-endian.
+ * 
+ * PSFTOOLS 1.1.0 uses a slightly different format:
+ * 
+ * -- First 128 bytes are the header.
+ *    0000-001B: Magic number, "PSFTOOLS CODEPAGE MAP 2\r\n\032\000"
+ *    0040-0043: Number of long integers that follow the header
+ *              (little-endian)
+ *    0044-0047: Number of overall sequences (always 256 in the old version) 
+ *    All other bytes 0 (reserved)
+ *
+ * -- Remainder of file is the stated number of sequences of long integers, 
+ *    each terminated with 0x0000FFFF. Again, little-endian.
+ *
  */
 #include <dos.h>
 
@@ -438,12 +486,12 @@ PSF_MAPPING *psf_find_mapping(char *name)
 /* See if the name is an alias */
 	for (p = aliases; *p; p += 2)
 	{
-		if (!strcmp(p[0], name))
+		if (!stricmp(p[0], name))
 		{
 			name = p[1];
 			break;
 		}
-		if (p[0][0] == 'C' && p[0][1] == 'P' && !strcmp(p[0]+2, name))
+		if (p[0][0] == 'C' && p[0][1] == 'P' && !stricmp(p[0]+2, name))
 		{
 			name = p[1];
 			break;
@@ -452,7 +500,7 @@ PSF_MAPPING *psf_find_mapping(char *name)
 /* See if the codepage is one of those already loaded */
 	for (n = 0; n < MAX_CODEPAGES; n++)
 	{
-		if (!strcmp(codepages[n]->psfm_name, name)) 
+		if (!stricmp(codepages[n]->psfm_name, name)) 
 			return codepages[n];
 
 	}
@@ -460,7 +508,7 @@ PSF_MAPPING *psf_find_mapping(char *name)
 	{
 		if (codepages[n]->psfm_name[0] == 'C' &&
 		    codepages[n]->psfm_name[1] == 'P' &&
-		    !strcmp(codepages[n]->psfm_name, name)) 
+		    !stricmp(codepages[n]->psfm_name, name)) 
 			return codepages[n];
 	}
 /* Try to load the codepage. */
@@ -548,7 +596,8 @@ extern PSF_MAPPING m_8859_1,  m_8859_2,  m_8859_3,  m_8859_4,  m_8859_5,
 		   m_CP1250,  m_CP1251,  m_CP1252,  m_CP1253,  m_CP1254,
 		   m_CP1255,  m_CP1256,  m_CP1257,  m_CP1258, 
 		   
-		   m_AMSTRAD, m_PCGEM,  m_BBCMICRO,  m_PPC437,
+		   m_AMSTRAD, m_LS3,       m_QX10,  m_PRINTIT,
+		   m_PCGEM,   m_BBCMICRO,  m_PPC437,
 		   m_PPC860,  m_PPC865, m_PPCGREEK;
 
 static PSF_MAPPING *builtin_codepages[] =
@@ -597,6 +646,9 @@ static PSF_MAPPING *builtin_codepages[] =
 &m_CP1256, 
 &m_CP1257, 
 &m_CP1258,
+&m_LS3,
+&m_QX10,
+&m_PRINTIT,
 &m_PCGEM,
 &m_PPC437,
 &m_PPC860,
@@ -616,7 +668,7 @@ PSF_MAPPING *psf_find_mapping(char *name)
  * loaded. */
 	for (m = codepages; *m; m++) 
 	{
-		if (!strcmp((*m)->psfm_name, name)) return *m;
+		if (!stricmp((*m)->psfm_name, name)) return *m;
 	}
 /* See if the name looks like a filename. Our compiled-in codepages only
  * contain letters, numbers and dashes, so any punctuation that looks 
@@ -632,12 +684,12 @@ PSF_MAPPING *psf_find_mapping(char *name)
 /* See if the name is an alias */
 	for (p = aliases; *p; p += 2)
 	{
-		if (!strcmp(p[0], name))
+		if (!stricmp(p[0], name))
 		{
 			name = p[1];
 			break;
 		}
-		if (p[0][0] == 'C' && p[0][1] == 'P' && !strcmp(p[0]+2, name))
+		if (p[0][0] == 'C' && p[0][1] == 'P' && !stricmp(p[0]+2, name))
 		{
 			name = p[1];
 			break;
@@ -646,14 +698,14 @@ PSF_MAPPING *psf_find_mapping(char *name)
 
 	for (m = builtin_codepages; *m; m++) 
 	{
-		if (!strcmp((*m)->psfm_name, name)) return *m;
+		if (!stricmp((*m)->psfm_name, name)) return *m;
 	}
 /* See if a codepage was supplied as just a number */
 	if (isdigit(name[0])) for (m = builtin_codepages; *m; m++) 
 	{
 		if ((*m)->psfm_name[0] == 'C' &&
 		    (*m)->psfm_name[1] == 'P' &&
-		    !strcmp((*m)->psfm_name + 2, name)) return *m;
+		    !stricmp((*m)->psfm_name + 2, name)) return *m;
 	}
 /* And if all else fails hit the disk again */
 	return psf_load_cp(name, name);

@@ -95,7 +95,8 @@ static psf_dword values[] = {
 0x00fc, 0xffff, 0x0119, 0xffff, 0x021b, 0xffff, 0x00ff, 0xffff, 
 };
 
-struct psf_mapping m_8859_16 = { "8859-16", {
+struct psf_mapping256 m_8859_16 = { "8859-16", 
+256, {
 &values[1], /* 0 	NULL */
 &values[2], /* 1 	START OF HEADING */
 &values[3], /* 2 	START OF TEXT */

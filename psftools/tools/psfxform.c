@@ -212,7 +212,7 @@ int load_transfile(char *transfile)
 {
 	int from, to;
 	FILE *fp;
-	char *s;
+	char *s, *result;
 	int c;
 
 	if (!strcmp(transfile, "-")) fp = stdin;
@@ -226,8 +226,8 @@ int load_transfile(char *transfile)
 
 	do
 	{
-		fgets(linebuf, 20, fp);	
-		if (feof(fp)) break;
+		result = fgets(linebuf, 20, fp);	
+		if (feof(fp) || result == NULL) break;
 
 		/* If line was longer than 20 chars, swallow the rest */
 		s = strchr(linebuf, '\n'); 
@@ -462,7 +462,7 @@ void copychar(int ndest, int nsrc, psf_byte *dest, psf_byte *src)
 */
 	if (setcodepage)
 	{
-		if (ndest < 256) 
+		if (ndest < setcodepage->psfm_count)
 			psf_unicode_addmap(&psfo, ndest, setcodepage, ndest);
 	}
 	else if (ucs) for (ude = psfi.psf_dirents_used[nsrc]; ude != NULL;

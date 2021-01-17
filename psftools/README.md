@@ -4,17 +4,15 @@ The PSFTOOLS are designed to manipulate fixed-width bitmap fonts, such as DOS or
 
 Note that these programs share no code with the Linux console utilities (kbd).
 
-## Change log
+## New in psftools 1.1.0
 
-## 1.0.10
-
-* loadpsf can now load fonts on a Wang Professional Computer with a colour or monochrome video card (but not the high resolution CGDC card).
-* Now that Unicode has a 'bell character, the PCGEM codepage has been updated to use it.
-* cpi2psf can now parse LCD.CPI from Toshiba MS-DOS 3.30, which is slightly out of spec (its fonts are type 0, not type 1).
-
-## 1.0.7
-
-* Added new psf2bbc and bbc2psf utilities, to convert PSF fonts to/from soft fonts for the BBC Micro.
+* Added support for codepages with more than 256 characters. This leads to a revision of the .CP2 file format to support these codepages.
+* Codepage names are now matched case-insensitively.
+* New codepages: LS3 (LocoScript 3), QX10 (Epson QX-10) and PRINTIT (MML  Systems Printit, a subset of QX10)
+* raw2psf: Bugfix: --codepage was not setting the Unicode mapping on the last character in the font.
+* ams2psf: Now supports SCRCHAR.JOY, the LocoScript screen font file
+* psf2ams: If passed an 8x16 font, the self-loading COM file now loads it at full height on the PCW16 (and scales it down on other computers).
+* psf2xbm: Added an --across option allowing the width of the output bitmap to be changed (height is adjusted to match).
 
 ## Usage
 
@@ -28,7 +26,7 @@ For details of the options provided by each utility, see the supplied manual pag
 
 ## Unicode support
 
-Support for the Unicode table in .PSFs was last improved in version 1.0.1.
+Support for the Unicode table in .PSFs was last improved in version 1.1.0.
 
 Utilities that write .PSF files automatically attach a Unicode directory if they know the encoding used; if not, the ```--codepage``` option should be used to attach one. To get a list of codepages supported, run psfpages; see *codepage.txt* in this directory for more information.
 
@@ -149,6 +147,15 @@ nb: On an original BBC, only a limited range of characters can be redefined at a
 
 ```bbc2psf``` reverses the process, converting a BBC Micro soft font to PSF.
 
+### Amstrad CP/M fonts
+
+```psf2ams``` either:
+* Converts a .PSF font to a .COM file which installs the associated font under CP/M on the CPC, PCW, PcW16 and Spectrum +3;
+* Converts a .PSF font to a SCRCHAR.JOY file for LocoScript 3.
+* Injects a .PSF font into a CP/M or LocoScript 1 .EMS file.
+
+```ams2psf``` converts self-loading font .COM files back to .PSF, and attempts to extract fonts that have been embedded in .EMS files or the LocoScript character file SCRCHAR.JOY.
+
 ### Converting PSFs to other things
 
 ```psf2inc``` Convert a .PSF font to C source, or Digital Research RASM86 source.
@@ -157,8 +164,7 @@ nb: On an original BBC, only a limited range of characters can be redefined at a
 
 ```psf2xbm``` Convert a .PSF font to an X-Window bitmap, for display purposes. This can be useful when experimenting with other programs that output .PSFs; just pipe the result into ```psf2xbm | xv -``` to see the output.
 
-```psf2bdf``` Convert a .PSF font to an X-Window bitmap font. The resulting font
-	should be fine-tuned in an editor such as xmbdfed.
+```psf2bdf``` Convert a .PSF font to an X-Window bitmap font. The resulting font should be fine-tuned in an editor such as xmbdfed.
 
 ### Hercules WriteOn fonts
 
@@ -267,17 +273,11 @@ loadpsf supports the following hardware:
 The behaviour of loadpsf varies according to what display hardware it finds:
 
 * On the EGA / VGA: Fonts must be 8 pixels wide or less. Fonts loaded with `--alt` will be used to draw bright text.
-
 * On the IBM Convertible: Fonts must be 8x8 pixels. Fonts loaded with `--alt` will be used to draw bold text.
-
 * On the Compaq Portables: As for the Convertible, but fonts can be up to 8x16 pixels.
-
 * On the Hercules: Fonts must be 8x14 pixels. Fonts with more than 256 characters (or fonts loaded with `--alt`) will force the card into 48k RAMfont mode.
-
 * On the Apricot PC / Xi: Fonts can be at most 10x16 pixels. Fonts loaded with `--alt` will be ignored.
-
 * On the Apricot F-Series: Fonts must be 8x10 or 8x8 pixels, and will be loaded into the correct slot automatically. Fonts loaded with `--alt` will be ignored.
-
 * On the Wang PC: If there is only one class of video card present (colour or mono) then the font will be loaded into that display and alternative fonts will be ignored. If both colour and mono cards are present, the font will be loaded for the currently active display, and the `--alt` option selects the other display.
  If you have two or more displays of the same class (eg: two colour or two mono) loadpsf will load the same font into both.
  The CGDC high-resolution display is not supported. Neither is the IBM emulation card (class 0x16).

@@ -36,6 +36,7 @@ static char helpbuf[2048];
 static int width  = 8;
 static int height = 0;
 static int skip   = 0;
+static int skipbytes = 0;
 static int doflip = 0;
 static int first  = 0;
 static int last   = 255;
@@ -53,13 +54,14 @@ char *cnv_set_option(int ddash, char *variable, char *value)
     if (!stricmp(variable, "width"))  { width  = atoi(value); return NULL; }
     if (!stricmp(variable, "height")) { height = atoi(value); return NULL; }
     if (!stricmp(variable, "skip"))   { skip   = atoi(value); return NULL; }
+    if (!stricmp(variable, "skipbytes")) { skipbytes = atoi(value); return NULL; }
     if (!stricmp(variable, "first"))  { first  = atoi(value); return NULL; }
     if (!stricmp(variable, "last"))   { last   = atoi(value); return NULL; }
     if (!stricmp(variable, "flip"))   { doflip = 1; return NULL; }
     if (!stricmp(variable, "psf1"))   { v1 = 1; return NULL; }
     if (!stricmp(variable, "psf2"))   { v2 = 1; return NULL; }
     if (!stricmp(variable, "512"))    { first = 0; last = 511; return NULL; }
-    if (!stricmp(variable, "codepage"))  
+    if (!stricmp(variable, "codepage") || !stricmp(variable, "setcodepage"))  
 	{ 
 	codepage = psf_find_mapping(value); 
 	if (codepage == NULL) return "Code page name not recognised.";
@@ -79,6 +81,7 @@ char *cnv_help(void)
 	             "    --height=x     Height of glyphs\n"
 	             "    --width=x      Width of glyphs (defaults to 8)\n"
 	             "    --skip=x       Skip x characters at start of raw file (defaults to 0)\n"
+	             "    --skipbytes=x  Skip x bytes at start of raw file (defaults to 0)\n"
                      "    --first=x      First character to use in the PSF\n"
 	             "    --last=x       Last character to go into PSF (defaults to 255)\n"
 	             "    --codepage=x   Create a Unicode directory from the specified code page\n"
@@ -131,6 +134,11 @@ char *cnv_execute(FILE *infile, FILE *outfile)
 			if (fgetc(infile) == EOF) return "Unexpected end of file";
 			--skip;
 		}	
+		while (skipbytes)
+		{
+			if (fgetc(infile) == EOF) return "Unexpected end of file";
+			--skipbytes;
+		}	
 		if (fread(psf.psf_data + first * psf.psf_charlen, 
 				psf.psf_charlen, last + 1 - first, infile) < last + 1 - first)
 		{
@@ -149,10 +157,7 @@ char *cnv_execute(FILE *infile, FILE *outfile)
 		}
 		if (codepage)
 		{
-			int n;
-			psf_file_create_unicode(&psf);
-			for (n = first; n < last; n++) if (n < 256)
-				psf_unicode_addmap(&psf, n, codepage, n);
+			psf_unicode_addall(&psf, codepage, first, last);
 		}
 
 

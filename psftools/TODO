@@ -2,6 +2,10 @@
   [Probably not; the BSD headers use arithmetic. Only way would be to
   have some horrible pass-to-C-compiler trick.]
 
+* Test CP2 loading for the new-format CP2 files.
+* Test 8x16 self-loading PSFs on the PCW16
+
+
 * LOADPSF: Support for IBM 3270 PC Programmed Symbols board? 
 
 [Done] * LOADPSF: ACT Apricot support (preferably in the same EXE rather than 

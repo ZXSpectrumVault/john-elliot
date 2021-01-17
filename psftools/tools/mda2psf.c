@@ -38,7 +38,7 @@ char *cnv_progname = "MDA2PSF";
 /* Return NULL if OK, else error string */
 char *cnv_set_option(int ddash, char *variable, char *value)
 {
-	if (!stricmp(variable, "codepage"))
+	if (!stricmp(variable, "codepage") || !stricmp(variable, "setcodepage"))
 	{
 		codepage = psf_find_mapping(value);
 		if (codepage == NULL) return "Code page name not recognised.";
@@ -131,9 +131,7 @@ char *cnv_execute(FILE *infile, FILE *outfile)
 		}	
                 if (codepage)
                 {
-			psf_file_create_unicode(&psf); 
-			for (n = 0; n < 256; n++)
-				psf_unicode_addmap(&psf, n, codepage, n);
+			psf_unicode_addall(&psf, codepage, 0, 255);
 		}
 		rv = psf_file_write(&psf, outfile);
 	}

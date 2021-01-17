@@ -123,8 +123,23 @@ typedef struct psfio
 typedef struct psf_mapping
 {
 	char *psfm_name;
-	psf_dword *psfm_tokens[256];
+	psf_dword  psfm_count;
+	psf_dword *psfm_tokens[0];
 } PSF_MAPPING;
+
+typedef struct psf_mapping256
+{
+	char *psfm_name;
+	psf_dword  psfm_count;
+	psf_dword *psfm_tokens[256];
+} PSF_MAPPING256;
+
+typedef struct psf_mapping512
+{
+	char *psfm_name;
+	psf_dword  psfm_count;
+	psf_dword *psfm_tokens[512];
+} PSF_MAPPING512;
 
 /* Initialise the structure as empty */
 void psf_file_new(PSF_FILE *f);
@@ -139,6 +154,10 @@ psf_errno_t psf_unicode_add(PSF_FILE *f, psf_word nchar, psf_dword token);
 /* Add a chain to the Unicode directory from the map */
 psf_errno_t psf_unicode_addmap(PSF_FILE *f, psf_word destchar, 
 				PSF_MAPPING *m, psf_word srcchar);
+
+/* Helper method: Populate the entire Unicode directory in one hit */
+psf_errno_t psf_unicode_addall(PSF_FILE *f, PSF_MAPPING *m, unsigned first, unsigned last);
+
 /* Remove an entry from the Unicode directory */
 psf_errno_t psf_unicode_delete(PSF_FILE *f, psf_word nchar, psf_dword token);
 /* Find a token in the Unicode directory */

@@ -8,14 +8,21 @@ formats are supported; the default output format is PSF2.
   Note that these programs share no code with the Linux console utilities 
 (kbd).
 
-New in psftools 1.0.13
-======================
+New in psftools 1.1.0
+=====================
 
-* zx2psf has a new --move1 option, which moves the pound and copyright symbols
- to their ISO-8859-1 positions leaving surrounding characters blank.
-
-* fnt2psf when applied to Windows 1.x-format fonts now seeks to the font data,
- rather than assuming that the font directly follows the file header. 
+* Added support for codepages with more than 256 characters. This leads to
+ a revision of the .CP2 file format to support these codepages.
+* Codepage names are now matched case-insensitively.
+* New codepages: LS3 (LocoScript 3), QX10 (Epson QX-10) and PRINTIT (MML 
+ Systems Printit, a subset of QX10)
+* raw2psf: Bugfix: --codepage was not setting the Unicode mapping on
+           the last character in the font.
+* ams2psf: Now supports SCRCHAR.JOY, the LocoScript screen font file
+* psf2ams: If passed an 8x16 font, the self-loading COM file now loads it at 
+           full height on the PCW16 (and scales it down on other computers).
+* psf2xbm: Added an --across option allowing the width of the output bitmap 
+           to be changed (height is adjusted to match).
 
 Usage
 =====
@@ -35,7 +42,7 @@ pages, or type <program> --help.
 Unicode support
 ===============
 
-  Support for the Unicode table in .PSFs was last improved in version 1.0.1. 
+  Support for the Unicode table in .PSFs was last improved in version 1.1.0. 
 
   Utilities that write .PSF files automatically attach a Unicode 
 directory if they know the encoding used; if not, the --codepage option 
@@ -201,6 +208,17 @@ psf2bbc  converts a .PSF font to a BBC Micro soft font. For best results the
 	 To load it under Risc OS, set its filetype to FF7 and double-click it.
 
 bbc2psf	 reverses the process, converting a BBC Micro soft font to PSF.
+
+Amstrad CP/M fonts
+------------------
+psf2ams  either:
+	* Converts a .PSF font to a .COM file which installs the associated 
+	 font under CP/M on the CPC, PCW, PcW16 and Spectrum +3;
+	* Converts a .PSF font to a SCRCHAR.JOY file for LocoScript 3.
+	* Injects a .PSF font into a CP/M or LocoScript 1 .EMS file.
+ams2psf  converts self-loading font .COM files back to .PSF, and attempts 
+	to extract fonts that have been embedded in .EMS files or 
+	the LocoScript character file SCRCHAR.JOY.
 
 Converting PSFs to other things: psf2inc, psf2xbm, psf2bdf, psf2bsd
 -------------------------------------------------------------------

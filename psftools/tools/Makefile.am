@@ -7,10 +7,12 @@ bin_PROGRAMS=psf2bbc psf2bsd psf2inc psf2pbms psf2raw psf2wof psf2xbm psf2zx \
 	     psfs2cpi psfs2mda psf2txt psf2wyse \
 	     psfxform psfmerge psfjoin \
 	     bbc2psf mda2psf raw2psf zx2psf psf2bdf wof2psf txt2psf wyse2psf \
-	     psfpages page2cp2 \
+	     psfpages page2cp2 psf2ams ams2psf \
 	     cpi2psf cpicomp cpidcomp
 noinst_PROGRAMS=cpitest
-EXTRA_DIST=lat1-08.psf loadpsf.c load_pc.c ldshell.c 
+EXTRA_DIST=lat1-08.psf loadpsf.c load_pc.c ldshell.c \
+		psfcom8.zsm psfcom8.bin \
+		psfcom16.zsm psfcom16.bin
 
 BUILT_SOURCES=latin1.inc
 
@@ -26,6 +28,8 @@ page2cp2_SOURCES=page2cp2.c
 psfmerge_SOURCES=psfmerge.c cnvmulti.h cnvmulti.c cnvshell.inc
 psfxform_SOURCES=psfxform.c cnvshell.c cnvshell.inc cnvshell.h
 psfjoin_SOURCES=psfjoin.c cnvmulti.h cnvmulti.c cnvshell.inc
+psf2ams_SOURCES=psf2ams.c psfcom8.inc psfcom16.inc cnvshell.c cnvshell.inc \
+		cnvshell.h
 psf2bbc_SOURCES=psf2bbc.c cnvshell.c cnvshell.inc cnvshell.h
 psf2bsd_SOURCES=psf2bsd.c cnvshell.c cnvshell.h
 psf2inc_SOURCES=psf2inc.c cnvshell.c cnvshell.h
@@ -34,6 +38,7 @@ psf2raw_SOURCES=psf2raw.c cnvshell.c cnvshell.inc cnvshell.h
 psf2xbm_SOURCES=psf2xbm.c cnvshell.c cnvshell.inc cnvshell.h
 psf2txt_SOURCES=psf2txt.c cnvshell.c cnvshell.inc cnvshell.h
 psf2wyse_SOURCES=psf2wyse.c cnvshell.c cnvshell.inc cnvshell.h
+ams2psf_SOURCES=ams2psf.c cnvshell.c cnvshell.inc cnvshell.h
 bbc2psf_SOURCES=bbc2psf.c cnvshell.c cnvshell.inc cnvshell.h
 txt2psf_SOURCES=txt2psf.c cnvshell.c cnvshell.inc cnvshell.h
 wyse2psf_SOURCES=wyse2psf.c cnvshell.c cnvshell.inc cnvshell.h

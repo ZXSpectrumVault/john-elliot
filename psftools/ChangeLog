@@ -1,3 +1,36 @@
+2021-01-12 John Elliott
+
+	* psftools-1.1.0 released.
+	* ams2psf, psf2ams: Now support SCRCHAR.JOY, the LocoScript screen 
+	          font file.
+	* psf2ams: A short .PSF font converted to a .COM file will now only
+	          redefine those characters defined by the .PSF font.
+	
+
+2020-12-22 John Elliott
+
+	* Support added for (internal and external) code page mappings
+	 with more than 256 characters. The format of the .CP2 files used
+	 to hold these mappings has been changed accordingly.
+	* Codepage names are now matched case-insensitively.
+	* New codepages: LS3 (LocoScript 3), QX10 (Epson QX-10) and PRINTIT 
+	 (MML Systems Printit, a subset of QX10)
+	* raw2psf: Bugfix: --codepage was not setting the Unicode mapping on 
+		the last character in the font.
+	* psf2ams: If passed an 8x16 font, the self-loading COM file now
+		  loads it at full height on the PCW16 (and scales it down
+		  on other computers).
+	* psf2xbm: Added an --across option allowing the width of the output
+	 bitmap to be changed (height is adjusted to match).
+
+2020-12-07 John Elliott
+
+	* psftools-1.0.14 released.
+
+	* New programs: psf2ams and ams2psf, allowing generation of 
+			self-loading fonts and/or custom EMS files for 
+			Amstrad CP/M computers.
+
 2019-07-05 John Elliott
 
 	* psftools-1.0.13 released.
@@ -123,7 +156,7 @@
 2006-03-13 John Elliott
 
 	* loadpsf: Added support for Hercules Graphics Card Plus, which can
- 	load up to 3072 8x14 characters. At the same time, allowed it
+	load up to 3072 8x14 characters. At the same time, allowed it
 	to load up to 2048 characters into a VGA, though there is
 	little practical use for either of these.
 
@@ -138,7 +171,7 @@
 	it are in the same order as in the source file.
 	* psfxform: Added --scale and --inverse options.
 	* psfxform: Rewrote the character conversion engine. Added --centre
-        option and support for applying options only to ranges of characters, 
+	option and support for applying options only to ranges of characters, 
 	because you might want --repeat only to apply to graphics, for example.
 
 2005-12-13 John Elliott

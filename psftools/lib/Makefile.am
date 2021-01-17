@@ -13,7 +13,7 @@ noinst_PROGRAMS=dumpcps
 # If interfaces have been removed set the right-hand number to 0.
 # 
 #
-libpsf_la_LDFLAGS = -version-info 1:1:1
+libpsf_la_LDFLAGS = -version-info 1:2:1
 libpsf_la_SOURCES = psflib.c psfucs.c psfio.c psfpix.c psfver.c mappings.c \
                     psfio.h psferror.c psfutil1.c psfutil2.c psfutil3.c \
 		    psfucs2.c \
@@ -23,7 +23,7 @@ libpsf_la_SOURCES = psflib.c psfucs.c psfio.c psfpix.c psfver.c mappings.c \
 8859-14.c  8859-4.c   8859-9.c	CP1254.c  CP437.c   CP855.c  CP863.c  CP874.c \
 8859-15.c  8859-5.c   CP1250.c	CP1255.c  CP737.c   CP857.c  CP864.c  PCGEM.c \
 AMSTRAD.c  BBCMICRO.c CP858.c    CP367.c  PPC437.c  PPC860.c PPC865.c \
-PPCGREEK.c
+PPCGREEK.c LS3.c      QX10.c   PRINTIT.c
 
 dumpcps_SOURCES=dumpcps.c
 dumpcps_LDADD=libpsf.la	
