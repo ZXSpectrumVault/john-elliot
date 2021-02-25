@@ -1933,8 +1933,8 @@ dsk_err_t ldbs_put_trackhead(PLDBS self, const LDBS_TRACKHEAD *trkh,
 	size_t bufsize;
 	dsk_err_t err;
 	char type[4];
-	unsigned short se_offset;	/* Offset to sector entries */
-	unsigned short se_size;	/* Length of a sector entry */
+	unsigned se_offset;	/* Offset to sector entries */
+	unsigned se_size;	/* Length of a sector entry */
 
 	ldbs_encode_trackid(type, cylinder, head);
 

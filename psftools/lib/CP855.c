@@ -85,7 +85,8 @@ static psf_dword values[] = {
 0xffff, 0x0427, 0xffff, 0x00a7, 0xffff, 0x25a0, 0xffff, 0x00a0, 
 0xffff, };
 
-struct psf_mapping m_CP855 = { "CP855", {
+struct psf_mapping256 m_CP855 = { "CP855", 
+256, {
 &values[1], /* 0  */
 &values[3], /* 1  */
 &values[5], /* 2  */

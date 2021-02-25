@@ -24,3 +24,4 @@ int standard_args(int argc, char **argv);
 int ignore_arg(char *arg, int count, int *argc, char **argv);
 void args_complete(int *argc, char **argv);
 int version(void);
+const char *guess_type(const char *arg);

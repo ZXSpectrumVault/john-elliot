@@ -13,14 +13,14 @@
 
 
 
-void new_PEFILE(PEFILE *self, FILE *fp)
+int new_PEFILE(PEFILE *self, FILE *fp)
 {
-        int r;
+        int r = 0;
 	size_t optsz;
         long rec = ftell(fp);
 	long m_off;
 
-	if (!self) return;
+	if (!self) return -1;
 	new_MZFILE(&self->super, fp);
 	self->super.open_resdir = pe_open_resdir;
 	m_off = mz_check_ne(&self->super);
@@ -43,6 +43,7 @@ void new_PEFILE(PEFILE *self, FILE *fp)
                 }
         }
         if (rec >= 0) fseek(fp, rec, SEEK_SET);
+	return r;
 }
 
 

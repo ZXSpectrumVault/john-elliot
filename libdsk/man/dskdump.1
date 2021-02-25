@@ -21,7 +21,7 @@
 .\" Author contact information:
 .\" John Elliott: email: seasip.webmaster@gmail.com
 .\"
-.TH dskdump 1 "23 January 2008" "Version 1.2.1" "Emulators"
+.TH dskdump 1 "17 September 2018" "Version 1.5.9" "Emulators"
 .\"
 .\"------------------------------------------------------------------
 .\"
@@ -104,7 +104,9 @@ drivers are as for -itype.
 .TP
 .B -icomp COMP
 Select the compression method used on the source disc image file (has no
-effect when reading a floppy disc).
+effect when reading a floppy disc). Use 'none' to disable transparent 
+decompression of gzipped disc images (for example, the Slackware installer
+rootdisks).
 .RS
 .TP 8
 .B auto

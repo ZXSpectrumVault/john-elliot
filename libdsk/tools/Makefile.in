@@ -91,7 +91,8 @@ host_triplet = @host@
 target_triplet = @target@
 bin_PROGRAMS = dsktrans$(EXEEXT) dskform$(EXEEXT) dskid$(EXEEXT) \
 	dskdump$(EXEEXT) dskscan$(EXEEXT) dskutil$(EXEEXT) \
-	md3serial$(EXEEXT) apriboot$(EXEEXT) dskconv$(EXEEXT)
+	md3serial$(EXEEXT) apriboot$(EXEEXT) dskconv$(EXEEXT) \
+	lsgotek$(EXEEXT) dsklabel$(EXEEXT)
 noinst_PROGRAMS = @TOOLCLASSES@ forkslave$(EXEEXT) dsktest$(EXEEXT) \
 	serslave$(EXEEXT)
 EXTRA_PROGRAMS =
@@ -143,7 +144,7 @@ dskdump_OBJECTS = $(am_dskdump_OBJECTS)
 dskdump_LDADD = $(LDADD)
 dskdump_DEPENDENCIES = ../lib/libdsk.la
 am_dskform_OBJECTS = dskform.$(OBJEXT) utilopts.$(OBJEXT) \
-	formname.$(OBJEXT)
+	formname.$(OBJEXT) bootsec.$(OBJEXT) labelopt.$(OBJEXT)
 dskform_OBJECTS = $(am_dskform_OBJECTS)
 dskform_LDADD = $(LDADD)
 dskform_DEPENDENCIES = ../lib/libdsk.la
@@ -151,6 +152,11 @@ am_dskid_OBJECTS = dskid.$(OBJEXT) utilopts.$(OBJEXT)
 dskid_OBJECTS = $(am_dskid_OBJECTS)
 dskid_LDADD = $(LDADD)
 dskid_DEPENDENCIES = ../lib/libdsk.la
+am_dsklabel_OBJECTS = dsklabel.$(OBJEXT) utilopts.$(OBJEXT) \
+	labelopt.$(OBJEXT)
+dsklabel_OBJECTS = $(am_dsklabel_OBJECTS)
+dsklabel_LDADD = $(LDADD)
+dsklabel_DEPENDENCIES = ../lib/libdsk.la
 am_dskscan_OBJECTS = dskscan.$(OBJEXT) utilopts.$(OBJEXT) \
 	formname.$(OBJEXT)
 dskscan_OBJECTS = $(am_dskscan_OBJECTS)
@@ -174,6 +180,11 @@ am_forkslave_OBJECTS = forkslave.$(OBJEXT)
 forkslave_OBJECTS = $(am_forkslave_OBJECTS)
 forkslave_LDADD = $(LDADD)
 forkslave_DEPENDENCIES = ../lib/libdsk.la
+am_lsgotek_OBJECTS = lsgotek.$(OBJEXT) utilopts.$(OBJEXT) \
+	labelopt.$(OBJEXT)
+lsgotek_OBJECTS = $(am_lsgotek_OBJECTS)
+lsgotek_LDADD = $(LDADD)
+lsgotek_DEPENDENCIES = ../lib/libdsk.la
 am_md3serial_OBJECTS = md3serial.$(OBJEXT) utilopts.$(OBJEXT)
 md3serial_OBJECTS = $(am_md3serial_OBJECTS)
 md3serial_LDADD = $(LDADD)
@@ -218,14 +229,16 @@ am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
 SOURCES = $(apriboot_SOURCES) $(check1_SOURCES) $(check2_SOURCES) \
 	$(check3_SOURCES) $(dskconv_SOURCES) $(dskdump_SOURCES) \
-	$(dskform_SOURCES) $(dskid_SOURCES) $(dskscan_SOURCES) \
-	$(dsktest_SOURCES) $(dsktrans_SOURCES) $(dskutil_SOURCES) \
-	$(forkslave_SOURCES) $(md3serial_SOURCES) $(serslave_SOURCES)
+	$(dskform_SOURCES) $(dskid_SOURCES) $(dsklabel_SOURCES) \
+	$(dskscan_SOURCES) $(dsktest_SOURCES) $(dsktrans_SOURCES) \
+	$(dskutil_SOURCES) $(forkslave_SOURCES) $(lsgotek_SOURCES) \
+	$(md3serial_SOURCES) $(serslave_SOURCES)
 DIST_SOURCES = $(apriboot_SOURCES) $(check1_SOURCES) $(check2_SOURCES) \
 	$(check3_SOURCES) $(dskconv_SOURCES) $(dskdump_SOURCES) \
-	$(dskform_SOURCES) $(dskid_SOURCES) $(dskscan_SOURCES) \
-	$(dsktest_SOURCES) $(dsktrans_SOURCES) $(dskutil_SOURCES) \
-	$(forkslave_SOURCES) $(md3serial_SOURCES) $(serslave_SOURCES)
+	$(dskform_SOURCES) $(dskid_SOURCES) $(dsklabel_SOURCES) \
+	$(dskscan_SOURCES) $(dsktest_SOURCES) $(dsktrans_SOURCES) \
+	$(dskutil_SOURCES) $(forkslave_SOURCES) $(lsgotek_SOURCES) \
+	$(md3serial_SOURCES) $(serslave_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -387,6 +400,7 @@ top_srcdir = @top_srcdir@
 uudecode = @uudecode@
 AM_CPPFLAGS = -I$(top_srcdir)/include
 LDADD = ../lib/libdsk.la
+lsgotek_SOURCES = lsgotek.c utilopts.c utilopts.h labelopt.c labelopt.h
 dskconv_SOURCES = dskconv.c utilopts.c utilopts.h formname.c formname.h
 dsktrans_SOURCES = dsktrans.c utilopts.c utilopts.h formname.c formname.h \
 		 apriboot.h bootsec.c
@@ -394,9 +408,12 @@ dsktrans_SOURCES = dsktrans.c utilopts.c utilopts.h formname.c formname.h \
 apriboot_SOURCES = apriboot.c bootsec.c apriboot.h formname.c formname.h \
 		 utilopts.c utilopts.h
 
-dskform_SOURCES = dskform.c utilopts.c utilopts.h formname.c formname.h
+dskform_SOURCES = dskform.c utilopts.c utilopts.h formname.c formname.h \
+		 apriboot.h bootsec.c labelopt.c labelopt.h 
+
 dskid_SOURCES = dskid.c utilopts.c utilopts.h
 md3serial_SOURCES = md3serial.c utilopts.c utilopts.h
+dsklabel_SOURCES = dsklabel.c utilopts.c utilopts.h labelopt.c labelopt.h
 dskscan_SOURCES = dskscan.c utilopts.c utilopts.h formname.c formname.h
 dskdump_SOURCES = dskdump.c utilopts.c utilopts.h formname.c formname.h
 dskutil_SOURCES = dskutil.c utilopts.c utilopts.h formname.c formname.h
@@ -541,6 +558,10 @@ dskid$(EXEEXT): $(dskid_OBJECTS) $(dskid_DEPENDENCIES) $(EXTRA_dskid_DEPENDENCIE
 	@rm -f dskid$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(dskid_OBJECTS) $(dskid_LDADD) $(LIBS)
 
+dsklabel$(EXEEXT): $(dsklabel_OBJECTS) $(dsklabel_DEPENDENCIES) $(EXTRA_dsklabel_DEPENDENCIES) 
+	@rm -f dsklabel$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(dsklabel_OBJECTS) $(dsklabel_LDADD) $(LIBS)
+
 dskscan$(EXEEXT): $(dskscan_OBJECTS) $(dskscan_DEPENDENCIES) $(EXTRA_dskscan_DEPENDENCIES) 
 	@rm -f dskscan$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(dskscan_OBJECTS) $(dskscan_LDADD) $(LIBS)
@@ -560,6 +581,10 @@ dskutil$(EXEEXT): $(dskutil_OBJECTS) $(dskutil_DEPENDENCIES) $(EXTRA_dskutil_DEP
 forkslave$(EXEEXT): $(forkslave_OBJECTS) $(forkslave_DEPENDENCIES) $(EXTRA_forkslave_DEPENDENCIES) 
 	@rm -f forkslave$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(forkslave_OBJECTS) $(forkslave_LDADD) $(LIBS)
+
+lsgotek$(EXEEXT): $(lsgotek_OBJECTS) $(lsgotek_DEPENDENCIES) $(EXTRA_lsgotek_DEPENDENCIES) 
+	@rm -f lsgotek$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(lsgotek_OBJECTS) $(lsgotek_LDADD) $(LIBS)
 
 md3serial$(EXEEXT): $(md3serial_OBJECTS) $(md3serial_DEPENDENCIES) $(EXTRA_md3serial_DEPENDENCIES) 
 	@rm -f md3serial$(EXEEXT)
@@ -585,12 +610,15 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dskdump.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dskform.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dskid.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dsklabel.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dskscan.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dsktest.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dsktrans.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dskutil.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/forkslave.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/formname.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/labelopt.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsgotek.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/md3serial.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/serslave.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/utilopts.Po@am__quote@

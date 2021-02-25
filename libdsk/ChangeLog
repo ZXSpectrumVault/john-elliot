@@ -1,3 +1,51 @@
+2019-01-01 John Elliott
+
+	* dsktrans, dskform, dskdump: Output filetype always defaulted to 
+	 'dsk'. Attempt to come up with a reasonable default based on
+	 the filename (which can be overridden if required)
+
+	* The compression type 'none' can be used to disable auto-expansion
+	 of compressed disc images (necessary if you are writing compressed
+	 data such as the Slackware installer without decompression).
+
+	* Geometry probe: Rewrite the DFS boot block check so that LibDsk
+	 has a sporting chance of detecting DFS-format media.
+
+	* New utility: dsklabel (get / set label on DOS, CP/M or DFS media)
+
+	* New utility: lsgotek (list the drive images on a Gotek-format USB
+	 drive)
+
+	* New driver: gotek (allows access to Gotek-format drive emulation
+	 disc images stored on a USB key)
+
+	* More bug fixes from Mark Ogden: Incorrect results returned by the
+	 geometry probe in LDBS-based formats, and accessing sectors with
+	 dsk_lread() on disc images with 'extended surface' layout.
+
+	* dskutil: Swapped "sectors / track" and "sectors / cylinder"
+	 captions (Mark Ogden).
+
+	* Fixed some memory corruption issues detected by VS2017 analysis
+	 (Mark Ogden).
+
+	* dskform: Widened total_sectors32 to 32 bits (Mark Ogden).
+
+	* apridisk: Fixed a crash writing to Apridisk files.
+
+2018-09-18 John Elliott
+
+	* libdsk-1.5.9 released.
+
+	* Fixed compilation issue on recent glibc (Steven Fosdick).
+
+	* dskform: Added -pcdos and -apricot options to create FAT12 
+	 filesystems.
+
+2018-04-09 John Elliott
+
+	* SAP: New disk image format implemented (Thanks to Emulix75).
+
 2018-02-06 John Elliott
 
 	* libdsk-1.5.8 released.

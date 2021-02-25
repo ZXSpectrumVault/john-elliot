@@ -40,6 +40,7 @@ zx2psf - convert a Spectrum font to PSF format
 .RI [ "--mode=merge1" ]
 .RI [ "--mode=latin1" ]
 .RI [ "--mode=synth1" ]
+.RI [ "--mode=move1" ]
 .RI [ "--graphics=none" ]
 .RI [ "--graphics=block" ]
 .RI [ "--graphics=udg" ]
@@ -90,6 +91,10 @@ As merge1, except that the Latin-1 characters are mostly generated from the
 Spectrum characters rather than being copied from LAT1-08.PSF. If this option
 is used the font will require manual editing afterwards to make it look better.
 .TP
+.B --mode=move1
+As bare, but the pound sign and copyright characters are moved to their 
+correct positions for ISO Latin-1.
+.TP
 .B --graphics=none
 The graphics characters 128-159 will be blank (--mode=bare) or those
 from LAT1-08.PSF (other modes).
@@ -124,5 +129,5 @@ psf2zx(1)
 .\"------------------------------------------------------------------
 .\"
 .SH AUTHOR
-John Elliott <jce@seasip.demon.co.uk>.
+John Elliott <seasip.webmaster@gmail.com>.
 .PP

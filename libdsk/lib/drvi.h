@@ -41,7 +41,14 @@
 # include <assert.h>
 #endif
 
+#ifdef HAVE_WINDOWS_H 
+# include <windows.h>
+#endif
+
 #ifndef DISABLE_FLOPPY
+# ifdef HAVE_SYS_SYSMACROS_H
+#  include <sys/sysmacros.h>
+# endif
 # ifdef HAVE_LINUX_FD_H
 #  include "linux/fd.h"
 #  ifdef HAVE_LINUX_FDREG_H
@@ -50,9 +57,6 @@
 #  endif
 # endif
 
-# ifdef HAVE_WINDOWS_H 
-#  include <windows.h>
-# endif
 
 #ifdef HAVE_WINIOCTL_H
 #  define WIN32FLOPPY 

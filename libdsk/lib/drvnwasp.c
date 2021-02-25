@@ -93,7 +93,6 @@ dsk_err_t nwasp_open(DSK_DRIVER *self, const char *filename)
 	return DSK_ERR_OK;
 }
 
-
 dsk_err_t nwasp_creat(DSK_DRIVER *self, const char *filename)
 {
 	NWASP_DSK_DRIVER *nwself;
@@ -174,6 +173,7 @@ static dsk_err_t seekto(NWASP_DSK_DRIVER *self, unsigned long offset)
 	if (fseek(self->nw_fp, offset, SEEK_SET)) return DSK_ERR_SYSERR;
 	return DSK_ERR_OK;
 }
+
 
 dsk_err_t nwasp_write(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
                              const void *buf, dsk_pcyl_t cylinder,

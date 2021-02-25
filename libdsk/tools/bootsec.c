@@ -107,13 +107,14 @@ static int pcdos_to_apricot(byte *buf, const char *filename, int verbose)
 		
 		memcpy(buf2 + 0x50, buf + 0x0b, 13); /* BPB */ 
 		/* Disk type */	
+		/* [1.5.9] This is at offset 0x5D, not 0x54 */
 		if (heads == 1)
 		{
 			if (cylinders == 70) 
-		 		 buf2[0x54] = 0;
-			else buf2[0x54] = 1;
+		 		 buf2[0x5D] = 0;
+			else buf2[0x5D] = 1;
 		}
-		else     buf2[0x54] = 2;
+		else     buf2[0x5D] = 2;
 	}
 	/* Save the original PCDOS boot sector */
 	memcpy(buf2 + 0x144, pcd_magic, sizeof(pcd_magic));

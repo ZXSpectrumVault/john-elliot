@@ -21,7 +21,7 @@
 .\" Author contact information:
 .\" John Elliott: email: seasip.webmaster@gmail.com
 .\"
-.TH dskform 1 "23 January 2008" "Version 1.2.1" "Emulators"
+.TH dskform 1 "17 September 2018" "Version 1.5.9" "Emulators"
 .\"
 .\"------------------------------------------------------------------
 .\"
@@ -38,6 +38,7 @@ dskform - floppy or image file formatter for emulated machines
 .RI [ "-side SIDE" ]
 .RI [ "-comp COMP" ]
 .RI [ "-retry COUNT" ]
+.RI [ "-fat12" ]
 .I DISKIMAGE
 .P
 .PD 1
@@ -112,6 +113,13 @@ Set the number of times to attempt a format operation in case of error.
 .B -side SIDE
 Determines which side (0 or 1) of the disc is to be formatted.
 
+.TP
+.B -pcdos
+Create an empty PCDOS (FAT12) filesystem on the disc image.
+
+.TP
+.B -apricot
+Create an empty Apricot MSDOS filesystem on the disc image.
 .\"
 .\" -----------------------------------------------------------------
 .\"

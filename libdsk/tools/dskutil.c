@@ -645,7 +645,7 @@ int get_decimal(const char *s)
 
 int get_hex(const char *s)
 {
-	int v, c;
+	int v = 0, c = 0;
 
 	if (s[0] == '#') return get_decimal(s+1);
 	c = sscanf(s, "%x", &v);
@@ -1030,8 +1030,8 @@ void show_geometry(void)
 	printf("Cylinders:\t%4d\t  %02x\n", dg.dg_cylinders, dg.dg_cylinders);
 	printf("Heads:\t\t%4d\t  %02x\n", dg.dg_heads, dg.dg_heads);
 	printf("Tracks:\t\t%4d\t  %02x\n", tracks, tracks);
-	printf("Sec/cyl:\t%4d\t  %02x\n", dg.dg_sectors, dg.dg_sectors);
-	printf("Sec/track:\t%4d\t  %02x\n", spt, spt);
+	printf("Sec/track:\t%4d\t  %02x\n", dg.dg_sectors, dg.dg_sectors);
+	printf("Sec/cyl:\t%4d\t  %02x\n", spt, spt);
 	printf("1st sec:\t%4d\t  %02x\n", dg.dg_secbase, dg.dg_secbase);
 	printf("Sec size:\t%4ld\t%04lx\n", (long)dg.dg_secsize, (long)dg.dg_secsize);
 	printf("Data rate:\t");
@@ -1056,8 +1056,8 @@ int inc_sector(void)
 {
 	dsk_psect_t  os = sector;
 	dsk_ltrack_t ot = track;
-	dsk_pcyl_t cyl;
-	dsk_phead_t head;
+	dsk_pcyl_t cyl = 0;
+	dsk_phead_t head = 0;
 
 	++sector;
 	if (sector >= (dg.dg_sectors + dg.dg_secbase))

@@ -43,6 +43,7 @@
     &dc_dos32,
     &dc_dosint25,
 #endif
+    &dc_gotek,
     &dc_remote,
 /* 2. Directory-based backends */
 #ifdef HAVE_RCPMFS
@@ -65,11 +66,12 @@
     &dc_tele,	/* Teledisk */
 #endif
     &dc_ldbsdisk, /* LibDsk block store */
+    &dc_sap,	/* Thomson SAP */
     &dc_qrst,	/* Compaq Quick Release Sector Transfer */
     &dc_imd,	/* IMAGEDISK IMD */
 /*  &dc_dskf,	   IBM LoadDskF */
     &dc_ydsk,	/* YAZE YDSK */
-
+   
 /* 4. Raw files with no magic number. */
     &dc_posixalt,
     &dc_posixoo,
@@ -79,7 +81,11 @@
  *   explicitly specified. */
     &dc_myz80,
     &dc_simh,
+/* For some reason building the nwasp driver crashes the Pacific C 
+ * compiler. Exclude it from DOS builds for now. */
+#ifndef __PACIFIC__
     &dc_nwasp,
+#endif
     &dc_logical,
     &dc_jv3,
     &dc_cfi,    /* RLE-compressed raw. The reasons that this isn't 

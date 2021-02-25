@@ -53,7 +53,7 @@ char *cnv_set_option(int ddash, char *variable, char *value)
     if (!stricmp(variable, "height")) { height = atoi(value); return NULL; }
     if (!stricmp(variable, "psf1"))   { v1 = 1; return NULL; }
     if (!stricmp(variable, "psf2"))   { v2 = 1; return NULL; }
-    if (!stricmp(variable, "codepage"))  
+    if (!stricmp(variable, "codepage") || !stricmp(variable, "setcodepage"))  
 	{ 
 	codepage = psf_find_mapping(value); 
 	if (codepage == NULL) return "Code page name not recognised.";
@@ -131,10 +131,7 @@ char *cnv_execute(FILE *infile, FILE *outfile)
 
 		if (codepage)
 		{
-			int n;
-			psf_file_create_unicode(&psf);
-			for (n = 0; n < lastc - firstc; n++) if (n < 256)
-				psf_unicode_addmap(&psf, n, codepage, n);
+			psf_unicode_addall(&psf, codepage, 0, (lastc + 1 - firstc));
 		}
 
 

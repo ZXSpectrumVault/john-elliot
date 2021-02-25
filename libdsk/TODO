@@ -1,11 +1,18 @@
 TO BE DONE in LibDSK 1.5.x:
 
+- [gotek]  For the Win32 version, support accessing physical devices.
+	(Code written, but completely untested)
+- Ensure DOS and Win32 builds build.
+  : DOS does not build (drvnwasp.c crashes Pacific C??)
+
+
 - [CopyQM] Use real CopyQM on real hardware to image some DOS-format
   floppies so I can see the BPB.
 
 - [CPCEMU] Debug the new LDBS-style driver:
 	* Need to try on a few more test cases. extextdsk tests all seem
 	 to pass; would be nice to try some old-style DSKs too.
+
 
 - Add an LDBS chapter to the documentation.
 

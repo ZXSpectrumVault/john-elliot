@@ -3,6 +3,8 @@
 *.ko
 *.obj
 *.elf
+*.Plo
+*.Po
 
 # Precompiled Headers
 *.gch
@@ -34,7 +36,7 @@ config.h
 config.log
 config.status
 libtool
-stamp-h
+stamp-h*
 autom4te.cache/
 
 # Makefiles (uses Configure instead)
@@ -47,6 +49,7 @@ Makefile
 # Binaries & libraries
 */.libs/*
 lib/dumpcps
+tools/ams2psf
 tools/bbc2psf
 tools/cpi2psf
 tools/cpicomp
@@ -55,10 +58,12 @@ tools/cpitest
 tools/latin1.inc
 tools/mda2psf
 tools/page2cp2
+tools/psf2ams
 tools/psf2bbc
 tools/psf2bdf
 tools/psf2bsd
 tools/psf2inc
+tools/psfs2mda
 tools/psf2pbms
 tools/psf2raw
 tools/psf2txt

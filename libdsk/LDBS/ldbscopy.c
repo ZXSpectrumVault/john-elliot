@@ -72,7 +72,8 @@ int main(int argc, char **argv)
 	err = ldbs_open(&source, argv[1], type, &ro);
 	if (err) diewith(argv[1], err);
 
-	if (memcmp(type, LDBS_DSK_TYPE, 4))
+	if (memcmp(type, LDBS_DSK_TYPE, 4) &&
+	    memcmp(type, LDBS_DSK_TYPE_V1, 4))
 	{
 		ldbs_close(&source);
 		diewith(argv[1], DSK_ERR_NOTME);

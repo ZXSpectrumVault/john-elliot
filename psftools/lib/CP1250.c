@@ -78,7 +78,8 @@ static psf_dword values[] = {
 0xffff, 0x0171, 0xffff, 0x00fc, 0xffff, 0x00fd, 0xffff, 0x0163, 
 0xffff, 0x02d9, 0xffff, };
 
-struct psf_mapping m_CP1250 = { "CP1250", {
+struct psf_mapping256 m_CP1250 = { "CP1250", 
+256, {
 &values[1], /* 0 NULL */
 &values[2], /* 1 START OF HEADING */
 &values[3], /* 2 START OF TEXT */

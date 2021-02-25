@@ -70,7 +70,7 @@
 \begin_body
 
 \begin_layout Title
-LibDsk v1.5.8
+LibDsk v1.5.10
 \end_layout
 
 \begin_layout Author
@@ -153,6 +153,10 @@ Raw images in logical filesystem order;
 \end_layout
 
 \begin_layout Itemize
+Raw images within a Gotek-formatted USB device;
+\end_layout
+
+\begin_layout Itemize
 CPCEMU-format .DSK images (normal and extended); 
 \end_layout
 
@@ -194,6 +198,10 @@ Compaq Quick Release Sector Transfer (QRST), used for their computers' BIOS
 \begin_layout Itemize
 Disc images created by the Sydex imaging programs Teledisk and CopyQM (Not
  supported in the 16-bit Windows version).
+\end_layout
+
+\begin_layout Itemize
+SAP disc images used in emulation of Thomson computers.
 \end_layout
 
 \begin_layout Itemize
@@ -263,6 +271,42 @@ If you have coded against a version of LibDsk prior to 1.5.3, bear in mind
 
 \begin_layout Standard
 For full details, see the file ChangeLog.
+\end_layout
+
+\begin_layout Itemize
+New utility: 'dsklabel' allows the drive label to be viewed and changed
+ on disk images where LibDsk detects a DOS, CP/M or DFS filesystem.
+\end_layout
+
+\begin_layout Itemize
+New utility: 'lsgotek' lists the drive images on a USB drive or file in
+ the format used by Gotek floppy emulators.
+\end_layout
+
+\begin_layout Itemize
+New 'gotek' driver for accessing raw disc images within Gotek-format floppy
+ archives.
+\end_layout
+
+\begin_layout Itemize
+If an output filetype is not provided to the dsktrans, dskform and dskdump
+ utilities, they will attempt to guess one from the passed filename rather
+ than defaulting to 'dsk'.
+\end_layout
+
+\begin_layout Itemize
+Fixed some memory corruption issues (thanks to Mark Ogden for discovering
+ these).
+\end_layout
+
+\begin_layout Itemize
+dskform can now format disc images with a blank PCDOS or Apricot MSDOS filesyste
+m.
+\end_layout
+
+\begin_layout Itemize
+Added a new 'sap' driver for SAP-format disc images (thanks to Emulix75
+ for information).
 \end_layout
 
 \begin_layout Itemize
@@ -479,6 +523,18 @@ logical
 -logical
 \family default
  option to dsktrans) but couldn't then write them back or use them in emulators.
+\end_layout
+
+\begin_layout Description
+\begin_inset Quotes eld
+\end_inset
+
+gotek
+\begin_inset Quotes erd
+\end_inset
+
+ : Raw 1.4M disc image on a USB drive (or ordinary file) in the format used
+ by Gotek floppy emulators.
 \end_layout
 
 \begin_layout Description
@@ -2754,7 +2810,7 @@ dsk_err_t dsk_getgeom(DSK_PDRIVER self, DSK_GEOMETRY *geom)
 \begin_layout Standard
 This attempts to determine the geometry of a disc (number of cylinders,
  tracks, sectors etc.) by loading the boot sector.
- It understands DOS, Apricot, CP/M-86 and PCW boot sectors.
+ It understands DOS, Apricot, CP/M-86, PCW and Acorn DFS boot sectors.
  If the geometry could be guessed, then 
 \begin_inset Quotes eld
 \end_inset
@@ -2795,6 +2851,11 @@ dsk_err_t dg_cpm86geom(DSK_GEOMETRY *self, const unsigned char *bootsect)
 
 \begin_layout LyX-Code
 dsk_err_t dg_aprigeom(DSK_GEOMETRY *self, const unsigned char *bootsect)
+\end_layout
+
+\begin_layout LyX-Code
+dsk_err_t dg_dfsgeom(DSK_GEOMETRY *self, const unsigned char *bootsect0,
+ const unsigned char *bootsect1)
 \end_layout
 
 \begin_layout Standard
@@ -2847,6 +2908,12 @@ dg_cpm86geom will check for a CP/M-86 boot sector.
 
 \begin_layout Description
 dg_aprigeom will check for an Apricot DOS boot sector.
+\end_layout
+
+\begin_layout Description
+dg_dfsgeom will check for an Acorn DFS boot sector and directory.
+ It needs to be passed two buffers, containing the first two sectors of
+ the disc.
 \end_layout
 
 \begin_layout Subsection
@@ -3264,12 +3331,14 @@ FS:FAT:SECFAT Number of sectors per FAT
 \end_layout
 
 \begin_layout Standard
-Note that it is theoretically possible for a disc to have FS:CP/M 
+Note that it is possible for a disc to have FS:CP/M 
 \emph on
 and
 \emph default
  FS:FAT information - for example, a CP/M filesystem saved in a disc image
  that also contains FAT metadata, or vice versa.
+ LDBS-format disc images will also return FS:CP/M properties; for a non-CP/M
+ disc these will all be zero.
 \end_layout
 
 \begin_layout Subsection
@@ -4190,6 +4259,67 @@ The systemwide file is only searched for if the LIBDSK environment variable
 \end_layout
 
 \begin_layout Section
+The Gotek backend
+\end_layout
+
+\begin_layout Standard
+This backend is new in version 1.5.10, and should be treated with the caution
+ appropriate to new, untried code.
+ It can directly access a USB drive containing floppy images, but it's safer
+ to back the drive up to a file (under Windows this can be done with a tool
+ like Win32DiskImager) and work on a copy of that file.
+\end_layout
+
+\begin_layout Standard
+To access a disk image within the drive / file, pass a filename to LibDsk
+ of the form:
+\end_layout
+
+\begin_layout LyX-Code
+gotek:
+\emph on
+device
+\emph default
+,
+\emph on
+number
+\end_layout
+
+\begin_layout Standard
+Where 
+\emph on
+device
+\emph default
+ is a USB device (or file) in the format used by the Gotek floppy emulator,
+ and 
+\emph on
+number
+\emph default
+ is the number of the disc image within it, 0 to 999.
+ In my very limited experience, when accessing a device the correct file
+ to use is the first partition (for example /dev/sdh1) rather than the device
+ as a whole (/dev/sdh).
+ On Windows this relies on the first drive image on the USB device having
+ a FAT filesystem and being mounted as a drive by Windows; you can then
+ use a filename like gotek:F:,6 to access it.
+\end_layout
+
+\begin_layout Standard
+The format of disc images supported by the Gotek driver is sharply limited:
+ it is restricted to high-density disc images with up to 18 sectors per
+ track (numbered 1-18).
+ This allows it to support 1.4M and 1.2M DOS formats, and non-DOS formats
+ with similar disc geometry.
+\end_layout
+
+\begin_layout Standard
+The utility lsgotek can be used to list the contents of a device / file
+ in Gotek format.
+ dsklabel can be used to change the labels of the disk images within the
+ file, to help you keep track of what is where.
+\end_layout
+
+\begin_layout Section
 \begin_inset CommandInset label
 LatexCommand label
 name "sec:rcpmfs"
@@ -4652,7 +4782,7 @@ Very limited
 \begin_inset Text
 
 \begin_layout Plain Layout
-2000, XP + ntwdm driver
+2000+ with ntwdm driver
 \end_layout
 
 \end_inset
@@ -4729,7 +4859,7 @@ The floppy drive can only read/write formats which are supported by the
 \end_layout
 
 \begin_layout Subsection
-Windows 2000 and XP with ntwdm driver
+Windows 2000 and later with ntwdm driver
 \end_layout
 
 \begin_layout Standard
@@ -6837,7 +6967,11 @@ DRV_CLASS dc_qrst =
 \end_layout
 
 \begin_layout LyX-Code
-    "QRST", 
+    "qrst
+\backslash
+0QRST
+\backslash
+0", 
 \end_layout
 
 \begin_layout LyX-Code
@@ -6878,7 +7012,7 @@ The driver's superclass.
 \end_layout
 
 \begin_layout Itemize
-The driver's name (as passed to 
+The driver's name(s) (as passed to 
 \family typewriter
 dsk_open()
 \family default

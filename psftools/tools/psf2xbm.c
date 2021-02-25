@@ -24,19 +24,34 @@
 
 char *cnv_progname = "PSF2XBM";
 
+static int across = 32;
+static char helpbuf[2048];
 
 char *cnv_set_option(int ddash, char *variable, char *value)
-    {
-    return "This program does not have options.";
-    }
+{
+	if (!strcmp(variable, "across"))
+	{
+		if (!value || !atoi(value))
+		{
+			return "The 'across' value may not be zero or omitted.";
+		}
+		across = atoi(value);
+		return NULL;
+	}
+        if (strlen(variable) > 2000) variable[2000] = 0;
+        sprintf(helpbuf, "Unknown option: %s\n", variable);
+        return helpbuf;
+}
 
 char *cnv_help(void)
-    {
-    static char buf[150];
-
-    sprintf(buf, "Syntax: %s psf_file xbm_file\n", cnv_progname);
-    return buf;
-    }
+{
+	sprintf(helpbuf, "Syntax: %s { --across=value } psf_file xbm_file\n"
+		"\n"
+		"    --across : Set the number of characters shown across the bitmap.", 
+		cnv_progname);
+	
+	return helpbuf;
+}
 
 
 
@@ -45,6 +60,7 @@ char *cnv_execute(FILE *fpin, FILE *fpout)
 	int rv;
 	PSF_FILE psf;
 	int x,y,chy,chx;
+	int rows;
 	psf_dword ch;
 	psf_byte pix, xbpix;
 	int height, width, count, max;
@@ -53,8 +69,12 @@ char *cnv_execute(FILE *fpin, FILE *fpout)
 	rv = psf_file_read(&psf, fpin);	
 	if (rv != PSF_E_OK) return psf_error_string(rv);
 
-	width  = psf.psf_width * 32;	/* is therefore a multiple of 8 */
-	height = psf.psf_height * ((psf.psf_length + 31) / 32);
+	/* Width of bitmap in pixels */
+	width  = psf.psf_width * across;
+
+	for (rows = 0; (across * rows) < psf.psf_length; rows++) {}
+
+	height = psf.psf_height * rows;
 
 	fprintf(fpout, "#define psf_width  %d\n", width);
 	fprintf(fpout, "#define psf_height %d\n", height);
@@ -67,7 +87,7 @@ char *cnv_execute(FILE *fpin, FILE *fpout)
 	{
 		for (x = 0; x < width; x++)
 		{
-			ch  = ((y/psf.psf_height) * 32) + (x / psf.psf_width);
+			ch = (y / psf.psf_height) * across + (x / psf.psf_width);
 			chy = y % psf.psf_height;
 			chx = x % psf.psf_width;
 			psf_get_pixel(&psf, ch, chx, chy, &pix);

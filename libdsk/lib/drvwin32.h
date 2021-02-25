@@ -1,7 +1,7 @@
 /***************************************************************************
  *                                                                         *
  *    LIBDSK: General floppy and diskimage access library                  *
- *    Copyright (C) 2001  John Elliott <seasip.webmaster@gmail.com>            *
+ *    Copyright (C) 2001, 2019  John Elliott <seasip.webmaster@gmail.com>  *
  *                                                                         *
  *    This library is free software; you can redistribute it and/or        *
  *    modify it under the terms of the GNU Library General Public          *
@@ -89,6 +89,15 @@ dsk_err_t win32m_secid(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
                                 DSK_FORMAT *result);
 dsk_err_t win32m_status(DSK_DRIVER *self, const DSK_GEOMETRY *geom,
                       dsk_phead_t head, unsigned char *result);
+
+
+/* Raw device access: Helper functions */
+BOOL win32_is_device(const char *filename);
+HANDLE win32_open_device(const char *filename, int *readonly);
+BOOL win32_lock_volume(HANDLE hDisk);
+BOOL win32_unlock_volume(HANDLE hDisk);
+BOOL win32_dismount_volume(HANDLE hDisk);
+BOOL win32_get_geometry(HANDLE hDisk, DISK_GEOMETRY *dg);
 
 #endif
  

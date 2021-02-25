@@ -23,6 +23,14 @@
  */
 #include "mappings.c"
 
+void poke4(unsigned char *p, psf_dword value)
+{
+	p[0] = (value) & 0xFF;
+	p[1] = (value >> 8) & 0xFF;
+	p[2] = (value >> 16) & 0xFF;
+	p[3] = (value >> 24) & 0xFF;
+}
+
 int dump_mapping(PSF_MAPPING *m)
 {
 	FILE *fp;
@@ -32,7 +40,7 @@ int dump_mapping(PSF_MAPPING *m)
 	unsigned char data[4];
 
 	memset(header, 0, sizeof header);
-	strcpy(header, "PSFTOOLS CODEPAGE MAP\r\n\032");
+	strcpy((char *)header, "PSFTOOLS CODEPAGE MAP 2\r\n\032");
 
 	sprintf(filename, "%s.cp2", m->psfm_name);
 	fp = fopen(filename, "wb");
@@ -42,28 +50,22 @@ int dump_mapping(PSF_MAPPING *m)
 		return -1;
 	}
 	total = 0;
-	for (n = 0; n < 256; n++)
+	for (n = 0; n < m->psfm_count; n++)
 	{
 		for (p = 0; m->psfm_tokens[n][p] != 0xFFFF; p++);
 		total += (p + 1);	
 	}
-	header[0x40] = (total) & 0xFF;
-	header[0x41] = (total >> 8) & 0xFF;
-	header[0x42] = (total >> 16) & 0xFF;
-	header[0x43] = (total >> 24) & 0xFF;
+	poke4(&header[0x40], total);
+	poke4(&header[0x44], m->psfm_count);
 	fwrite(header, 1, sizeof(header), fp);
-	for (n = 0; n < 256; n++)
+	for (n = 0; n < m->psfm_count; n++)
 	{
 		for (p = 0; m->psfm_tokens[n][p] != 0xFFFF; p++)
 		{
-			data[0] = (m->psfm_tokens[n][p]) & 0xFF;
-			data[1] = (m->psfm_tokens[n][p] >> 8) & 0xFF;
-			data[2] = (m->psfm_tokens[n][p] >> 16) & 0xFF;
-			data[3] = (m->psfm_tokens[n][p] >> 24) & 0xFF;
+			poke4(data, m->psfm_tokens[n][p]);
 			fwrite(data, 1, sizeof(data), fp);
 		}
-		data[0] = data[1] = 0xFF;
-		data[2] = data[3] = 0;
+		poke4(data, 0xFFFF);
 		fwrite(data, 1, sizeof(data),fp);
 	}
 	fclose(fp);

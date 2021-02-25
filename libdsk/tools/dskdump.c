@@ -46,7 +46,8 @@
 #endif
 
 static dsk_format_t format = -1;
-static	char *intyp = NULL, *outtyp = NULL;
+static const char *intyp = NULL;
+static const char *outtyp = NULL;
 static	char *incomp = NULL, *outcomp = NULL;
 static	int inside = -1, outside = -1;
 static  int idstep =  0, odstep  =  0;
@@ -141,12 +142,12 @@ int main(int argc, char **argv)
 	retries   = check_retry("-retry", &argc, argv);
 	if (present_arg("-idstep", &argc, argv)) idstep = 1;
 	if (present_arg("-odstep", &argc, argv)) odstep = 1;
-	if (!outtyp) outtyp = "dsk";
         format    = check_format("-format", &argc, argv);
         first     = check_numeric("-first", &argc, argv);
         last      = check_numeric("-last", &argc, argv);
 	args_complete(&argc, argv);
 	if (argc < 3) return help(argc, argv);
+	if (!outtyp) outtyp = guess_type(argv[2]);
 	return do_copy(argv[1], argv[2]);
 }
 

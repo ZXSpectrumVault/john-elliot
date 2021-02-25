@@ -1,0 +1,299 @@
+;    psftools: Manipulate console fonts in the .PSF format
+;    Copyright (C) 2005, 2020  John Elliott <seasip.webmaster@gmail.com>
+;
+; Self-contained "loader" header to load an 8x16 font under Amstrad CP/M.
+; 
+; Permission is hereby granted, free of charge, to any person obtaining a 
+; copy of this software and associated documentation files (the "Software"),
+; to deal in the Software without restriction, including without limitation 
+; the rights to use, copy, modify, merge, publish, distribute, sublicense, 
+; and/or sell copies of the Software, and to permit persons to whom the 
+; Software is furnished to do so, subject to the following conditions:
+; 
+; The above copyright notice and this permission notice shall be included 
+; in all copies or substantial portions of the Software.
+;
+; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS 
+; OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL 
+; THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR 
+; OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, 
+; ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR 
+; OTHER DEALINGS IN THE SOFTWARE. 
+;
+CR	equ	0Dh
+LF	equ	0Ah
+EOF	equ	1Ah
+
+FDOS	equ	5		;CP/M entry point
+C_WRITESTR equ	9		;String output function
+;
+; USERF functions
+;
+CD_VERSION	equ	00E3h
+SCR_RUN_ROUTINE	equ	00E9h
+FIND_FID	equ	00ECh
+BANK2_RUN	equ	00EFh
+
+COMMON	equ	0C000h		;Common memory
+HCOPYL	equ	0C001h		;Length of copy
+HCOPYD	equ	0C004h		;Copy destination
+HCOPYS	equ	0C007h		;Copy source
+
+FONTFID	equ	0C010h		;PcW16 CRTPLUS.FID header
+FONT16	equ	0C030h		;Pointer to PcW16 8x16 font
+FONT20	equ	0C032h		;Pointer to PcW16 8x20 font
+
+	org	0100h
+;
+; DOS protection
+;
+	defb	0EBh, 04h	;JMPS +4
+	ex	de,hl
+	jp	begin
+	defb	0B4h, 09h	;MOV AH, 9
+	defb	0BAh		;MOV DX, offset badsys
+	defw	badsys
+	defb	0CDh, 21h	;INT 21h
+	defb	0CDh, 20h	;INT 20h
+
+;
+; Offset 0x0F: Signature
+;
+	defb	cr, 'Font Converted with PSF2AMS',cr,lf,EOF
+fontlen: defw	1000h		;0x2E Length of font 
+fontadd: defw	FONTSRC		;0x30 Address of font
+badsys:	defb	'Requires CPC/PCW/PcW16/Spectrum +3 CP/M.',cr,lf,'$'
+nomem:	defb	'Memory too low.',cr,lf,'$'
+nocrtp:	defb	'CRTPLUS driver not loaded.',cr,lf,'$'
+anne1:	defb	'ANNE1',26
+begin:	sub	a
+	jp	pe, abort	;Ensure we have a Z80 CPU
+;
+; Check CP/M version
+;
+	ld	c, 0Ch
+	call	FDOS
+	cp	30h
+	jr	nc, iscpm3
+;
+; If this is not CP/M 3, it may still be usable if this is a PCW16
+;
+	ld	hl, (1)		;Address of BIOS
+	ld	de, 66h		;Look for ANNE1 BIOS signature
+	add	hl, de
+	ld	de, anne1
+	ld	b, 6
+cplp:	ld	a, (de)	
+	cp	(hl)
+	jr	nz, abort
+	inc	hl
+	inc	de
+	djnz	cplp
+iscpm3:
+
+;
+; Check memory
+;
+	ld	hl,(FDOS+1)	;Top of memory
+	ld	bc,(fontlen)	;Font length
+	inc	b		;+256
+	and	a
+	sbc	hl,bc
+	ld	a,h
+	cp	0C0h
+	ld	de, nomem
+	ld	c, C_WRITESTR
+	jp	c, FDOS
+;
+; Relocate code to high memory
+;
+	ld	bc,(fontlen)	;Length of font
+	ld	hl,(fontadd)	;Address of font
+	ld	de,COMMON + 80h	;Move to high memory
+	ldir
+	ld	bc,hice-hicode
+	ld	hl,hicode	;Move hicode to 0C000h
+	ld	de,COMMON
+	ldir
+	ld	hl,(fontlen)
+	ld	(HCOPYL),hl
+	call	USERF
+	defw	CD_VERSION	;Get system type
+	or	a
+	jr	z,cpc		;0 => CPC
+	cp	1	
+	jr	z,pcw		;1 => PCW
+	cp	3
+	jr	z,plus3		;3 => Spectrum +3
+	cp	'A'	
+	jr	z,pcw16		;'A' => PcW16
+abort:	ld	de, badsys	;Unsupported system
+	ld	c, C_WRITESTR
+	jp	FDOS
+;
+cpc:	ld	hl,1000h	;CPC: Font is always 4k (reducing to 2k). 
+	call	limitlen
+	ld	(HCOPYL),hl	;Destination address is already set to 8000h.
+	call	USERF
+	defw	COMMON		;Call the code in bank 0 context.
+	rst	0
+;	
+pcw:	ld	hl,1000h	;PCW: Font is always 4k (reducing to 2k).
+	call	limitlen
+	ld	(HCOPYL),hl
+	ld	hl,0B800h	;Destination address is 0B800h.
+	jr	plus3a		;Call the code in screen environment context.
+;
+plus3:	ld	hl,3000h	;Spectrum +3: 
+plus3a:	ld	(HCOPYD),hl	;Destination address
+	ld	bc, COMMON
+	call	USERF
+	defw	SCR_RUN_ROUTINE	;Call code in screen environment.
+	rst	0
+;
+; If the font length in the file is less than that in HL, reduce HL to the
+; font length in the file.
+;
+limitlen:
+	ld	bc,(fontlen)	;Get actual length of font
+	ld	a,b
+	cp	h
+	jr	c,reduce
+	ld	a,c
+	cp	l
+	ret	nc
+reduce:	ld	h,b
+	ld	l,c
+	ret
+;
+; For the PCW16 we have an 8x16 font. Ideally we'd expand it to 8x20.
+;
+pcw16:	
+;
+; Switch the copy routine back to a simple LDIR
+;
+	ld	hl, 0B0EDh	
+	ld	(COMMON+10),hl
+	ld	l,0C9h
+	ld	(COMMON+12),hl
+
+	ld	hl,nocrtp		;Attempt to locate the video driver
+	ld	de,COMMON+64		;(CRTPLUS.FID) by copying its name
+	push	hl			;to common memory
+	push	de
+	ld	bc,8		
+	ldir	
+
+	pop	de
+	call	USERF			;Search for its address
+	defw	FIND_FID
+	pop	de
+	ld	c, C_WRITESTR		;If not found, abort.
+	jp	nc, FDOS
+;
+; HL is address of CRTPLUS. Copy the first 36 bytes of it to FONTFID.
+;
+	ld	de, FONTFID
+	ld	bc, 36
+	call	copy16
+;
+; Now load the characters.
+;
+	ld	c, 0			;Load 256 characters
+	ld	hl,(fontadd)
+expchar:
+	push	bc
+	ld	ix, COMMON+80h		;8x16 char
+	ld	iy, COMMON+90h		;8x20 char
+	ld	b, 16			
+expbit:
+	ld	a, (hl)			;For each row...
+	inc	hl
+	bit	0, b
+	jr	nz, expb1
+	bit	1, b
+	jr	nz, expb1
+	ld	(iy+0), a		;For the 8x20 character, triple
+	inc	iy			;every fourth line
+expb1:
+	ld	(ix+0), a		;For both, double every line
+	ld	(iy+0), a
+	inc	ix	
+	inc	iy
+	djnz	expbit	
+;
+; Characters now expanded to COMMON+80h / COMMON+90h
+;
+	push	hl
+	ld	de,(font16)		;Copy the 16-row character
+	ld	hl,COMMON+80h	
+	ld	bc,16
+	call	COPY16
+	ld	(font16),de
+
+	ld	de,(font20)		;And the 20-row character
+	ld	hl,COMMON+90h
+	ld	bc,20
+	call	COPY16
+	ld	(font20),de
+	pop	hl
+	pop	bc
+	dec	c			;Expand next character
+	jp	nz, expchar
+	rst	0
+;
+; Copy memory in the PcW16 bank 2 context.
+;
+copy16: ld	(HCOPYS), HL	;Source code
+	ld	(HCOPYD), DE	;Destination
+	ld	(HCOPYL), BC	;Length
+	ld	bc, COMMON
+	call	USERF
+	defw	BANK2_RUN
+	ret
+;
+; Call the Amstrad extended BIOS
+;
+USERF:	jp	USERF1
+USERF1:	push	hl		;Calculate the address
+	push	de		;of the USERF BIOS function
+	ld	hl,(1)
+	ld	de,57h	
+	add	hl,de
+	ld	(USERF+1), hl	;Save it so we don't need to recalc
+	pop	de
+	ex	(sp),hl		;Restore registers
+	ret			;And execute
+;
+; This memory copy code is relocated to COMMON.
+;
+; Copy an 8x16 bitmap into the 8x8 font memory by taking alternate lines.
+;
+hicode:
+	ld	bc,800h		;COMMON+1 = Font length
+	ld	de,8000h	;COMMON+4 = Font destination
+	ld	hl,COMMON+80h	;COMMON+7 = Font source
+hicopy:	ld	a,(hl)		;COMMON+10 = copy routine
+	inc	hl
+	or	(hl)		;Merge two lines together
+	inc	hl
+	ld	(de),a
+	inc	de
+	dec	bc
+	ld	a,b
+	or	c
+	ret	z
+	dec	bc
+	ld	a,b
+	or	c
+	ret	z
+	jr	hicopy
+
+hice:
+;
+
+	org	0300h
+FONTSRC:
+
+	end

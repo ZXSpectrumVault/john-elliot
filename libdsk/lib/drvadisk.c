@@ -269,22 +269,26 @@ static dsk_err_t adisk_add_block(ADISK_DSK_DRIVER *self, FILE *fp)
 		dsk_free(buf);
 		if (err) return err;
 	}
+	/* At this point buf has been freed in either the if or else 
+	 * branch */
+	buf = NULL;
+
 	/* Now it needs to be recorded in the track header */
 	err = ldbs_get_trackhead(self->adisk_super.ld_store, &trkh, 
 				rh.cylinder, rh.head);
-	if (err) { dsk_free(buf); return err; }
+	if (err) return err; 
 
 	if (trkh)
 	{
 		nsec = trkh->count;
 		trkh = ldbs_trackhead_realloc(trkh, (unsigned short)(1 + trkh->count));
-		if (!trkh) { dsk_free(buf); return DSK_ERR_NOMEM; }
+		if (!trkh) return DSK_ERR_NOMEM; 
 	}
 	else
 	{
 		nsec = 0;
 		trkh = ldbs_trackhead_alloc(1);
-		if (!trkh) { dsk_free(buf); return DSK_ERR_NOMEM; }
+		if (!trkh) return DSK_ERR_NOMEM; 
 
 		trkh->datarate = 1;
 		trkh->recmode = 2;
@@ -401,10 +405,10 @@ dsk_err_t adisk_creat(DSK_DRIVER *self, const char *filename)
 	if (self->dr_class != &dc_adisk) return DSK_ERR_BADPTR;
 	adiskself = (ADISK_DSK_DRIVER *)self;
 
-	/* Create a 0-byte file, just to be sure we can */
+	/* Create a minimal file, just to be sure we can */
 	fp = fopen(filename, "wb");
 	if (!fp) return DSK_ERR_SYSERR;
-	if (fwrite(adisk_wmagic, 1, 128, adiskself->adisk_fp) < 128)
+	if (fwrite(adisk_wmagic, 1, 128, fp) < 128)
 	{
 		fclose(fp);
 		return DSK_ERR_SYSERR;

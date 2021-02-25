@@ -110,8 +110,9 @@ char *msw_conv_1(FILE *fp)
 			vx += msw.dfPixWidth;
 		}
 	}
-	/* dfReserved? */
-	if (read_byte(fp, &b)) return "Unexpected end of file";
+	/* Seek to font bitmap */
+	if (maybe_fseek(fp, msw.dfBitsOffset)) 
+		return "Unexpected end of file";	
 	for (y = 0; y < msw.dfPixHeight; y++)
 	{
 		for (x = 0; x < msw.dfWidthBytes; x++)

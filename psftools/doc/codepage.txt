@@ -84,16 +84,21 @@ Custom codepages
 
 AMSTRAD	  Amstrad PCW. The PCW character 7Fh (zero without a slash) is mapped
           to U+FF10 (full-width zero) for want of anything better.
+LS3       Amstrad PCW (LocoScript 3). For applying Unicode mappings to the 
+	  font in SCRCHAR.JOY. Unusually for a codepage, this covers up to 
+	  512 characters, rather than the usual 256.
 
 BBCMICRO  BBC Micro: Only characters 32-127 are mapped, since that is all
 	  the BBC Micro ROM defines.
 
 PCGEM	  The character mapping used by the video drivers in Intel GEM. 
-	  Character 0x0A (picture of a bell) has been mapped to U+237E 
-          (symbol for a bell) -- not ideal.
+	  Character 0x0A (picture of a bell) is now mapped to U+1F514 (bell
+	  picture) rather than U+237E (symbol for a bell).
 
 PPC437    The codepages used by the character ROM on Amstrad PPC laptops and 
 PPC860    their desktop counterpart, the Sinclair PC200. These differ slightly
 PPC865    from the standard codepages 437, 860 and 865 to avoid confusion 
 PPCGREEK  between the 'epsilon' and 'element-of' characters.
 
+QX10      Epson QX-10 screen font
+PRINTIT   The subset of the QX-10 font used by the PRINTIT utility.

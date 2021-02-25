@@ -104,7 +104,7 @@ psf_errno_t psf_unicode_addmap(PSF_FILE *f, psf_word destchar,
 	psf_dword *pw;
 	psf_errno_t rv;
 
-	if (slot > 256) return PSF_E_OK;
+	if (slot >= m->psfm_count) return PSF_E_OK;
        	pw = m->psfm_tokens[slot];
 	if (!pw) return PSF_E_OK;
 
@@ -113,6 +113,22 @@ psf_errno_t psf_unicode_addmap(PSF_FILE *f, psf_word destchar,
 		rv = psf_unicode_add(f, destchar, *pw);
 		if (rv) return rv;
 		++pw;	
+	}
+	return PSF_E_OK;
+}
+
+psf_errno_t psf_unicode_addall(PSF_FILE *f, PSF_MAPPING *m, unsigned first,
+	unsigned last)
+{
+	unsigned n;
+
+	psf_errno_t err = psf_file_create_unicode(f);
+	if (err) return err;
+	for (n = first; n <= last; n++)
+	{
+		if (n < m->psfm_count)
+			err = psf_unicode_addmap(f, n, m, n);
+		if (err) return err;
 	}
 	return PSF_E_OK;
 }
@@ -211,7 +227,7 @@ psf_errno_t psf_unicode_lookupmap(PSF_FILE *f, PSF_MAPPING *m, psf_word slot,
 	psf_dword *pw;
 	psf_errno_t rv;
 
-	if (slot > 256) return PSF_E_NOTFOUND;
+	if (slot >= m->psfm_count) return PSF_E_NOTFOUND;
        	pw = m->psfm_tokens[slot];
 	if (!pw) return PSF_E_NOTFOUND;
 

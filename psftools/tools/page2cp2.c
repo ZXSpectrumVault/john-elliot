@@ -33,7 +33,7 @@ psf_errno_t dump_mapping(PSF_MAPPING *m)
 	unsigned char data[4];
 
 	memset(header, 0, sizeof header);
-	strcpy((char *)header, "PSFTOOLS CODEPAGE MAP\r\n\032");
+	strcpy((char *)header, "PSFTOOLS CODEPAGE MAP 2\r\n\032");
 
 	filename = malloc(5 + strlen(m->psfm_name));
 	if (!filename) return PSF_E_NOMEM;
@@ -61,7 +61,7 @@ psf_errno_t dump_mapping(PSF_MAPPING *m)
 		return PSF_E_ERRNO;
 	}
 	total = 0;
-	for (n = 0; n < 256; n++)
+	for (n = 0; n < m->psfm_count; n++)
 	{
 		for (p = 0; m->psfm_tokens[n][p] != 0xFFFF; p++);
 		total += (p + 1);	
@@ -70,8 +70,12 @@ psf_errno_t dump_mapping(PSF_MAPPING *m)
 	header[0x41] = (total >> 8) & 0xFF;
 	header[0x42] = (total >> 16) & 0xFF;
 	header[0x43] = (total >> 24) & 0xFF;
+	header[0x44] = (m->psfm_count) & 0xFF;
+	header[0x45] = (m->psfm_count >> 8) & 0xFF;
+	header[0x46] = (m->psfm_count >> 16) & 0xFF;
+	header[0x47] = (m->psfm_count >> 24) & 0xFF;
 	fwrite(header, 1, sizeof(header), fp);
-	for (n = 0; n < 256; n++)
+	for (n = 0; n < m->psfm_count; n++)
 	{
 		for (p = 0; m->psfm_tokens[n][p] != 0xFFFF; p++)
 		{
